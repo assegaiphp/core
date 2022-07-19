@@ -33,7 +33,7 @@ enum Color: string
   public function name(): string
   {
     return match($this) {
-      Color::RESET => 'none',
+      self::RESET => 'none',
       self::BLACK => 'black',
       self::RED => 'red',
       self::GREEN => 'green',
