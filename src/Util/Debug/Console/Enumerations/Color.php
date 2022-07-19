@@ -29,4 +29,35 @@ enum Color: string
   case DARK_MAGENTA = "\033[2;35m";
   case DARK_CYAN = "\033[2;36m";
   case DARK_WHITE = "\033[2;37m";
+
+  public function name(): string
+  {
+    return match($this) {
+      Color::RESET => 'none',
+      self::BLACK => 'black',
+      self::RED => 'red',
+      self::GREEN => 'green',
+      self::YELLOW => 'yellow',
+      self::BLUE => 'blue',
+      self::MAGENTA => 'magenta',
+      self::CYAN => 'cyan',
+      self::WHITE => 'white',
+      self::BRIGHT_BLACK => 'bright black',
+      self::BRIGHT_RED => 'bright red',
+      self::BRIGHT_GREEN => 'bright green',
+      self::BRIGHT_YELLOW => 'bright yellow',
+      self::BRIGHT_BLUE => 'bright blue',
+      self::BRIGHT_MAGENTA => 'bright magenta',
+      self::BRIGHT_CYAN => 'bright cyan',
+      self::BRIGHT_WHITE => 'bright white',
+      self::DARK_BLACK => 'dark black',
+      self::DARK_RED => 'dark red',
+      self::DARK_GREEN => 'dark green',
+      self::DARK_YELLOW => 'dark yellow',
+      self::DARK_BLUE => 'dark blue',
+      self::DARK_MAGENTA => 'dark magenta',
+      self::DARK_CYAN => 'dark cyan',
+      self::DARK_WHITE => 'dark white'
+    };
+  }
 }
