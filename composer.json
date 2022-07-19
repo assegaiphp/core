@@ -1,0 +1,21 @@
+{
+    "name": "assegaiphp/core",
+    "description": "A progressive PHP framework for building effecient and scalable server-side applications.",
+    "type": "library",
+    "require-dev": {
+        "codeception/codeception": "^4.2"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Assegai\\Core\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Andrew Masiye",
+            "email": "amasiye313@gmail.com"
+        }
+    ],
+    "require": {}
+}
