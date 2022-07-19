@@ -4,26 +4,34 @@ namespace Assegai\Core\Util\Debug;
 
 use Assegai\Core\Util\Debug\Console\Enumerations\Color;
 
+defined('STDOUT') or define('STDOUT', fopen('php://stdout', 'wb'));
+defined('STDERR') or define('STDERR', fopen('php://stderr', 'wb'));
+
 class Log
 {
+  public static function print(string $tag, string $message, bool $outputHTML = false, Color $color = Color::BLUE): void
+  {
+    $output = sprintf("<h3 style='color: %s'>%s:\n</h3><p>%s</p>\n" . PHP_EOL, $color->name(), $tag, $message);
+    echo $outputHTML ? $output : strip_tags($output);
+  }
+
   public static function debug(string $tag, string $message): void
   {
-    printf("%sD/%s: %s%s", Color::BLUE->value, $tag, Color::RESET->value, $message);
+    printf(STDOUT, "%sD/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message);
   }
 
   public static function info(string $tag, string $message): void
   {
-    printf("%sI/%s: %s%s", Color::BLUE->value, $tag, Color::RESET->value, $message);
+    printf(STDOUT, "%sI/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message);
   }
 
   public static function warn(string $tag, string $message): void
   {
-    printf("%sW/%s: %s%s", Color::BLUE->value, $tag, Color::RESET->value, $message);
+    printf(STDOUT, "%sW/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message);
   }
 
   public static function error(string $tag, string $message, int $type = 0, ?string $destination = null, ?string $headers = null): void
   {
-    printf("%sE/%s: %s%s", Color::RED->value, $tag, Color::RESET->value, $message);
-    error_log($message, $type, $destination, $headers);
+    error_log(sprintf("%sE/%s:\n%s%s\n" . PHP_EOL, Color::RED->value, $tag, Color::RESET->value, $message), $type, $destination, $headers);
   }
 }
