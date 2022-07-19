@@ -19,6 +19,7 @@ class Request
   protected array $allHeaders = [];
   protected ?App $app = null;
   protected RequestMethod $requestMethod;
+  protected string $path;
 
   protected static ?Request $instance = null;
 
@@ -33,6 +34,7 @@ class Request
       'OPTIONS' => RequestMethod::OPTIONS,
        default => RequestMethod::GET
     };
+    $this->path = str_replace('/^\//', '', ($_GET['path'] ?? ''));
 
     $this->body = match ($this->getMethod()) {
       RequestMethod::GET      => $_GET,
@@ -98,7 +100,7 @@ class Request
   #[ArrayShape([
     'app' => 'App', 'body' => 'mixed', 'cookies' => 'string', 'fresh' => 'bool',
     'headers' => 'array', 'host_name' => 'string', 'method' => 'string',
-    'remote_ip' => 'string', 'uri' => 'string', 'protocol' => 'string'
+    'remote_ip' => 'string', 'path' => 'string', 'protocol' => 'string'
   ])]
   public function toArray(): array
   {
@@ -111,7 +113,7 @@ class Request
       'host_name' => $this->getHostName(),
       'method'    => $this->getMethod(),
       'remote_ip' => $this->getRemoteIp(),
-      'uri'       => $this->uri(),
+      'path'       => $this->getPath(),
       'protocol'  => $this->getProtocol()
     ];
   }
@@ -172,9 +174,9 @@ class Request
   /**
    * @return string
    */
-  public function uri(): string
+  public function getPath(): string
   {
-    return $_SERVER['REQUEST_URI'] ?? '/';
+    return $this->path ?? '';
   }
 
   /**
