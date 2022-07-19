@@ -4,6 +4,7 @@ namespace Assegai\Core\Attributes;
 
 use Assegai\Core\ScopeOptions;
 use Attribute;
+use JetBrains\PhpStorm\ArrayShape;
 
 class_alias(ScopeOptions::class, 'InjectableOptions');
 
@@ -11,7 +12,8 @@ class_alias(ScopeOptions::class, 'InjectableOptions');
 class Injectable
 {
   public function __construct(
-    public readonly ?InjectableOptions $options = null,
+    #[ArrayShape(['scope' => 'Assegai\Core\Enumerations\Scope', 'durable' => 'bool'])]
+    public readonly InjectableOptions|array|null $options = null,
   )
   {
   }
