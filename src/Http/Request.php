@@ -1,0 +1,332 @@
+<?php
+
+namespace Assegai\Core\Http;
+
+//use Assegai\Lib\Authentication\JWT\JWTToken;
+use Assegai\Core\App;
+use Assegai\Core\Config;
+use Assegai\Core\Enumerations\Http\RequestMethod;
+use JetBrains\PhpStorm\ArrayShape;
+use stdClass;
+
+/**
+ * The **Request** class represents the HTTP request and has properties for
+ * the request query string, parameters, HTTP headers, and body
+ */
+class Request
+{
+  protected mixed $body = null;
+  protected array $allHeaders = [];
+  protected ?App $app = null;
+  protected RequestMethod $requestMethod;
+
+  protected static ?Request $instance = null;
+
+  private final function __construct()
+  {
+    $this->requestMethod = match ($_SERVER['REQUEST_METHOD']) {
+      'POST' => RequestMethod::POST,
+      'PUT' => RequestMethod::PUT,
+      'PATCH' => RequestMethod::PATCH,
+      'DELETE' => RequestMethod::DELETE,
+      'HEAD' => RequestMethod::HEAD,
+      'OPTIONS' => RequestMethod::OPTIONS,
+       default => RequestMethod::GET
+    };
+
+    $this->body = match ($this->getMethod()) {
+      RequestMethod::GET      => $_GET,
+      RequestMethod::POST     => !empty($_POST) ? $_POST : ( !empty($_FILES) ? $_FILES : file_get_contents('php://input') ),
+      RequestMethod::PUT,
+      RequestMethod::PATCH    => file_get_contents('php://input'),
+      RequestMethod::DELETE   => !empty($_GET) ? $_GET : file_get_contents('php://input'),
+      RequestMethod::HEAD,
+      RequestMethod::OPTIONS  => NULL,
+    };
+
+    if (isset($this->body['path']))
+    {
+      unset($this->body['path']);
+    }
+
+    foreach ($_SERVER as $key => $value)
+    {
+      if (str_starts_with($key, 'HTTP_'))
+      {
+        $this->allHeaders[$key] = $value;
+      }
+    }
+
+    if (! isset(Request::$instance) || empty(Request::$instance))
+    {
+      Request::$instance = $this;
+    }
+  }
+
+  /**
+   * @return Request
+   */
+  public static function getInstance(): Request
+  {
+    if (!Request::$instance)
+    {
+      Request::$instance = new Request;
+    }
+    return Request::$instance;
+  }
+
+  /**
+   * @return App
+   */
+  public function getApp(): App
+  {
+    return $this->app;
+  }
+
+  /**
+   * @param App $app
+   * @return void
+   */
+  public function setApp(App $app): void
+  {
+    $this->app = $app;
+  }
+
+  /**
+   * @return array
+   */
+  #[ArrayShape([
+    'app' => 'App', 'body' => 'mixed', 'cookies' => 'string', 'fresh' => 'bool',
+    'headers' => 'array', 'host_name' => 'string', 'method' => 'string',
+    'remote_ip' => 'string', 'uri' => 'string', 'protocol' => 'string'
+  ])]
+  public function toArray(): array
+  {
+    return [
+      'app'       => $this->app,
+      'body'      => $this->getBody(),
+      'cookies'   => $this->getCookies(),
+      'fresh'     => $this->fresh(),
+      'headers'   => $this->allHeaders(),
+      'host_name' => $this->getHostName(),
+      'method'    => $this->getMethod(),
+      'remote_ip' => $this->getRemoteIp(),
+      'uri'       => $this->uri(),
+      'protocol'  => $this->getProtocol()
+    ];
+  }
+
+  /**
+   * @return string
+   */
+  public function toJSON(): string
+  {
+    return json_encode($this->toArray());
+  }
+
+  /**
+   * @return string
+   */
+  public function __toString(): string
+  {
+    return $this->toJSON();
+  }
+
+  /**
+   * @return array
+   */
+  public function __serialize(): array
+  {
+    return $this->toArray();
+  }
+
+  /**
+   * @param string $name
+   * @return string
+   */
+  public function header(string $name): string
+  {
+    $key = strtoupper($name);
+
+    if (isset($_SERVER["HTTP_$key"]))
+    {
+      return $_SERVER["HTTP_$key"];
+    }
+
+    if (isset($_SERVER[$key]))
+    {
+      return $_SERVER[$key];
+    }
+
+    return '';
+  }
+
+  /**
+   * @return array
+   */
+  public function allHeaders(): array
+  {
+    return $this->allHeaders;
+  }
+
+  /**
+   * @return string
+   */
+  public function uri(): string
+  {
+    return $_SERVER['REQUEST_URI'] ?? '/';
+  }
+
+  /**
+   * @return string
+   */
+  public function path(): string
+  {
+    return $_GET['path'] ?? '/';
+  }
+
+  /**
+   * @return int
+   */
+  public function getLimit(): int
+  {
+    $limit = $_GET['limit'] ?? Config::get('request')['DEFAULT_LIMIT'] ?? 10;
+
+    return match(true) {
+      is_int($limit) => $limit,
+      is_numeric($limit) => intval($limit),
+      default => 100
+    };
+  }
+
+  /**
+   * @return int
+   */
+  public function getSkip(): int
+  {
+    $skip = $_GET['skip'] ?? Config::get('request')['DEFAULT_SKIP'] ?? 0;
+
+    return match (true) {
+      is_int($skip) => $skip,
+      is_numeric($skip) => intval($skip),
+      default => 0
+    };
+  }
+
+  /**
+   * @return mixed
+   */
+  public function getBody(): mixed
+  {
+    return $this->body;
+  }
+
+  /**
+   * @param string|null $name
+   * @return array|string
+   */
+  public function getCookies(?string $name = null): array|string
+  {
+    return $_COOKIE[$name] ?? $_COOKIE;
+  }
+
+  /**
+   * @return bool
+   */
+  public function fresh(): bool
+  {
+    return false;
+  }
+
+  /**
+   * @return string
+   */
+  public function getHostName(): string
+  {
+    return $_SERVER['HTTP_HOST'] ?? 'localhost';
+  }
+
+  /**
+   * @return string
+   */
+  public function getMethod(): RequestMethod
+  {
+    return $this->requestMethod;
+  }
+
+  /**
+   * @return string
+   */
+  public function getRemoteIp(): string
+  {
+    return $_SERVER['REMOTE_ADDR'] ?? '::1';
+  }
+
+  /**
+   * @return string
+   */
+  public function getRemoteIps(): string
+  {
+    return '';
+  }
+
+  /**
+   * @return string
+   */
+  public function getProtocol(): string
+  {
+    return $_SERVER['REQUEST_SCHEME'] ?? 'http';
+  }
+
+  /**
+   * @return string
+   */
+  public function getQuery(): string
+  {
+    return $_SERVER['QUERY_STRING'] ?? '';
+  }
+
+  /**
+   * Returns the access token provided with the request.
+   *
+   * @param bool $deconstruct If set to TRUE, then an object will be return on success.
+   *
+   * @return null|string|stdClass|false Returns the access token provided with the
+   * request, null if non was set and false if the supplied token is invalid.
+   */
+  public function accessToken(bool $deconstruct = false): null|string|stdClass|false
+  {
+    $accessToken = $this->header('Authorization');
+
+    if (empty($accessToken))
+    {
+      return NULL;
+    }
+
+    if (!str_contains($accessToken, 'BEARER'))
+    {
+      return NULL;
+    }
+
+    $matches = [];
+    if (!preg_match('/Bearer (.*)/', $accessToken, $matches))
+    {
+      return false;
+    }
+
+    if (count($matches) < 2)
+    {
+      return false;
+    }
+
+    $tokenString = $matches[1];
+
+    if ($deconstruct)
+    {
+//      return (object) JWTToken::parse(tokenString: $tokenString, returnArray: true);
+    }
+
+    return $tokenString;
+  }
+}
+
