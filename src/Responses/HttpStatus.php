@@ -2,37 +2,28 @@
 
 namespace Assegai\Core\Responses;
 
-class HttpStatusCode
-{
-  public function __construct(
-    private int $code,
-    private string $name,
-    private string $description,
-  ) { }
-
-  public function __toString(): string
-  {
-    return "$this->code - $this->name";
-  }
-
-  public function code(): int
-  {
-    return $this->code;
-  }
-
-  public function name(): string
-  {
-    return $this->name;
-  }
-
-  public function description(): string
-  {
-    return $this->description;
-  }
-}
-
 class HttpStatus
 {
+  public static function fromInt(int $code): HttpStatusCode
+  {
+    return match($code) {
+      100 => self::Continue(),
+      201 => self::Created(),
+      202 => self::Accepted(),
+      204 => self::NoContent(),
+      400 => self::BadRequest(),
+      401 => self::Unauthorized(),
+      403 => self::Forbidden(),
+      404 => self::NotFound(),
+      405 => self::MethodNotAllowed(),
+      409 => self::Conflict(),
+      500 => self::InternalServerError(),
+      501 => self::NotImplemented(),
+      503 => self::ServiceUnavailable(),
+      default => self::OK()
+    };
+  }
+
   public static function Continue(): HttpStatusCode
   {
     return new HttpStatusCode(
