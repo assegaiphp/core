@@ -48,13 +48,13 @@ class ArgumentsHost
     return RpcArgumentsHost::getInstance();
   }
 
-  private function switchToWs(): IWsArgumentsHost
+  public function switchToWs(): IWsArgumentsHost
   {
     $this->contextType = ContextType::WEB_SOCKETS;
     return WsArgumentsHost::getInstance();
   }
 
-  private function switchToHttp(): IHttpArgumentsHost
+  public function switchToHttp(): IHttpArgumentsHost
   {
     $this->contextType = ContextType::HTTP;
     return HttpArgumentsHost::getInstance();
