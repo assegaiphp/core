@@ -2,7 +2,7 @@
 
 namespace Assegai\Core\Attributes;
 
-use Assegai\Core\Responses\HttpStatusCode;
+use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Responses\Responder;
 use Attribute;
 
