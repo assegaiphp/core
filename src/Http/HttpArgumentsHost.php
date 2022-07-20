@@ -13,7 +13,7 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   {
   }
 
-  public static function getInstance()
+  public static function getInstance(): HttpArgumentsHost
   {
     if (!self::$instance)
     {
