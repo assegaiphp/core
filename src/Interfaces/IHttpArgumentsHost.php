@@ -23,4 +23,6 @@ interface IHttpArgumentsHost
   public function getResponse(): Response;
 
   public function getNext(): mixed;
+
+  public function getArgs(): array;
 }
