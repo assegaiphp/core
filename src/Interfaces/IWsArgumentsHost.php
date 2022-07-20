@@ -16,4 +16,9 @@ interface IWsArgumentsHost
    * @return mixed Returns the client object.
    */
   public function getClient(): mixed;
+
+  /**
+   * @return array
+   */
+  public function getArgs(): array;
 }

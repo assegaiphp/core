@@ -16,4 +16,9 @@ interface IRpcArgumentsHost
    * @return mixed Returns the context object.
    */
   public function getContext(): mixed;
+
+  /**
+   * @return array
+   */
+  public function getArgs(): array;
 }
