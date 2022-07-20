@@ -7,9 +7,10 @@ use stdClass;
 
 class NotFoundException extends HttpException
 {
-  public function __construct(array|string|stdClass $message = '')
+  public function __construct(string $path)
   {
-    parent::__construct($message);
+    $uri = str_starts_with('/', $path) ? $path : "/$path";
+    parent::__construct('Not Found: ' . $uri);
     $this->setStatus(HttpStatus::NotFound());
   }
 }
