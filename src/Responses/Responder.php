@@ -2,6 +2,8 @@
 
 namespace Assegai\Core\Responses;
 
+use Assegai\Core\Http\HttpStatus;
+use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Request;
 
 class Responder
