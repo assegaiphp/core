@@ -2,7 +2,7 @@
 
 namespace Assegai\Core\Exceptions\Container;
 
-use Assegai\Core\Exceptions\HttpException;
+use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
 
 class EntryNotFoundException extends HttpException implements IEntryNotFoundException

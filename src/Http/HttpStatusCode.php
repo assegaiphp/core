@@ -1,6 +1,6 @@
 <?php
 
-namespace Assegai\Core\Responses;
+namespace Assegai\Core\Http;
 
 
 class HttpStatusCode
