@@ -58,11 +58,6 @@ class Request
         $this->allHeaders[$key] = $value;
       }
     }
-
-    if (! isset(Request::$instance) || empty(Request::$instance))
-    {
-      Request::$instance = $this;
-    }
   }
 
   /**
@@ -74,6 +69,7 @@ class Request
     {
       Request::$instance = new Request;
     }
+
     return Request::$instance;
   }
 
@@ -249,7 +245,7 @@ class Request
   }
 
   /**
-   * @return string
+   * @return RequestMethod
    */
   public function getMethod(): RequestMethod
   {
