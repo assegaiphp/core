@@ -9,10 +9,15 @@ defined('STDERR') or define('STDERR', fopen('php://stderr', 'wb'));
 
 class Log
 {
+  public static function sprint(string $tag, string $message, bool $outputHTML = false, Color $color = Color::BLUE): string
+  {
+    $output = sprintf("<h3 style='color: %s'>%s: </h3><p>%s</p>\n" . PHP_EOL, $color->name(), $tag, $message);
+    return $outputHTML ? $output : strip_tags($output);
+  }
+
   public static function print(string $tag, string $message, bool $outputHTML = false, Color $color = Color::BLUE): void
   {
-    $output = sprintf("<h3 style='color: %s'>%s:\n</h3><p>%s</p>\n" . PHP_EOL, $color->name(), $tag, $message);
-    echo $outputHTML ? $output : strip_tags($output);
+    echo self::sprint($tag, $message, $outputHTML, $color);
   }
 
   public static function debug(string $tag, string $message): void
