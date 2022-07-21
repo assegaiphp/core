@@ -4,13 +4,14 @@ namespace Assegai\Core;
 
 use Assegai\Core\Enumerations\Http\ContextType;
 use Assegai\Core\Http\HttpArgumentsHost;
+use Assegai\Core\Interfaces\IArgumentHost;
 use Assegai\Core\Interfaces\IHttpArgumentsHost;
 use Assegai\Core\Interfaces\IRpcArgumentsHost;
 use Assegai\Core\Interfaces\IWsArgumentsHost;
 use Assegai\Core\RPC\RpcArgumentsHost;
 use Assegai\Core\WebSockets\WsArgumentsHost;
 
-class ArgumentsHost
+class ArgumentsHost implements IArgumentHost
 {
   public function __construct(protected ContextType $contextType = ContextType::HTTP)
   {
