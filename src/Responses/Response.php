@@ -2,11 +2,13 @@
 
 namespace Assegai\Core\Responses;
 
+use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Http\HttpStatusCode;
 use JetBrains\PhpStorm\ArrayShape;
 use stdClass;
 
+#[Injectable()]
 class Response
 {
   protected static ?Response $instance = null;
@@ -16,6 +18,7 @@ class Response
   private final function __construct()
   {
     $this->contentType = ContentType::JSON;
+    $this->body = new stdClass();
   }
 
   /**
@@ -124,10 +127,10 @@ class Response
   }
 
   /**
-   * @param string $body
+   * @param string|array|stdClass $body
    * @return void
    */
-  public function setBody(string $body): void
+  public function setBody(string|array|stdClass $body): void
   {
     $this->body = $body;
   }

@@ -4,6 +4,7 @@ namespace Assegai\Core\Http;
 
 //use Assegai\Lib\Authentication\JWT\JWTToken;
 use Assegai\Core\App;
+use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Config;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use JetBrains\PhpStorm\ArrayShape;
@@ -13,18 +14,42 @@ use stdClass;
  * The **Request** class represents the HTTP request and has properties for
  * the request query string, parameters, HTTP headers, and body
  */
+#[Injectable()]
 class Request
 {
   protected mixed $body = null;
   protected array $allHeaders = [];
   protected ?App $app = null;
   protected RequestMethod $requestMethod;
+  protected ?string $scheme;
+  protected ?string $host;
   protected string $path;
+  protected ?Query $query;
+  protected string $uri;
+  protected array $params = [];
 
   protected static ?Request $instance = null;
 
   private final function __construct()
   {
+    $this->uri = $_SERVER['REQUEST_URI'];
+    $parsedUrl = parse_url($this->uri);
+
+    $scheme = null;
+    $host = null;
+    $path = null;
+    $query = null;
+
+    if (is_array($parsedUrl))
+    {
+      extract($parsedUrl);
+    }
+
+    $this->scheme = $scheme ?? ($_SERVER['REQUEST_SCHEME'] ?? 'http');
+    $this->host = $host ?? ($_SERVER['REMOTE_HOST'] ?? 'localhost');
+    $this->path = $path;
+    $this->query = new Query();
+
     $this->requestMethod = match ($_SERVER['REQUEST_METHOD']) {
       'POST' => RequestMethod::POST,
       'PUT' => RequestMethod::PUT,
@@ -34,7 +59,7 @@ class Request
       'OPTIONS' => RequestMethod::OPTIONS,
        default => RequestMethod::GET
     };
-    $this->path = str_replace('/^\//', '', ($_GET['path'] ?? ''));
+    $this->path = str_replace('/^\//', '', $this->path);
 
     $this->body = match ($this->getMethod()) {
       RequestMethod::GET      => $_GET,
@@ -170,13 +195,22 @@ class Request
   /**
    * @return string
    */
-  public function getPath(): string
+  public function getUri(): string
   {
-    return $this->path ?? '';
+    return $this->uri;
   }
 
   /**
    * @return string
+   */
+  public function getPath(): string
+  {
+    return $this->path ?? $_SERVER['PATH_INFO'];
+  }
+
+  /**
+   * @return string
+   * @deprecated No longer used by internal code and not recommended.
    */
   public function path(): string
   {
@@ -273,15 +307,28 @@ class Request
    */
   public function getProtocol(): string
   {
-    return $_SERVER['REQUEST_SCHEME'] ?? 'http';
+    return $this->scheme ?? $_SERVER['REQUEST_SCHEME'];
   }
 
   /**
-   * @return string
+   * @return array
    */
-  public function getQuery(): string
+  public function getParams(): array
   {
-    return $_SERVER['QUERY_STRING'] ?? '';
+    return $this->params ?? [];
+  }
+
+  /**
+   * @return Query
+   */
+  public function getQuery(): Query
+  {
+    if (!$this->query)
+    {
+      $this->query = new Query();
+    }
+
+    return $this->query;
   }
 
   /**
@@ -325,6 +372,15 @@ class Request
     }
 
     return $tokenString;
+  }
+
+  /**
+   * @param string $path
+   * @return void
+   */
+  public function extractParams(string $path): void
+  {
+    // TODO: Implement extractParams()
   }
 }
 
