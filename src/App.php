@@ -2,13 +2,16 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
+use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Http\Request;
 use Assegai\Core\Responses\Responder;
 use Assegai\Core\Responses\Response;
 use Exception;
 use ReflectionAttribute;
+use ReflectionClass;
 use ReflectionException;
 
 /**
@@ -24,8 +27,14 @@ class App
    * @var ReflectionAttribute[] $modules
    */
   protected array $modules = [];
-  protected array $providers = [];
+  /**
+   * @var ReflectionClass[] $providers
+   */
   protected array $controllers = [];
+  /**
+   * @var string[] $providers
+   */
+  protected array $providers = [];
   protected array $controllerMap = [];
   protected ?AppConfig $config = null;
 
@@ -33,6 +42,7 @@ class App
   protected Request $request;
   protected Response $response;
   protected Responder $responder;
+  protected ?object $activatedController;
 
   /**
    * @param string $rootModuleClass
@@ -125,26 +135,30 @@ class App
   }
 
   /**
+   * Processes the incoming client request.
    * @return void
-   * @throws Exceptions\Container\ContainerException
-   * @throws Exceptions\Http\NotFoundException
+   * @throws ContainerException
+   * @throws NotFoundException
    * @throws HttpException
    * @throws ReflectionException
    */
   private function handleRequest(): void
   {
     $this->request = $this->router->route(url: $this->request->getUri());
-    $activatedController =
+    $this->activatedController =
       $this->router->getActivatedController(request: $this->request, controllerTokensList: $this->controllers);
-    $this->response = $this->router->handleRequest(request: $this->request, controller: $activatedController);
   }
 
   /**
    * Responds to the client's request.
    * @return void
+   * @throws ContainerException
+   * @throws NotFoundException
+   * @throws ReflectionException
    */
   private function handleResponse(): void
   {
+    $this->response = $this->router->handleRequest(request: $this->request, controller: $this->activatedController);
     $this->responder->respond(response: $this->response);
   }
 }
