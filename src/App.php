@@ -59,6 +59,10 @@ class App
     $this->responder = Responder::getInstance();
   }
 
+  /**
+   * @param AppConfig|array|null $config
+   * @return $this
+   */
   public function configure(null|AppConfig|array $config = null): App
   {
     if ($config instanceof  AppConfig)
