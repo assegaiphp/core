@@ -2,8 +2,16 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Attributes\Delete;
+use Assegai\Core\Attributes\Get;
+use Assegai\Core\Attributes\Head;
+use Assegai\Core\Attributes\Options;
 use Assegai\Core\Attributes\Param;
+use Assegai\Core\Attributes\Patch;
+use Assegai\Core\Attributes\Post;
+use Assegai\Core\Attributes\Put;
 use Assegai\Core\Attributes\Queries;
+use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
@@ -208,7 +216,6 @@ final class Router
   public function canActivateHandler(ReflectionMethod $handler, object $controller, Request $request): bool
   {
     $path = $request->getPath();
-//    $path = str_starts_with($request->getPath(), '/') ? substr($request->getPath(), 1): $request->getPath();
     $controllerPrefix = $this->getControllerPrefix(controller: $controller);
     $handlerPath = $this->getHandlerPath(handler: $handler);
 
@@ -224,11 +231,54 @@ final class Router
 
     $requestMapperClassFound = false;
     /** @var ReflectionAttribute $attribute */
-    foreach ($attributes as $ignored)
+    foreach ($attributes as $attribute)
     {
       if ($this->isPathMatch(pattern: $pattern, path: $path))
       {
-        $requestMapperClassFound = true;
+        switch($request->getMethod())
+        {
+          case RequestMethod::OPTIONS:
+            if ($attribute->getName() === Options::class)
+            {
+              $requestMapperClassFound = true;
+            }
+            break;
+          case RequestMethod::GET:
+            if ($attribute->getName() === Get::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            {
+              $requestMapperClassFound = true;
+            }
+            break;
+          case RequestMethod::POST:
+            if ($attribute->getName() === Post::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            {
+              $requestMapperClassFound = true;
+            }
+            break;
+          case RequestMethod::PUT:
+            if ($attribute->getName() === Put::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            {
+              $requestMapperClassFound = true;
+            }
+            break;
+          case RequestMethod::PATCH:
+            if ($attribute->getName() === Patch::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            {
+              $requestMapperClassFound = true;
+            }
+            break;
+          case RequestMethod::DELETE:
+            if ($attribute->getName() === Delete::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            {
+              $requestMapperClassFound = true;
+            }
+            break;
+          case RequestMethod::HEAD:
+            if ($attribute->getName() === Head::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            {
+              $requestMapperClassFound = true;
+            }
+        }
       }
     }
 
