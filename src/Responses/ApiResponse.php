@@ -43,7 +43,7 @@ class ApiResponse
 
   public function __toString(): string
   {
-    return $this->toJSON();
+    return is_string($this->data) ? $this->data : $this->toJSON();
   }
 
   private function getTotal(): int
