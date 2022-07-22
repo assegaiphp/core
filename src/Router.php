@@ -244,37 +244,37 @@ final class Router
             }
             break;
           case RequestMethod::GET:
-            if ($attribute->getName() === Get::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            if ($attribute->getName() === Get::class)
             {
               $requestMapperClassFound = true;
             }
             break;
           case RequestMethod::POST:
-            if ($attribute->getName() === Post::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            if ($attribute->getName() === Post::class)
             {
               $requestMapperClassFound = true;
             }
             break;
           case RequestMethod::PUT:
-            if ($attribute->getName() === Put::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            if ($attribute->getName() === Put::class)
             {
               $requestMapperClassFound = true;
             }
             break;
           case RequestMethod::PATCH:
-            if ($attribute->getName() === Patch::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            if ($attribute->getName() === Patch::class)
             {
               $requestMapperClassFound = true;
             }
             break;
           case RequestMethod::DELETE:
-            if ($attribute->getName() === Delete::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            if ($attribute->getName() === Delete::class)
             {
               $requestMapperClassFound = true;
             }
             break;
           case RequestMethod::HEAD:
-            if ($attribute->getName() === Head::class && $this->isPathMatch(pattern: $pattern, path: $path))
+            if ($attribute->getName() === Head::class)
             {
               $requestMapperClassFound = true;
             }
@@ -390,7 +390,12 @@ final class Router
    */
   private function getPathMatchingPattern(string $path): string
   {
-    return preg_replace('/:\w+/', '(\w+)', $path);
+    if (str_ends_with($path, '/'))
+    {
+      $path = preg_replace('/\/$/', '', $path);
+    }
+
+    return preg_replace('/(\/?):\w+/', '$1(\w+)', $path);
   }
 
   /**
@@ -400,7 +405,11 @@ final class Router
    */
   private function isPathMatch(string $pattern, string $path): bool
   {
+    $path = preg_replace('/^\//', '', $path);
     $pattern = str_replace('/', '\/', $pattern);
-    return preg_match_all("/$pattern/", $path) !== false;
+    $matches = [];
+    $result = preg_match_all("/$pattern/", $path, $matches);
+
+    return boolval($result) === true;
   }
 }
