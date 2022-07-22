@@ -59,7 +59,7 @@ final class Router
 
   /**
    * @param Request $request
-   * @param array $controllerTokensList
+   * @param ReflectionClass[] $controllerTokensList
    * @return object
    * @throws ContainerException
    * @throws NotFoundException

@@ -112,7 +112,7 @@ class ModuleManager
   }
 
   /**
-   * @return array
+   * @return string[] Returns a list of Provider tokenIds
    * @throws EntryNotFoundException
    */
   public function buildProviderTokensList(): array
