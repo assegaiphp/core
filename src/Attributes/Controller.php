@@ -1,6 +1,6 @@
 <?php
 
-namespace Assgai\Core\Attributes;
+namespace Assegai\Core\Attributes;
 
 use Attribute;
 

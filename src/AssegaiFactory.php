@@ -14,7 +14,8 @@ final class AssegaiFactory
       rootModuleClass: $moduleName,
       router: Router::getInstance(),
       controllerManager: ControllerManager::getInstance(),
-      moduleManager: ModuleManager::getInstance()
+      moduleManager: ModuleManager::getInstance(),
+      injector: Injector::getInstance(),
     );
   }
 }

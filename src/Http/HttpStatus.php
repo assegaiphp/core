@@ -1,38 +1,35 @@
 <?php
 
-namespace Assegai\Core\Responses;
-
-class HttpStatusCode
-{
-  public function __construct(
-    private int $code,
-    private string $name,
-    private string $description,
-  ) { }
-
-  public function __toString(): string
-  {
-    return "$this->code - $this->name";
-  }
-
-  public function code(): int
-  {
-    return $this->code;
-  }
-
-  public function name(): string
-  {
-    return $this->name;
-  }
-
-  public function description(): string
-  {
-    return $this->description;
-  }
-}
+namespace Assegai\Core\Http;
 
 class HttpStatus
 {
+  public static function fromInt(int $code): HttpStatusCode
+  {
+    return match($code) {
+      100 => self::Continue(),
+      201 => self::Created(),
+      202 => self::Accepted(),
+      204 => self::NoContent(),
+      400 => self::BadRequest(),
+      401 => self::Unauthorized(),
+      403 => self::Forbidden(),
+      404 => self::NotFound(),
+      405 => self::MethodNotAllowed(),
+      409 => self::Conflict(),
+      500 => self::InternalServerError(),
+      501 => self::NotImplemented(),
+      503 => self::ServiceUnavailable(),
+      default => self::OK()
+    };
+  }
+
+  /**
+   * This interim response indicates that everything so far is OK and that the client should continue the request,
+   * or ignore the response if the request is already finished.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
+   */
   public static function Continue(): HttpStatusCode
   {
     return new HttpStatusCode(
@@ -49,6 +46,8 @@ class HttpStatus
    * - `HEAD`: The representation headers are included in the response without any message body.
    * - `PUT` or `POST`: The resource describing the result of the action is transmitted in the message body.
    * - `TRACE`: The message body contains the request message as received by the server.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function OK(): HttpStatusCode
   {
@@ -93,8 +92,10 @@ class HttpStatus
 
   /**
    * There is no content to send for this request, but the headers may 
-   * be useful. The user-agent may update its cached headers for this 
+   * be useful. The user-agent may update its cached headers for this
    * resource with the new ones.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function NoContent(): HttpStatusCode {
     return new HttpStatusCode(
@@ -106,6 +107,8 @@ class HttpStatus
 
   /**
    * The server could not understand the request due to invalid syntax.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function BadRequest(): HttpStatusCode {
     return new HttpStatusCode(
@@ -119,6 +122,8 @@ class HttpStatus
    * Although the HTTP standard specifies "unauthorized", semantically 
    * this response means "unauthenticated". That is, the client must 
    * authenticate itself to get the requested response.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function Unauthorized(): HttpStatusCode {
     return new HttpStatusCode(
@@ -132,6 +137,8 @@ class HttpStatus
    * The client does not have access rights to the content; that is, it is 
    * unauthorized, so the server is refusing to give the requested 
    * resource. Unlike 401, the client's identity is known to the server.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function Forbidden(): HttpStatusCode {
     return new HttpStatusCode(
@@ -148,6 +155,8 @@ class HttpStatus
    * may also send this response instead of 403 to hide the existence of a 
    * resource from an unauthorized client. This response code is probably 
    * the most famous one due to its frequent occurrence on the web.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function NotFound(): HttpStatusCode {
     return new HttpStatusCode(
@@ -160,6 +169,8 @@ class HttpStatus
   /**
    * The request method is known by the server but is not supported by the 
    * target resource. For example, an API may forbid DELETE-ing a resource.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function MethodNotAllowed(): HttpStatusCode {
     return new HttpStatusCode(
@@ -171,6 +182,8 @@ class HttpStatus
 
   /**
    * This response is sent when a request conflicts with the current state of the server.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function Conflict(): HttpStatusCode {
     return new HttpStatusCode(
@@ -182,6 +195,8 @@ class HttpStatus
 
   /**
    * The server has encountered a situation it doesn't know how to handle.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function InternalServerError(): HttpStatusCode {
     return new HttpStatusCode(
@@ -195,12 +210,29 @@ class HttpStatus
    * The request method is not supported by the server and cannot be handled. 
    * The only methods that servers are required to support (and therefore 
    * that must not return this code) are GET and HEAD.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function NotImplemented(): HttpStatusCode {
     return new HttpStatusCode(
       code: 501,
       name: 'Not Implemented',
       description: 'The request method is not supported by the server and cannot be handled. The only methods that servers are required to support (and therefore that must not return this code) are GET and HEAD.'
+    );
+  }
+
+  /**
+   * This error response means that the server, while working as a gateway to get a response needed to handle
+   * the request, got an invalid response.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
+   */
+  public static function BadGateway(): HttpStatusCode
+  {
+    return new HttpStatusCode(
+      code: 502,
+      name: 'Bad Gateway',
+      description: 'This error response means that the server, while working as a gateway to get a response needed to handle the request, got an invalid response.'
     );
   }
 
@@ -214,13 +246,19 @@ class HttpStatus
    * webmaster must also take care about the caching-related headers that 
    * are sent along with this response, as these temporary condition 
    * responses should usually not be cached.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
    */
   public static function ServiceUnavailable(): HttpStatusCode {
     return new HttpStatusCode(
       code: 503,
       name: 'Service Unavailable',
-      description: 'The server is not ready to handle the request. Common causes are a server that is down for maintenance or that is overloaded. Note that together with this response, a user-friendly page explaining the problem should be sent. This response should be used for temporary conditions and the Retry-After: HTTP header should, if possible, contain the estimated time before the recovery of the service. The webmaster must also take care about the caching-related headers that are sent along with this response, as these temporary condition responses should usually not be cached.'
+      description: 'The server is not ready to handle the request. Common causes are a server that is down for ' .
+        'maintenance or that is overloaded. Note that together with this response, a user-friendly page explaining ' .
+        'the problem should be sent. This response should be used for temporary conditions and the Retry-After: ' .
+        'HTTP header should, if possible, contain the estimated time before the recovery of the service. The ' .
+        'webmaster must also take care about the caching-related headers that are sent along with this response, ' .
+        'as these temporary condition responses should usually not be cached.'
     );
   }
 }
-
