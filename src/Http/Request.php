@@ -14,7 +14,7 @@ use stdClass;
  * The **Request** class represents the HTTP request and has properties for
  * the request query string, parameters, HTTP headers, and body
  */
-#[Injectable()]
+#[Injectable]
 class Request
 {
   protected mixed $body = null;
@@ -38,7 +38,6 @@ class Request
     $scheme = null;
     $host = null;
     $path = null;
-    $query = null;
 
     if (is_array($parsedUrl))
     {
@@ -297,14 +296,6 @@ class Request
   /**
    * @return string
    */
-  public function getRemoteIps(): string
-  {
-    return '';
-  }
-
-  /**
-   * @return string
-   */
   public function getProtocol(): string
   {
     return $this->scheme ?? $_SERVER['REQUEST_SCHEME'];
@@ -376,11 +367,25 @@ class Request
 
   /**
    * @param string $path
+   * @param string $pattern
    * @return void
    */
-  public function extractParams(string $path): void
+  public function extractParams(string $path, string $pattern): void
   {
-    // TODO: Implement extractParams()
+    $pattern = str_replace('/', '\/', $pattern);
+    $params = [];
+    if (preg_match_all("/$pattern/", $path, $matches))
+    {
+      if (count($matches) > 1)
+      {
+        $params = $matches[1];
+      }
+    }
+
+    foreach ($params as $key => $param)
+    {
+      $this->params[$key] = $param;
+    }
   }
 }
 
