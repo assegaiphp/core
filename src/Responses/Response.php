@@ -109,9 +109,9 @@ class Response
   }
 
   /**
-   * @return string
+   * @return string|array|stdClass
    */
-  public function body(): string
+  public function getBody(): string|array|stdClass
   {
     return $this->body;
   }
@@ -124,6 +124,14 @@ class Response
   {
     $this->contentType = ContentType::JSON;
     header('Content-Type: ' . $this->contentType->value);
+  }
+
+  /**
+   * @return ContentType
+   */
+  public function getContentType(): ContentType
+  {
+    return $this->contentType;
   }
 
   /**

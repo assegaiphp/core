@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Responses;
 
+use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Request;
@@ -33,6 +34,10 @@ class Responder
     $this->setResponseCode($code);
     $responseString = match(true) {
       is_countable($response) => new ApiResponse(data: $response),
+      ($response instanceof Response) => match($response->getContentType()) {
+        ContentType::JSON => new ApiResponse(data: $response->getBody()),
+        default => $response->getBody()
+      },
       default => $response
     };
 
