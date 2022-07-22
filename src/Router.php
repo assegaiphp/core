@@ -48,12 +48,10 @@ final class Router
   }
 
   /**
-   * @param string $url
    * @return Request
    */
-  public function route(string $url): Request
+  public function route(): Request
   {
-    // TODO: Implement route()
     return Request::getInstance();
   }
 
@@ -243,36 +241,42 @@ final class Router
               $requestMapperClassFound = true;
             }
             break;
+
           case RequestMethod::GET:
             if ($attribute->getName() === Get::class)
             {
               $requestMapperClassFound = true;
             }
             break;
+
           case RequestMethod::POST:
             if ($attribute->getName() === Post::class)
             {
               $requestMapperClassFound = true;
             }
             break;
+
           case RequestMethod::PUT:
             if ($attribute->getName() === Put::class)
             {
               $requestMapperClassFound = true;
             }
             break;
+
           case RequestMethod::PATCH:
             if ($attribute->getName() === Patch::class)
             {
               $requestMapperClassFound = true;
             }
             break;
+
           case RequestMethod::DELETE:
             if ($attribute->getName() === Delete::class)
             {
               $requestMapperClassFound = true;
             }
             break;
+
           case RequestMethod::HEAD:
             if ($attribute->getName() === Head::class)
             {
@@ -319,7 +323,10 @@ final class Router
               $paramAttributeArgs = $paramAttribute->getArguments();
               if (empty($paramAttributeArgs))
               {
-                $dependencies[$param->getPosition()] = json_encode($request->getParams());
+                $dependencies[$param->getPosition()]
+                  = ($param->getType()->getName() === 'string')
+                  ? json_encode($request->getParams())
+                  : (object)$request->getParams();
               }
               else
               {
