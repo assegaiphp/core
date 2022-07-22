@@ -11,7 +11,7 @@ class Query extends stdClass
 
   public function __construct()
   {
-    $this->raw = $_SERVER['QUERY_STRING'];
+    $this->raw = $_SERVER['QUERY_STRING'] ?? '';
 
     $this->props = [];
     parse_str($this->raw, $this->props);
@@ -22,8 +22,8 @@ class Query extends stdClass
     }
   }
 
-  public function getProps(): array
+  public function getProps(?string $key = null): array|string
   {
-    return $this->props;
+    return $this->props[$key] ?? $this->props;
   }
 }
