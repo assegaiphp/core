@@ -2,6 +2,8 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Attributes\Param;
+use Assegai\Core\Attributes\Queries;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
@@ -162,21 +164,19 @@ final class Router
    * @param ReflectionMethod[] $handlers
    * @param object $controller
    * @param Request $request
-   * @return ReflectionMethod
+   * @return ReflectionMethod|null
    */
-  public function getActivatedHandler(array $handlers, object $controller, Request $request): ReflectionMethod
+  public function getActivatedHandler(array $handlers, object $controller, Request $request): ?ReflectionMethod
   {
-    $activatedHandler = null;
-
     foreach ($handlers as $handler)
     {
       if ($this->canActivateHandler(handler: $handler, controller: $controller, request: $request))
       {
-        $activatedHandler = $handler;
+        return $handler;
       }
     }
 
-    return $activatedHandler;
+    return null;
   }
 
   /**
@@ -207,14 +207,13 @@ final class Router
    */
   public function canActivateHandler(ReflectionMethod $handler, object $controller, Request $request): bool
   {
-    $request = Request::getInstance();
-    $path = str_starts_with($request->getPath(), '/') ? substr($request->getPath(), 1): $request->getPath();
+    $path = $request->getPath();
+//    $path = str_starts_with($request->getPath(), '/') ? substr($request->getPath(), 1): $request->getPath();
     $controllerPrefix = $this->getControllerPrefix(controller: $controller);
     $handlerPath = $this->getHandlerPath(handler: $handler);
 
-    $request->extractParams(path: $handlerPath);
-
     $pattern = $this->getPathMatchingPattern(path: "$controllerPrefix/$handlerPath");
+    $request->extractParams(path: $path, pattern: $pattern);
 
     $attributes = $handler->getAttributes();
 
@@ -225,7 +224,7 @@ final class Router
 
     $requestMapperClassFound = false;
     /** @var ReflectionAttribute $attribute */
-    foreach ($attributes as $attribute)
+    foreach ($attributes as $ignored)
     {
       if ($this->isPathMatch(pattern: $pattern, path: $path))
       {
@@ -241,19 +240,52 @@ final class Router
    * @param object $controller
    * @return Response
    * @throws ContainerException
-   * @throws ReflectionException
+   * @throws ReflectionException|NotFoundException
    */
   public function handleRequest(Request $request, object $controller): Response
   {
     $handlers = $this->getControllerHandlers(controller: $controller);
     $activatedHandler = $this->getActivatedHandler(handlers: $handlers, controller: $controller, request: $request);
 
+    if (!$activatedHandler)
+    {
+      throw new NotFoundException($request->getPath());
+    }
+
     $params = $activatedHandler->getParameters();
     $dependencies = [];
 
     foreach ($params as $param)
     {
-      $dependencies[] = $this->injector->resolve($param->getType()->getName());
+      if ($param->getType()->isBuiltin())
+      {
+        $paramAttributes = $param->getAttributes();
+
+        foreach ($paramAttributes as $paramAttribute)
+        {
+          switch ($paramAttribute->getName())
+          {
+            case Param::class:
+              $paramAttributeArgs = $paramAttribute->getArguments();
+              if (empty($paramAttributeArgs))
+              {
+                $dependencies[$param->getPosition()] = json_encode($request->getParams());
+              }
+              else
+              {
+                $dependencies[$param->getPosition()] = $request->getParams()[$param->getPosition()] ?? null;
+              }
+              break;
+
+            case Queries::class:
+              break;
+          }
+        }
+      }
+      else
+      {
+        $dependencies[$param->getPosition()] = $this->injector->resolve($param->getType()->getName());
+      }
     }
 
     $result = $activatedHandler->invokeArgs($controller, $dependencies);
@@ -275,7 +307,14 @@ final class Router
    */
   private function getControllerPrefix(object $controller): string
   {
-    // TODO: Implement getControllerPrefix()
+    $reflectionController = new ReflectionClass($controller);
+    $attributes = $reflectionController->getAttributes(Controller::class);
+
+    foreach ($attributes as $attribute)
+    {
+      $instance = $attribute->newInstance();
+      return $instance->path;
+    }
 
     return '';
   }
@@ -286,7 +325,11 @@ final class Router
    */
   private function getHandlerPath(ReflectionMethod $handler): string
   {
-    // TODO: Implement getHandlerPath()
+    $attributes = $handler->getAttributes();
+    foreach ($attributes as $attribute)
+    {
+      return $attribute->newInstance()->path;
+    }
 
     return '';
   }
@@ -297,9 +340,7 @@ final class Router
    */
   private function getPathMatchingPattern(string $path): string
   {
-    // TODO: Implement getPathMatchingPattern()
-
-    return '';
+    return preg_replace('/:\w+/', '(\w+)', $path);
   }
 
   /**
@@ -309,6 +350,7 @@ final class Router
    */
   private function isPathMatch(string $pattern, string $path): bool
   {
-    return true;
+    $pattern = str_replace('/', '\/', $pattern);
+    return preg_match_all("/$pattern/", $path) !== false;
   }
 }
