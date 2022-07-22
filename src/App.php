@@ -144,7 +144,7 @@ class App
    */
   private function handleRequest(): void
   {
-    $this->request = $this->router->route(url: $this->request->getUri());
+    $this->request = $this->router->route();
     $this->activatedController =
       $this->router->getActivatedController(request: $this->request, controllerTokensList: $this->controllers);
   }

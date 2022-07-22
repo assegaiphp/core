@@ -372,13 +372,21 @@ class Request
    */
   public function extractParams(string $path, string $pattern): void
   {
+    if (str_starts_with($path, '/'))
+    {
+      $path = substr($path, 1);
+    }
     $pattern = str_replace('/', '\/', $pattern);
     $params = [];
-    if (preg_match_all("/$pattern/", $path, $matches))
+    if (preg_match("/$pattern/", $path, $matches))
     {
       if (count($matches) > 1)
       {
-        $params = $matches[1];
+        $totalMatches = count($matches);
+        for ($x = 1; $x < $totalMatches; ++$x)
+        {
+          $params[] = $matches[$x];
+        }
       }
     }
 
