@@ -42,7 +42,8 @@ class HttpException extends Exception
   {
     return json_encode((! is_string($this->response)) ? $this->response : [
       'statusCode' => $this->status->code,
-      'message' => $this->response ?? $this->status->name
+      'message' => $this->response ?? $this->status->name,
+      'error' => $this->status->name
     ]);
   }
 

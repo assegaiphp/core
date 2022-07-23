@@ -8,7 +8,7 @@ use Assegai\Core\Http\HttpStatusCode;
 use JetBrains\PhpStorm\ArrayShape;
 use stdClass;
 
-#[Injectable()]
+#[Injectable]
 class Response
 {
   protected static ?Response $instance = null;

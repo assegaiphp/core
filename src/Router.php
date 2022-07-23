@@ -2,6 +2,7 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Attributes\Body;
 use Assegai\Core\Attributes\Delete;
 use Assegai\Core\Attributes\Get;
 use Assegai\Core\Attributes\Head;
@@ -11,18 +12,24 @@ use Assegai\Core\Attributes\Patch;
 use Assegai\Core\Attributes\Post;
 use Assegai\Core\Attributes\Put;
 use Assegai\Core\Attributes\Queries;
+use Assegai\Core\Attributes\Req;
+use Assegai\Core\Attributes\Res;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Container\ContainerException;
+use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Http\Request;
 use Assegai\Core\Responses\Response;
+use Assegai\Core\Util\Types;
 use Assegai\Core\Util\Validator;
 use Assegai\Core\Attributes\Controller;
+use PharIo\Manifest\Type;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+use stdClass;
 
 final class Router
 {
@@ -294,7 +301,7 @@ final class Router
    * @param object $controller
    * @return Response
    * @throws ContainerException
-   * @throws ReflectionException|NotFoundException
+   * @throws ReflectionException|NotFoundException|EntryNotFoundException
    */
   public function handleRequest(Request $request, object $controller): Response
   {
@@ -311,16 +318,20 @@ final class Router
 
     foreach ($params as $param)
     {
-      if ($param->getType()->isBuiltin())
+      $paramTypeName = $param->getType()->getName();
+      $isStandardClassType = is_subclass_of($paramTypeName, stdClass::class) || $paramTypeName === 'stdClass';
+      if ($param->getType()->isBuiltin() || $isStandardClassType)
       {
+        // TODO: Move this logic to Injector::resolveBuiltin()
         $paramAttributes = $param->getAttributes();
 
         foreach ($paramAttributes as $paramAttribute)
         {
+          $paramAttributeArgs = $paramAttribute->getArguments();
+
           switch ($paramAttribute->getName())
           {
             case Param::class:
-              $paramAttributeArgs = $paramAttribute->getArguments();
               if (empty($paramAttributeArgs))
               {
                 $dependencies[$param->getPosition()]
@@ -335,6 +346,41 @@ final class Router
               break;
 
             case Queries::class:
+              if (empty($paramAttributeArgs))
+              {
+                $dependencies[$param->getPosition()]
+                  = ($param->getType()->getName() === 'string')
+                  ? json_encode($request->getQuery())
+                  : (object)$request->getQuery();
+              }
+              else
+              {
+                $dependencies[$param->getPosition()] = $request->getQuery()[$param->getPosition()] ?? null;
+              }
+              break;
+
+            case Body::class:
+              $body = null;
+              if (empty($paramAttributeArgs))
+              {
+                $body = ($param->getType()->getName() === 'string')
+                  ? json_encode($request->getBody())
+                  : $request->getBody();
+              }
+              else
+              {
+                $key = $param->getName();
+                $body = $request->getBody()->$key ?? null;
+              }
+              $dependencies[$param->getPosition()] = Types::castObjectToUserType($body, $paramTypeName);
+              break;
+
+            case Req::class:
+              $dependencies[$param->getPosition()] = $request;
+              break;
+
+            case Res::class:
+              $dependencies[$param->getPosition()] = Response::getInstance();
               break;
           }
         }
