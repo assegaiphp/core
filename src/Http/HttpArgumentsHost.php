@@ -14,6 +14,9 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   {
   }
 
+  /**
+   * @return HttpArgumentsHost
+   */
   public static function getInstance(): HttpArgumentsHost
   {
     if (!self::$instance)
@@ -33,7 +36,7 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   }
 
   /**
-   * @return \Assegai\Core\Http\Responses\Response
+   * @return Response
    */
   public function getResponse(): Response
   {

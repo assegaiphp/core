@@ -4,6 +4,7 @@ namespace Assegai\Core\Http\Responses;
 
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Enumerations\Http\ContentType;
+use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use JetBrains\PhpStorm\ArrayShape;
 use stdClass;
@@ -14,11 +15,13 @@ class Response
   protected static ?Response $instance = null;
   protected string|array|stdClass $body;
   protected ContentType $contentType;
+  protected HttpStatusCode|int $status;
 
   private final function __construct()
   {
     $this->contentType = ContentType::JSON;
     $this->body = new stdClass();
+    $this->status = http_response_code();
   }
 
   /**
@@ -60,12 +63,20 @@ class Response
   }
 
   /**
-   * @param HttpStatusCode|int $status
-   * @return $this
+   * @return int|HttpStatusCode
    */
-  public function status(HttpStatusCode|int $status): Response
+  public function getStatus(): HttpStatusCode|int
   {
-    return $this;
+    return $this->status;
+  }
+
+  /**
+   * @param HttpStatusCode|int $status
+   * @return void
+   */
+  public function setStatus(HttpStatusCode|int $status): void
+  {
+    $this->status = is_int($status) ? HttpStatus::fromInt($status) : $status;
   }
 
   /**

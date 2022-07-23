@@ -29,9 +29,13 @@ class Responder
     return Request::getInstance();
   }
 
-  public function respond(mixed $response, HttpStatusCode|int|null $code = 200): never
+  public function respond(mixed $response, HttpStatusCode|int|null $code = null): never
   {
-    $this->setResponseCode($code);
+    if ($code)
+    {
+      $this->setResponseCode($code);
+    }
+
     $responseString = match(true) {
       is_countable($response) => new ApiResponse(data: $response),
       ($response instanceof Response) => match($response->getContentType()) {

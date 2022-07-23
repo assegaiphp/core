@@ -48,7 +48,7 @@ final class Router
   }
 
   /**
-   * @return \Assegai\Core\Http\Requests\Request
+   * @return Request
    */
   public function route(): Request
   {
@@ -169,7 +169,7 @@ final class Router
   /**
    * @param ReflectionMethod[] $handlers
    * @param object $controller
-   * @param \Assegai\Core\Http\Requests\Request $request
+   * @param Request $request
    * @return ReflectionMethod|null
    */
   public function getActivatedHandler(array $handlers, object $controller, Request $request): ?ReflectionMethod
@@ -178,6 +178,7 @@ final class Router
     {
       if ($this->canActivateHandler(handler: $handler, controller: $controller, request: $request))
       {
+        $this->parseHandlerAttributes($handler);
         return $handler;
       }
     }
@@ -208,7 +209,7 @@ final class Router
   /**
    * @param ReflectionMethod $handler
    * @param object $controller
-   * @param \Assegai\Core\Http\Requests\Request $request
+   * @param Request $request
    * @return bool
    */
   public function canActivateHandler(ReflectionMethod $handler, object $controller, Request $request): bool
@@ -292,7 +293,7 @@ final class Router
   /**
    * @param Request $request
    * @param object $controller
-   * @return \Assegai\Core\Http\Responses\Response
+   * @return Response
    * @throws ContainerException
    * @throws ReflectionException|NotFoundException|EntryNotFoundException
    */
@@ -395,5 +396,18 @@ final class Router
     $result = preg_match_all("/$pattern/", $path, $matches);
 
     return boolval($result) === true;
+  }
+
+  /**
+   * @param ReflectionMethod $activatedHandler
+   * @return void
+   */
+  private function parseHandlerAttributes(ReflectionMethod $activatedHandler): void
+  {
+    $reflectionAttributes = $activatedHandler->getAttributes();
+    foreach ($reflectionAttributes as $attribute)
+    {
+      $attribute->newInstance();
+    }
   }
 }
