@@ -14,9 +14,10 @@ use Attribute;
 #[Attribute(Attribute::TARGET_METHOD|Attribute::TARGET_FUNCTION)]
 class Get
 {
-  public function __construct(
-    public readonly string $path = ''
-  )
+  /**
+   * @param string $path
+   */
+  public function __construct( public readonly string $path = '')
   {
   }
 }

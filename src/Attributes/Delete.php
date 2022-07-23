@@ -12,6 +12,9 @@ use Attribute;
 #[Attribute(Attribute::TARGET_FUNCTION|Attribute::TARGET_METHOD)]
 class Delete
 {
+  /**
+   * @param string $path
+   */
   public function __construct(public readonly string $path = '')
   {
   }

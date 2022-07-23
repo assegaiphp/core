@@ -12,6 +12,9 @@ class Body
 {
   public string|array|stdClass $value;
 
+  /**
+   * @param string|null $key
+   */
   public function __construct(public readonly ?string $key = null)
   {
     $request = Request::getInstance();
