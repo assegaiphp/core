@@ -3,7 +3,7 @@
 namespace Assegai\Core\Attributes;
 
 use Assegai\Core\Http\HttpStatusCode;
-use Assegai\Core\Responses\Responder;
+use Assegai\Core\Http\Responses\Responder;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_FUNCTION|Attribute::TARGET_METHOD)]

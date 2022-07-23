@@ -1,6 +1,6 @@
 <?php
 
-namespace Assegai\Core\Http;
+namespace Assegai\Core\Http\Requests;
 
 use stdClass;
 

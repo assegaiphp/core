@@ -1,11 +1,11 @@
 <?php
 
-namespace Assegai\Core\Responses;
+namespace Assegai\Core\Http\Responses;
 
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
-use Assegai\Core\Http\Request;
+use Assegai\Core\Http\Requests\Request;
 
 class Responder
 {
