@@ -2,13 +2,21 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Attributes\Body;
 use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Attributes\Param;
+use Assegai\Core\Attributes\Queries;
+use Assegai\Core\Attributes\Req;
+use Assegai\Core\Attributes\Res;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Container\ResolveException;
+use Assegai\Core\Http\Request;
 use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
+use Assegai\Core\Responses\Response;
+use Assegai\Core\Util\Types;
 use ReflectionClass;
 use ReflectionEnum;
 use ReflectionException;
@@ -212,5 +220,66 @@ final class Injector implements ITokenStoreOwner, IContainer
 
       return null;
     }, $parameters);
+  }
+
+  /**
+   * @param ReflectionParameter $param
+   * @param Request $request
+   * @return mixed
+   * @throws EntryNotFoundException
+   */
+  public function resolveBuiltIn(ReflectionParameter $param, Request $request): mixed
+  {
+    $paramTypeName = $param->getType()->getName();
+    $paramAttributes = $param->getAttributes();
+
+    foreach ($paramAttributes as $paramAttribute)
+    {
+      $paramAttributeArgs = $paramAttribute->getArguments();
+
+      switch ($paramAttribute->getName())
+      {
+        case Param::class:
+          if (empty($paramAttributeArgs))
+          {
+            return ($param->getType()->getName() === 'string')
+              ? json_encode($request->getParams())
+              : (object)$request->getParams();
+          }
+          return $request->getParams()[$param->getPosition()] ?? null;
+
+        case Queries::class:
+          if (empty($paramAttributeArgs))
+          {
+            return ($param->getType()->getName() === 'string')
+              ? json_encode($request->getQuery())
+              : (object)$request->getQuery();
+          }
+          return $request->getQuery()[$param->getPosition()] ?? null;
+
+        case Body::class:
+          $body = null;
+          if (empty($paramAttributeArgs))
+          {
+            $body = ($param->getType()->getName() === 'string')
+              ? json_encode($request->getBody())
+              : $request->getBody();
+          }
+          else
+          {
+            $key = $param->getName();
+            $body = $request->getBody()->$key ?? null;
+          }
+          return Types::castObjectToUserType($body, $paramTypeName);
+
+        case Req::class:
+          return $request;
+
+        case Res::class:
+          return Response::getInstance();
+      }
+    }
+
+    return null;
   }
 }

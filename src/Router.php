@@ -320,75 +320,11 @@ final class Router
     {
       $paramTypeName = $param->getType()->getName();
       $isStandardClassType = is_subclass_of($paramTypeName, stdClass::class) || $paramTypeName === 'stdClass';
-      if ($param->getType()->isBuiltin() || $isStandardClassType)
-      {
-        // TODO: Move this logic to Injector::resolveBuiltin()
-        $paramAttributes = $param->getAttributes();
-
-        foreach ($paramAttributes as $paramAttribute)
-        {
-          $paramAttributeArgs = $paramAttribute->getArguments();
-
-          switch ($paramAttribute->getName())
-          {
-            case Param::class:
-              if (empty($paramAttributeArgs))
-              {
-                $dependencies[$param->getPosition()]
-                  = ($param->getType()->getName() === 'string')
-                  ? json_encode($request->getParams())
-                  : (object)$request->getParams();
-              }
-              else
-              {
-                $dependencies[$param->getPosition()] = $request->getParams()[$param->getPosition()] ?? null;
-              }
-              break;
-
-            case Queries::class:
-              if (empty($paramAttributeArgs))
-              {
-                $dependencies[$param->getPosition()]
-                  = ($param->getType()->getName() === 'string')
-                  ? json_encode($request->getQuery())
-                  : (object)$request->getQuery();
-              }
-              else
-              {
-                $dependencies[$param->getPosition()] = $request->getQuery()[$param->getPosition()] ?? null;
-              }
-              break;
-
-            case Body::class:
-              $body = null;
-              if (empty($paramAttributeArgs))
-              {
-                $body = ($param->getType()->getName() === 'string')
-                  ? json_encode($request->getBody())
-                  : $request->getBody();
-              }
-              else
-              {
-                $key = $param->getName();
-                $body = $request->getBody()->$key ?? null;
-              }
-              $dependencies[$param->getPosition()] = Types::castObjectToUserType($body, $paramTypeName);
-              break;
-
-            case Req::class:
-              $dependencies[$param->getPosition()] = $request;
-              break;
-
-            case Res::class:
-              $dependencies[$param->getPosition()] = Response::getInstance();
-              break;
-          }
-        }
-      }
-      else
-      {
-        $dependencies[$param->getPosition()] = $this->injector->resolve($param->getType()->getName());
-      }
+      $dependencies[$param->getPosition()] = match(true) {
+        $param->getType()->isBuiltin(),
+        $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
+        default => $this->injector->resolve($param->getType()->getName())
+      };
     }
 
     $result = $activatedHandler->invokeArgs($controller, $dependencies);
@@ -448,7 +384,9 @@ final class Router
       $path = preg_replace('/\/$/', '', $path);
     }
 
-    return preg_replace('/(\/?):\w+/', '$1(\w+)', $path);
+    $path = str_replace('*', '.*', $path);
+
+    return preg_replace(pattern: '/(\/?):\w+/', replacement: '$1(\w+)', subject: $path);
   }
 
   /**
