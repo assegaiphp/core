@@ -2,8 +2,8 @@
 
 namespace Assegai\Core\Attributes;
 
-use Assegai\Core\Http\Query;
-use Assegai\Core\Http\Request;
+use Assegai\Core\Http\Requests\Query;
+use Assegai\Core\Http\Requests\Request;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_PARAMETER)]

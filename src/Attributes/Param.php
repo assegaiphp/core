@@ -3,10 +3,9 @@
 namespace Assegai\Core\Attributes;
 
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
-use Assegai\Core\Exceptions\Http\HttpException;
-use Assegai\Core\Http\Request;
+use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Responses\Responder;
 use Assegai\Core\Interfaces\IPipeTransform;
-use Assegai\Core\Responses\Responder;
 use Attribute;
 use stdClass;
 
