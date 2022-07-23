@@ -13,6 +13,9 @@ use Attribute;
 #[Attribute(Attribute::TARGET_METHOD|Attribute::TARGET_FUNCTION)]
 class Post
 {
+  /**
+   * @param string $path
+   */
   public function __construct(
     public readonly string $path = ''
   )

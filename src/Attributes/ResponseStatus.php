@@ -9,6 +9,10 @@ use Attribute;
 #[Attribute(Attribute::TARGET_FUNCTION|Attribute::TARGET_METHOD)]
 class ResponseStatus
 {
+  /**
+   * @param HttpStatusCode|int $code
+   * @param Responder|null $responder
+   */
   public function __construct(
     public readonly HttpStatusCode|int $code,
     public readonly ?Responder $responder = null
