@@ -4,7 +4,7 @@ namespace Assegai\Core\Exceptions\Http;
 
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
-use Assegai\Core\Responses\Responder;
+use Assegai\Core\Http\Responses\Responder;
 use Exception;
 use stdClass;
 

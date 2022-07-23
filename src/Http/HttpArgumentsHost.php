@@ -2,8 +2,9 @@
 
 namespace Assegai\Core\Http;
 
+use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IHttpArgumentsHost;
-use Assegai\Core\Responses\Response;
 
 class HttpArgumentsHost implements IHttpArgumentsHost
 {
@@ -32,7 +33,7 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   }
 
   /**
-   * @return Response
+   * @return \Assegai\Core\Http\Responses\Response
    */
   public function getResponse(): Response
   {

@@ -2,7 +2,7 @@
 
 namespace Assegai\Core\Attributes;
 
-use Assegai\Core\Http\Request;
+use Assegai\Core\Http\Requests\Request;
 use Attribute;
 use stdClass;
 

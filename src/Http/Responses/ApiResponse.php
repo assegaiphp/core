@@ -1,8 +1,8 @@
 <?php
 
-namespace Assegai\Core\Responses;
+namespace Assegai\Core\Http\Responses;
 
-use Assegai\Core\Http\Request;
+use Assegai\Core\Http\Requests\Request;
 use JetBrains\PhpStorm\ArrayShape;
 
 class ApiResponse

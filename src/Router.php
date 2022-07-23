@@ -2,29 +2,22 @@
 
 namespace Assegai\Core;
 
-use Assegai\Core\Attributes\Body;
+use Assegai\Core\Attributes\Controller;
 use Assegai\Core\Attributes\Delete;
 use Assegai\Core\Attributes\Get;
 use Assegai\Core\Attributes\Head;
 use Assegai\Core\Attributes\Options;
-use Assegai\Core\Attributes\Param;
 use Assegai\Core\Attributes\Patch;
 use Assegai\Core\Attributes\Post;
 use Assegai\Core\Attributes\Put;
-use Assegai\Core\Attributes\Queries;
-use Assegai\Core\Attributes\Req;
-use Assegai\Core\Attributes\Res;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
-use Assegai\Core\Http\Request;
-use Assegai\Core\Responses\Response;
-use Assegai\Core\Util\Types;
+use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Util\Validator;
-use Assegai\Core\Attributes\Controller;
-use PharIo\Manifest\Type;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
@@ -55,7 +48,7 @@ final class Router
   }
 
   /**
-   * @return Request
+   * @return \Assegai\Core\Http\Requests\Request
    */
   public function route(): Request
   {
@@ -176,7 +169,7 @@ final class Router
   /**
    * @param ReflectionMethod[] $handlers
    * @param object $controller
-   * @param Request $request
+   * @param \Assegai\Core\Http\Requests\Request $request
    * @return ReflectionMethod|null
    */
   public function getActivatedHandler(array $handlers, object $controller, Request $request): ?ReflectionMethod
@@ -215,7 +208,7 @@ final class Router
   /**
    * @param ReflectionMethod $handler
    * @param object $controller
-   * @param Request $request
+   * @param \Assegai\Core\Http\Requests\Request $request
    * @return bool
    */
   public function canActivateHandler(ReflectionMethod $handler, object $controller, Request $request): bool
@@ -299,7 +292,7 @@ final class Router
   /**
    * @param Request $request
    * @param object $controller
-   * @return Response
+   * @return \Assegai\Core\Http\Responses\Response
    * @throws ContainerException
    * @throws ReflectionException|NotFoundException|EntryNotFoundException
    */

@@ -1,6 +1,6 @@
 <?php
 
-namespace Assegai\Core\Responses;
+namespace Assegai\Core\Http\Responses;
 
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Enumerations\Http\ContentType;
