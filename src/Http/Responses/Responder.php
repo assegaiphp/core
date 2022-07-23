@@ -1,11 +1,11 @@
 <?php
 
-namespace Assegai\Core\Responses;
+namespace Assegai\Core\Http\Responses;
 
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
-use Assegai\Core\Http\Request;
+use Assegai\Core\Http\Requests\Request;
 
 class Responder
 {
@@ -29,9 +29,13 @@ class Responder
     return Request::getInstance();
   }
 
-  public function respond(mixed $response, HttpStatusCode|int|null $code = 200): never
+  public function respond(mixed $response, HttpStatusCode|int|null $code = null): never
   {
-    $this->setResponseCode($code);
+    if ($code)
+    {
+      $this->setResponseCode($code);
+    }
+
     $responseString = match(true) {
       is_countable($response) => new ApiResponse(data: $response),
       ($response instanceof Response) => match($response->getContentType()) {

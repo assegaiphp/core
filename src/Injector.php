@@ -11,11 +11,11 @@ use Assegai\Core\Attributes\Res;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Container\ResolveException;
-use Assegai\Core\Http\Request;
+use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
-use Assegai\Core\Responses\Response;
 use Assegai\Core\Util\Types;
 use ReflectionClass;
 use ReflectionEnum;
@@ -224,7 +224,7 @@ final class Injector implements ITokenStoreOwner, IContainer
 
   /**
    * @param ReflectionParameter $param
-   * @param Request $request
+   * @param \Assegai\Core\Http\Requests\Request $request
    * @return mixed
    * @throws EntryNotFoundException
    */

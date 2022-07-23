@@ -20,5 +20,6 @@ class Post
     public readonly string $path = ''
   )
   {
+    http_response_code(201);
   }
 }

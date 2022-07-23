@@ -2,29 +2,22 @@
 
 namespace Assegai\Core;
 
-use Assegai\Core\Attributes\Body;
+use Assegai\Core\Attributes\Controller;
 use Assegai\Core\Attributes\Delete;
 use Assegai\Core\Attributes\Get;
 use Assegai\Core\Attributes\Head;
 use Assegai\Core\Attributes\Options;
-use Assegai\Core\Attributes\Param;
 use Assegai\Core\Attributes\Patch;
 use Assegai\Core\Attributes\Post;
 use Assegai\Core\Attributes\Put;
-use Assegai\Core\Attributes\Queries;
-use Assegai\Core\Attributes\Req;
-use Assegai\Core\Attributes\Res;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
-use Assegai\Core\Http\Request;
-use Assegai\Core\Responses\Response;
-use Assegai\Core\Util\Types;
+use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Util\Validator;
-use Assegai\Core\Attributes\Controller;
-use PharIo\Manifest\Type;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
@@ -185,6 +178,7 @@ final class Router
     {
       if ($this->canActivateHandler(handler: $handler, controller: $controller, request: $request))
       {
+        $this->parseHandlerAttributes($handler);
         return $handler;
       }
     }
@@ -402,5 +396,18 @@ final class Router
     $result = preg_match_all("/$pattern/", $path, $matches);
 
     return boolval($result) === true;
+  }
+
+  /**
+   * @param ReflectionMethod $activatedHandler
+   * @return void
+   */
+  private function parseHandlerAttributes(ReflectionMethod $activatedHandler): void
+  {
+    $reflectionAttributes = $activatedHandler->getAttributes();
+    foreach ($reflectionAttributes as $attribute)
+    {
+      $attribute->newInstance();
+    }
   }
 }
