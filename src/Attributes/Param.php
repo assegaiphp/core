@@ -2,8 +2,11 @@
 
 namespace Assegai\Core\Attributes;
 
+use Assegai\Core\Exceptions\Container\EntryNotFoundException;
+use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Http\Request;
 use Assegai\Core\Interfaces\IPipeTransform;
+use Assegai\Core\Responses\Responder;
 use Attribute;
 use stdClass;
 
@@ -14,11 +17,11 @@ class Param
 
   /**
    * @param string|null $key
-   * @param array|IPipeTransform|null $pipes
+   * @param array|IPipeTransform|string|null $pipes
    */
   public function __construct(
     public readonly ?string $key = null,
-    public readonly null|array|IPipeTransform $pipes = null
+    public readonly array|IPipeTransform|string|null $pipes = null
   )
   {
     $request = Request::getInstance();
@@ -27,7 +30,14 @@ class Param
 
     if ($this->pipes)
     {
-      if (is_array($this->pipes))
+      if(is_string($value))
+      {
+        if (!is_subclass_of($this->pipes, IPipeTransform::class, true))
+        {
+          Responder::getInstance()->respond(new EntryNotFoundException($this->pipes));
+        }
+      }
+      else if (is_array($this->pipes))
       {
         foreach ($this->pipes as $pipe)
         {
