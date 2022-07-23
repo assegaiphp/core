@@ -153,6 +153,7 @@ class App
    * Responds to the client's request.
    * @return void
    * @throws ContainerException
+   * @throws EntryNotFoundException
    * @throws NotFoundException
    * @throws ReflectionException
    */
