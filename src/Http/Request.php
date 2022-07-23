@@ -17,7 +17,7 @@ use stdClass;
 #[Injectable]
 class Request
 {
-  protected mixed $body = null;
+  protected null|stdClass $body = null;
   protected array $allHeaders = [];
   protected ?App $app = null;
   protected RequestMethod $requestMethod;
@@ -48,19 +48,20 @@ class Request
     $this->host = $host ?? ($_SERVER['REMOTE_HOST'] ?? 'localhost');
     $this->path = $path;
     $this->query = new Query();
+    $this->body = new stdClass();
 
     $this->requestMethod = match ($_SERVER['REQUEST_METHOD']) {
-      'POST' => RequestMethod::POST,
-      'PUT' => RequestMethod::PUT,
-      'PATCH' => RequestMethod::PATCH,
-      'DELETE' => RequestMethod::DELETE,
-      'HEAD' => RequestMethod::HEAD,
+      'POST'    => RequestMethod::POST,
+      'PUT'     => RequestMethod::PUT,
+      'PATCH'   => RequestMethod::PATCH,
+      'DELETE'  => RequestMethod::DELETE,
+      'HEAD'    => RequestMethod::HEAD,
       'OPTIONS' => RequestMethod::OPTIONS,
-       default => RequestMethod::GET
+       default  => RequestMethod::GET
     };
     $this->path = str_replace('/^\//', '', $this->path);
 
-    $this->body = match ($this->getMethod()) {
+    $this->body = (object) match ($this->getMethod()) {
       RequestMethod::GET      => $_GET,
       RequestMethod::POST     => !empty($_POST) ? $_POST : ( !empty($_FILES) ? $_FILES : file_get_contents('php://input') ),
       RequestMethod::PUT,
@@ -70,9 +71,9 @@ class Request
       RequestMethod::OPTIONS  => NULL,
     };
 
-    if (isset($this->body['path']))
+    if (isset($this->body->path))
     {
-      unset($this->body['path']);
+      unset($this->body->path);
     }
 
     foreach ($_SERVER as $key => $value)
@@ -245,10 +246,14 @@ class Request
   }
 
   /**
-   * @return mixed
+   * @return stdClass|null
    */
-  public function getBody(): mixed
+  public function getBody(): ?stdClass
   {
+    if (isset($this->body->scalar))
+    {
+      $this->body = json_decode($this->body->scalar);
+    }
     return $this->body;
   }
 
