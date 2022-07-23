@@ -2,6 +2,7 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Attributes\Body;
 use Assegai\Core\Attributes\Delete;
 use Assegai\Core\Attributes\Get;
 use Assegai\Core\Attributes\Head;
@@ -11,18 +12,24 @@ use Assegai\Core\Attributes\Patch;
 use Assegai\Core\Attributes\Post;
 use Assegai\Core\Attributes\Put;
 use Assegai\Core\Attributes\Queries;
+use Assegai\Core\Attributes\Req;
+use Assegai\Core\Attributes\Res;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Container\ContainerException;
+use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Http\Request;
 use Assegai\Core\Responses\Response;
+use Assegai\Core\Util\Types;
 use Assegai\Core\Util\Validator;
 use Assegai\Core\Attributes\Controller;
+use PharIo\Manifest\Type;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+use stdClass;
 
 final class Router
 {
@@ -294,7 +301,7 @@ final class Router
    * @param object $controller
    * @return Response
    * @throws ContainerException
-   * @throws ReflectionException|NotFoundException
+   * @throws ReflectionException|NotFoundException|EntryNotFoundException
    */
   public function handleRequest(Request $request, object $controller): Response
   {
@@ -311,38 +318,13 @@ final class Router
 
     foreach ($params as $param)
     {
-      if ($param->getType()->isBuiltin())
-      {
-        $paramAttributes = $param->getAttributes();
-
-        foreach ($paramAttributes as $paramAttribute)
-        {
-          switch ($paramAttribute->getName())
-          {
-            case Param::class:
-              $paramAttributeArgs = $paramAttribute->getArguments();
-              if (empty($paramAttributeArgs))
-              {
-                $dependencies[$param->getPosition()]
-                  = ($param->getType()->getName() === 'string')
-                  ? json_encode($request->getParams())
-                  : (object)$request->getParams();
-              }
-              else
-              {
-                $dependencies[$param->getPosition()] = $request->getParams()[$param->getPosition()] ?? null;
-              }
-              break;
-
-            case Queries::class:
-              break;
-          }
-        }
-      }
-      else
-      {
-        $dependencies[$param->getPosition()] = $this->injector->resolve($param->getType()->getName());
-      }
+      $paramTypeName = $param->getType()->getName();
+      $isStandardClassType = is_subclass_of($paramTypeName, stdClass::class) || $paramTypeName === 'stdClass';
+      $dependencies[$param->getPosition()] = match(true) {
+        $param->getType()->isBuiltin(),
+        $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
+        default => $this->injector->resolve($param->getType()->getName())
+      };
     }
 
     $result = $activatedHandler->invokeArgs($controller, $dependencies);
@@ -402,7 +384,9 @@ final class Router
       $path = preg_replace('/\/$/', '', $path);
     }
 
-    return preg_replace('/(\/?):\w+/', '$1(\w+)', $path);
+    $path = str_replace('*', '.*', $path);
+
+    return preg_replace(pattern: '/(\/?):\w+/', replacement: '$1(\w+)', subject: $path);
   }
 
   /**
