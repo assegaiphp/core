@@ -6,5 +6,5 @@ use stdClass;
 
 interface IPipeTransform
 {
-  public function transform(mixed $value, null|array|stdClass $metaData): mixed;
+  public function transform(mixed $value, null|array|stdClass $metaData = null): mixed;
 }
