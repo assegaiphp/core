@@ -6,9 +6,15 @@ use Assegai\Core\Http\Requests\Query;
 use Assegai\Core\Http\Requests\Request;
 use Attribute;
 
+/**
+ * Binds the current client request `Query` object to the target parameter.
+ */
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class Queries
 {
+  /**
+   * @var string|Query
+   */
   public string|Query $value;
 
   /**

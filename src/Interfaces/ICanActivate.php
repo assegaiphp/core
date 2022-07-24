@@ -2,7 +2,7 @@
 
 namespace Assegai\Core\Interfaces;
 
-interface IActivateable
+interface ICanActivate
 {
   /**
    * @param IExcecutionContext $context
