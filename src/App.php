@@ -35,13 +35,34 @@ class App
    * @var string[] $providers
    */
   protected array $providers = [];
+  /**
+   * @var array
+   */
   protected array $controllerMap = [];
+  /**
+   * @var AppConfig|null
+   */
   protected ?AppConfig $config = null;
 
+  /**
+   * @var ArgumentsHost
+   */
   protected ArgumentsHost $host;
+  /**
+   * @var Request
+   */
   protected Request $request;
+  /**
+   * @var Response
+   */
   protected Response $response;
+  /**
+   * @var Responder
+   */
   protected Responder $responder;
+  /**
+   * @var object|null
+   */
   protected ?object $activatedController;
 
   /**
@@ -70,6 +91,7 @@ class App
   }
 
   /**
+   * Sets the app configuration to the given configuration properties.
    * @param AppConfig|array|null $config
    * @return $this
    */
@@ -84,6 +106,7 @@ class App
   }
 
   /**
+   * Runs the current application.
    * @return void
    */
   public function run(): void
@@ -107,6 +130,7 @@ class App
   }
 
   /**
+   * Determines which modules will be available in the current execution context.
    * @return void
    * @throws HttpException
    */
@@ -116,6 +140,7 @@ class App
   }
 
   /**
+   * Determines which providers will be available in the current execution context.
    * @return void
    * @throws EntryNotFoundException
    */
@@ -125,6 +150,7 @@ class App
   }
 
   /**
+   * Determines which controllers will be available in the current execution context.
    * @return void
    * @throws EntryNotFoundException
    */
