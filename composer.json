@@ -17,5 +17,7 @@
             "email": "amasiye313@gmail.com"
         }
     ],
-    "require": {}
+    "require": {
+        "psr/log": ">=3.0.0"
+    }
 }
