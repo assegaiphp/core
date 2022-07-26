@@ -42,6 +42,7 @@ class Responder
         ContentType::JSON => new ApiResponse(data: $response->getBody()),
         default => $response->getBody()
       },
+      is_object($response) => json_encode($response),
       default => $response
     };
 
