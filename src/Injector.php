@@ -1,4 +1,6 @@
-<?php
+<?php /** @noinspection ALL */
+
+/** @noinspection ALL */
 
 namespace Assegai\Core;
 
@@ -16,7 +18,9 @@ use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
+use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Types;
+use Assegai\Orm\Attributes\InjectRepository;
 use ReflectionClass;
 use ReflectionEnum;
 use ReflectionException;
@@ -207,13 +211,14 @@ final class Injector implements ITokenStoreOwner, IContainer
 
         # TODO: Check if param has Injectable class or attribute
 
-        # TODO: Check if type has InjectRepository attribute
-//        $repositoryAttributes = $param->getAttributes(InjectRepository::class);
+        $repositoryAttributes = $param->getAttributes(InjectRepository::class);
 
-//        foreach ( $repositoryAttributes as $reflectionRepoAttr )
-//        {
-//          $repoAttr = $reflectionRepoAttr->getArguments();
-//        }
+        foreach ( $repositoryAttributes as $reflectionRepoAttr )
+        {
+          /** @var InjectRepository $injectRepositoryInstance */
+          $injectRepositoryInstance = $reflectionRepoAttr->newInstance();
+          return $injectRepositoryInstance->repository;
+        }
 
         return $this->get($paramType->getName());
       }
@@ -224,7 +229,7 @@ final class Injector implements ITokenStoreOwner, IContainer
 
   /**
    * @param ReflectionParameter $param
-   * @param \Assegai\Core\Http\Requests\Request $request
+   * @param Request $request
    * @return mixed
    * @throws EntryNotFoundException
    */

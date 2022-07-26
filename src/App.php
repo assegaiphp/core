@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection ALL */
 
 namespace Assegai\Core;
 
@@ -10,6 +10,8 @@ use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Exception;
+//use Psr\Log\LoggerAwareInterface;
+//use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
@@ -64,6 +66,10 @@ class App
    * @var object|null
    */
   protected ?object $activatedController;
+  /**
+   * @var LoggerInterface|null
+   */
+  protected ?LoggerInterface $logger = null;
 
   /**
    * @param string $rootModuleClass
@@ -103,6 +109,17 @@ class App
     }
 
     return $this;
+  }
+
+  /**
+   * Sets a logger instance that should be user by the `App` instance.
+   *
+   * @param LoggerInterface $logger
+   * @return void
+   */
+  public function setLogger(LoggerInterface $logger): void
+  {
+    $this->logger = $logger;
   }
 
   /**

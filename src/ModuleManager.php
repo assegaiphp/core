@@ -3,7 +3,7 @@
 namespace Assegai\Core;
 
 use Assegai\Core\Attributes\Injectable;
-use Assegai\Core\Attributes\Module;
+use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Util\Debug\Log;
@@ -51,7 +51,7 @@ class ModuleManager
   }
 
   /**
-   * @throws \Assegai\Core\Exceptions\Http\HttpException
+   * @throws HttpException
    */
   public function buildModuleTokensList(string $rootToken): array
   {

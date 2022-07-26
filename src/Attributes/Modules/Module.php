@@ -1,11 +1,11 @@
 <?php
 
-namespace Assegai\Core\Attributes;
+namespace Assegai\Core\Attributes\Modules;
 
 use Attribute;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-class Module
+class Module extends ModuleMetaData
 {
   /**
    * @param array $providers
@@ -20,5 +20,6 @@ class Module
     public readonly array $exports = [],
   )
   {
+    parent::__construct($this->providers,$this->controllers,$this->imports,$this->exports);
   }
 }
