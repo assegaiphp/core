@@ -10,8 +10,8 @@ use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Exception;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerInterface;
+//use Psr\Log\LoggerAwareInterface;
+//use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
@@ -23,7 +23,7 @@ use ReflectionException;
  *
  * @link https://docs.assegaiphp.com
  */
-class App implements LoggerAwareInterface
+class App
 {
   /**
    * @var ReflectionAttribute[] $modules
