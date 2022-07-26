@@ -18,6 +18,7 @@ use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Util\Validator;
+use Exception;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
@@ -127,7 +128,7 @@ final class Router
   /**
    * @param ReflectionClass $reflectionController
    * @return object Returns an instance of the activated controller
-   * @throws Exceptions\Container\ContainerException
+   * @throws ContainerException
    * @throws ReflectionException
    */
   private function activateController(ReflectionClass $reflectionController): object
@@ -296,6 +297,7 @@ final class Router
    * @return Response
    * @throws ContainerException
    * @throws ReflectionException|NotFoundException|EntryNotFoundException
+   * @throws HttpException
    */
   public function handleRequest(Request $request, object $controller): Response
   {
@@ -321,7 +323,15 @@ final class Router
       };
     }
 
-    $result = $activatedHandler->invokeArgs($controller, $dependencies);
+    try
+    {
+      $result = $activatedHandler->invokeArgs($controller, $dependencies);
+    }
+    catch (Exception $e)
+    {
+      throw new HttpException(message: $e->getMessage());
+    }
+//    exit(var_export([ 'result' => $result ], true) . PHP_EOL);
 
     if ($result instanceof Response)
     {
