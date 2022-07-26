@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection ALL */
 
 namespace Assegai\Core;
 
@@ -15,9 +15,25 @@ class Config
    */
   public static function hydrate(): void
   {
+    $config = [];
+    $workingDirectory = shell_exec('pwd');
+    $configPath = trim($workingDirectory) . '/config/default.php';
+    if (file_exists($configPath))
+    {
+      $config = require($configPath);
+
+      $_ENV = array_merge($_ENV, $config);
+    }
+    $configPath = str_replace('default', 'local', $configPath);
+    if (file_exists($configPath))
+    {
+      $config = require($configPath);
+
+      $_ENV = array_merge($_ENV, $config);
+    }
+
     if (file_exists('.env'))
     {
-      $config = [];
       $env = file('.env');
       foreach ($env as $line)
       {
@@ -42,9 +58,9 @@ class Config
 
     if (!isset($GLOBALS['config']))
     {
-      $defaultConfigPath = 'app/config/default.php';
-      $localConfigPath = 'app/config/local.php';
-      $productionConfigPath = 'app/config/production.php';
+      $defaultConfigPath = 'config/default.php';
+      $localConfigPath = 'config/local.php';
+      $productionConfigPath = 'config/production.php';
 
       $config = file_exists($defaultConfigPath)
         ? require($defaultConfigPath)
