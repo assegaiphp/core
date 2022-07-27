@@ -11,4 +11,17 @@ enum RequestMethod: string
   case DELETE = "DELETE";
   case OPTIONS = "OPTIONS";
   case HEAD = "HEAD";
+
+  static function ALL(): self
+  {
+    return match ($_SERVER['REQUEST_METHOD']) {
+      'POST' => self::POST,
+      'PUT' => self::PUT,
+      'PATCH' => self::PATCH,
+      'DELETE' => self::DELETE,
+      'OPTIONS' => self::OPTIONS,
+      'HEAD' => self::HEAD,
+      default => self::GET
+    };
+  }
 }
