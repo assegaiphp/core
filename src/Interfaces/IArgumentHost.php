@@ -17,6 +17,7 @@ interface IArgumentHost
   public function getArgs(): array;
 
   /**
+   * @param int $index
    * @return array
    */
   public function getArgsByIndex(int $index): array;
