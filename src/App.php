@@ -9,12 +9,15 @@ use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Responder;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Interfaces\IConsumer;
+use Assegai\Core\Routing\Router;
 use Exception;
-//use Psr\Log\LoggerAwareInterface;
-//use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
+
+//use Psr\Log\LoggerAwareInterface;
+//use Psr\Log\LoggerInterface;
 
 /**
  * @since 1.0.0
@@ -98,14 +101,18 @@ class App
 
   /**
    * Sets the app configuration to the given configuration properties.
-   * @param AppConfig|array|null $config
+   * @param mixed $config
    * @return $this
    */
-  public function configure(null|AppConfig|array $config = null): App
+  public function configure(mixed $config = null): App
   {
     if ($config instanceof  AppConfig)
     {
       $this->config = $config;
+    }
+
+    if ($config instanceof IConsumer) {
+
     }
 
     return $this;
