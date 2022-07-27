@@ -1,6 +1,6 @@
 <?php
 
-namespace Assegai\Core;
+namespace Assegai\Core\Routing;
 
 use Assegai\Core\Attributes\Controller;
 use Assegai\Core\Attributes\Delete;
@@ -17,6 +17,7 @@ use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Injector;
 use Assegai\Core\Util\Validator;
 use Exception;
 use ReflectionAttribute;
@@ -402,8 +403,7 @@ final class Router
   {
     $path = preg_replace('/^\//', '', $path);
     $pattern = str_replace('/', '\/', $pattern);
-    $matches = [];
-    $result = preg_match_all("/$pattern/", $path, $matches);
+    $result = preg_match_all("/$pattern/", $path);
 
     return boolval($result) === true;
   }
