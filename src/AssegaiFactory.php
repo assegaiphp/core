@@ -2,6 +2,8 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Routing\Router;
+
 final class AssegaiFactory
 {
   private final function __construct()
