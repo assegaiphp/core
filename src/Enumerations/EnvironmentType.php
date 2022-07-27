@@ -9,4 +9,5 @@ enum EnvironmentType: string
   case QA = 'QA';
   case STAGING = 'STAGING';
   case PRODUCTION = 'PROD';
+  case TEST = 'TEST';
 }

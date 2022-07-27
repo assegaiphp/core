@@ -2,6 +2,7 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Enumerations\EnvironmentType;
 use Exception;
 
 /**
@@ -18,6 +19,8 @@ class Config
     $config = [];
     $workingDirectory = shell_exec('pwd');
     $configPath = trim($workingDirectory) . '/config/default.php';
+    $envPath = trim($workingDirectory) . '/.env';
+
     if (file_exists($configPath))
     {
       $config = require($configPath);
@@ -32,30 +35,6 @@ class Config
       $_ENV = array_merge($_ENV, $config);
     }
 
-    if (file_exists('.env'))
-    {
-      $env = file('.env');
-      foreach ($env as $line)
-      {
-        if (str_contains($line, '='))
-        {
-          list($key, $value) = explode('=', $line);
-
-          # Remove carriage return and/or end line character
-          $key = trim($key);
-
-          # Filter out blank lines
-          if (!empty($key))
-          {
-            $commentPos = strpos($value, ';');
-            $config[$key] = $commentPos !== false ? trim(substr($value, 0, $commentPos)) : trim($value);
-          }
-        }
-      }
-
-      $_ENV = array_merge($_ENV, $config);
-    }
-
     if (!isset($GLOBALS['config']))
     {
       $defaultConfigPath = 'config/default.php';
@@ -66,7 +45,7 @@ class Config
         ? require($defaultConfigPath)
         : [];
 
-      if (Config::environment('ENVIRONMENT') === 'PROD' && file_exists($productionConfigPath))
+      if (Config::environment() === EnvironmentType::PRODUCTION && file_exists($productionConfigPath))
       {
         $productionConfig =
           file_exists($productionConfigPath)
@@ -131,9 +110,18 @@ class Config
    * @return mixed Returns the current configuration value of the given name,
    * or `NULL` if it doesn't exist.
    */
-  public static function environment(string $name): mixed
+  public static function environment(): EnvironmentType|false
   {
-    return $_ENV[$name] ?? NULL;
+    $env = $_ENV['ENV'] ?? null;
+    return match ($env) {
+      'PROD' => EnvironmentType::PRODUCTION,
+      'STAGING' => EnvironmentType::STAGING,
+      'LOCAL' => EnvironmentType::LOCAL,
+      'QA' => EnvironmentType::QA,
+      'DEV' => EnvironmentType::DEVELOP,
+      'TEST' => EnvironmentType::TEST,
+      default => false
+    };
   }
 
   /**
