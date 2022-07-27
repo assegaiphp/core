@@ -4,10 +4,10 @@
 
 namespace Assegai\Core;
 
-use Assegai\Core\Attributes\Body;
+use Assegai\Core\Attributes\Http\Body;
+use Assegai\Core\Attributes\Http\Queries;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Param;
-use Assegai\Core\Attributes\Queries;
 use Assegai\Core\Attributes\Req;
 use Assegai\Core\Attributes\Res;
 use Assegai\Core\Exceptions\Container\ContainerException;
@@ -18,7 +18,6 @@ use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
-use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Types;
 use Assegai\Orm\Attributes\InjectRepository;
 use ReflectionClass;
