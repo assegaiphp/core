@@ -2,13 +2,13 @@
 
 namespace Assegai\Core\Util;
 
-use Assegai\Core\Attributes\Delete;
-use Assegai\Core\Attributes\Get;
-use Assegai\Core\Attributes\Head;
-use Assegai\Core\Attributes\Options;
-use Assegai\Core\Attributes\Patch;
-use Assegai\Core\Attributes\Post;
-use Assegai\Core\Attributes\Put;
+use Assegai\Core\Attributes\Http\Delete;
+use Assegai\Core\Attributes\Http\Get;
+use Assegai\Core\Attributes\Http\Head;
+use Assegai\Core\Attributes\Http\Options;
+use Assegai\Core\Attributes\Http\Patch;
+use Assegai\Core\Attributes\Http\Post;
+use Assegai\Core\Attributes\Http\Put;
 use ReflectionAttribute;
 
 class Validator

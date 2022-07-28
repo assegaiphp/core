@@ -1,17 +1,16 @@
 <?php
 
-namespace Assegai\Core\Attributes;
+namespace Assegai\Core\Attributes\Http;
 
 use Attribute;
 
 /**
- * Route handler (method) Decorator. Routes HTTP PATCH requests to the specified path.
+ * Route handler (method) Decorator. Routes HTTP DELETE requests to the specified path.
  *
  * @see [Routing](https://docs.assegaiphp.com/controllers#routing)
  */
-
 #[Attribute(Attribute::TARGET_FUNCTION|Attribute::TARGET_METHOD)]
-class Patch
+class Delete
 {
   /**
    * @param string $path
