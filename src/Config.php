@@ -185,4 +185,12 @@ class Config
 
     $config->$name = $value;
   }
+
+  /**
+   * @return bool
+   */
+  public static function isDebug(): bool
+  {
+    return filter_var(($_ENV['DEBUG_MODE'] ?? false), FILTER_VALIDATE_BOOL);
+  }
 }
