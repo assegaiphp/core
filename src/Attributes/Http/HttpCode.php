@@ -1,9 +1,8 @@
 <?php
 
-namespace Assegai\Core\Attributes;
+namespace Assegai\Core\Attributes\Http;
 
 use Assegai\Core\Http\HttpStatusCode;
-use Assegai\Core\Http\Responses\Response;
 use Attribute;
 
 #[Attribute]

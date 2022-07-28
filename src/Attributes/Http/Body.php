@@ -1,21 +1,17 @@
 <?php
 
-namespace Assegai\Core\Attributes;
+namespace Assegai\Core\Attributes\Http;
 
-use Assegai\Core\Http\Requests\Query;
+use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Http\Requests\Request;
 use Attribute;
+use stdClass;
 
-/**
- * Binds the current client request `Query` object to the target parameter.
- */
+#[Injectable]
 #[Attribute(Attribute::TARGET_PARAMETER)]
-class Queries
+class Body
 {
-  /**
-   * @var string|Query
-   */
-  public string|Query $value;
+  public string|array|stdClass $value;
 
   /**
    * @param string|null $key
@@ -23,7 +19,7 @@ class Queries
   public function __construct(public readonly ?string $key = null)
   {
     $request = Request::getInstance();
-    $this->value = $request->getQuery();
+    $this->value = $request->getBody();
 
     if (!empty($this->key) )
     {

@@ -2,10 +2,12 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
+use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Responder;
 use Assegai\Core\Http\Responses\Response;
@@ -15,6 +17,7 @@ use Exception;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
+use Throwable;
 
 //use Psr\Log\LoggerAwareInterface;
 //use Psr\Log\LoggerInterface;
@@ -89,6 +92,29 @@ class App
     protected readonly Injector $injector
   )
   {
+    set_exception_handler(function (Throwable $exception) {
+      if ($exception instanceof HttpException)
+      {
+        echo $exception;
+      }
+      else
+      {
+        $status = HttpStatus::fromInt(500);
+        http_response_code($status->code);
+
+        $response = Config::environment() === EnvironmentType::PRODUCTION
+          ? [
+            'statusCode' => $status->code,
+            'message' => $status->name,
+          ]
+          : [
+            'statusCode' => $status->code,
+            'message' =>  $exception->getMessage(),
+            'error' => $status->name,
+          ];
+        echo json_encode($response);
+      }
+    });
     $this->config = new AppConfig();
     $this->host = new ArgumentsHost();
 

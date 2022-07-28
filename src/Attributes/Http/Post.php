@@ -1,6 +1,6 @@
 <?php
 
-namespace Assegai\Core\Attributes;
+namespace Assegai\Core\Attributes\Http;
 
 use Attribute;
 
