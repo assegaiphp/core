@@ -2,10 +2,14 @@
 
 namespace Assegai\Core\Http\Responses;
 
+use Assegai\Core\Config;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Orm\Queries\QueryBuilder\Results\DeleteResult;
+use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
+use Assegai\Orm\Queries\QueryBuilder\Results\UpdateResult;
 
 class Responder
 {
@@ -39,7 +43,12 @@ class Responder
     $responseString = match(true) {
       is_countable($response) => new ApiResponse(data: $response),
       ($response instanceof Response) => match($response->getContentType()) {
-        ContentType::JSON => new ApiResponse(data: $response->getBody()),
+        ContentType::JSON => match (true) {
+          Config::isDebug() => new ApiResponse(data: $response->getBody()),
+          ($response->getBody() instanceof DeleteResult) => strval($response->getBody()->affected),
+          ($response->getBody() instanceof InsertResult),
+          ($response->getBody() instanceof UpdateResult) => json_encode($response->getBody()->identifiers)
+        },
         default => $response->getBody()
       },
       is_object($response) => json_encode($response),
