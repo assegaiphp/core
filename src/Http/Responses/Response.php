@@ -13,7 +13,7 @@ use stdClass;
 class Response
 {
   protected static ?Response $instance = null;
-  protected string|array|stdClass $body;
+  protected string|array|object $body;
   protected ContentType $contentType;
   protected HttpStatusCode|int $status;
 
@@ -120,9 +120,9 @@ class Response
   }
 
   /**
-   * @return string|array|stdClass
+   * @return string|array|object
    */
-  public function getBody(): string|array|stdClass
+  public function getBody(): string|array|object
   {
     return $this->body;
   }
@@ -146,10 +146,10 @@ class Response
   }
 
   /**
-   * @param string|array|stdClass $body
+   * @param string|array|object $body
    * @return void
    */
-  public function setBody(string|array|stdClass $body): void
+  public function setBody(string|array|object $body): void
   {
     $this->body = $body;
   }

@@ -332,7 +332,6 @@ final class Router
     {
       throw new HttpException(message: $e->getMessage());
     }
-//    exit(var_export([ 'result' => $result ], true) . PHP_EOL);
 
     if ($result instanceof Response)
     {
