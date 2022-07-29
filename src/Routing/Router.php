@@ -331,8 +331,19 @@ final class Router
         throw new ForbiddenException();
       }
     }
+    
+    $useGuardsAttributes = $activatedHandler->getAttributes(UseGuards::class);
 
-    // TODO: Check handler Guards
+    if ($useGuardsAttributes)
+    {
+      /** @var UseGuards $handlerUseGuardsAttribute */
+      $handlerUseGuardsAttribute = $useGuardsAttributes[0]->newInstance();
+
+      if (! $this->guardsConsumer->canActivate(guards: $handlerUseGuardsAttribute->guards, context: $context) )
+      {
+        throw new ForbiddenException();
+      }
+    }
 
     $params = $activatedHandler->getParameters();
     $dependencies = [];
