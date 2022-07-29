@@ -331,7 +331,7 @@ final class Router
         throw new ForbiddenException();
       }
     }
-    
+
     $useGuardsAttributes = $activatedHandler->getAttributes(UseGuards::class);
 
     if ($useGuardsAttributes)
