@@ -5,8 +5,8 @@ namespace Assegai\Core\Interfaces;
 interface ICanActivate
 {
   /**
-   * @param IExcecutionContext $context
+   * @param IExecutionContext $context
    * @return bool
    */
-  public function canActivate(IExcecutionContext $context): bool;
+  public function canActivate(IExecutionContext $context): bool;
 }

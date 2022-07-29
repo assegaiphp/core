@@ -2,7 +2,6 @@
 
 namespace Assegai\Core\Http\Responses;
 
-use Assegai\Core\Config;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
@@ -44,10 +43,10 @@ class Responder
       is_countable($response) => new ApiResponse(data: $response),
       ($response instanceof Response) => match($response->getContentType()) {
         ContentType::JSON => match (true) {
-          Config::isDebug() => new ApiResponse(data: $response->getBody()),
           ($response->getBody() instanceof DeleteResult) => strval($response->getBody()->affected),
           ($response->getBody() instanceof InsertResult),
-          ($response->getBody() instanceof UpdateResult) => json_encode($response->getBody()->identifiers)
+          ($response->getBody() instanceof UpdateResult) => json_encode($response->getBody()->identifiers),
+          default => new ApiResponse(data: $response->getBody()),
         },
         default => $response->getBody()
       },

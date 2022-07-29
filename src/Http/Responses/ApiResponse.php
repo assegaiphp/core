@@ -23,10 +23,10 @@ class ApiResponse
   {
     $data = $this->data;
     return [
-      'data' => $data,
-      'skip' => $this->request->getSkip(),
-      'limit' => $this->request->getLimit(),
       'total' => $this->getTotal(),
+      'limit' => $this->request->getLimit(),
+      'skip' => $this->request->getSkip(),
+      'data' => $data,
     ];
   }
 
