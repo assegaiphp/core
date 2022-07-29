@@ -10,11 +10,15 @@ use Assegai\Core\Attributes\Http\Options;
 use Assegai\Core\Attributes\Http\Patch;
 use Assegai\Core\Attributes\Http\Post;
 use Assegai\Core\Attributes\Http\Put;
+use Assegai\Core\Attributes\UseGuards;
+use Assegai\Core\Consumers\GuardsConsumer;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
+use Assegai\Core\Exceptions\Http\ForbiddenException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
+use Assegai\Core\ExecutionContext;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
@@ -30,10 +34,12 @@ final class Router
 {
   private static ?Router $instance = null;
   protected Injector $injector;
+  protected GuardsConsumer $guardsConsumer;
 
   private final function __construct()
   {
     $this->injector = Injector::getInstance();
+    $this->guardsConsumer = GuardsConsumer::getInstance();
   }
 
   /**
@@ -310,6 +316,24 @@ final class Router
       throw new NotFoundException($request->getPath());
     }
 
+    $controllerReflection = new ReflectionClass($controller);
+    $context = $this->createContext(class: $controllerReflection, handler: $activatedHandler);
+
+    $useGuardsAttributes = $controllerReflection->getAttributes(UseGuards::class);
+
+    if ($useGuardsAttributes)
+    {
+      /** @var UseGuards $controllerUseGuardsAttribute */
+      $controllerUseGuardsAttribute = $useGuardsAttributes[0]->newInstance();
+
+      if (! $this->guardsConsumer->canActivate(guards: $controllerUseGuardsAttribute->guards, context: $context) )
+      {
+        throw new ForbiddenException();
+      }
+    }
+
+    // TODO: Check handler Guards
+
     $params = $activatedHandler->getParameters();
     $dependencies = [];
 
@@ -418,5 +442,15 @@ final class Router
     {
       $attribute->newInstance();
     }
+  }
+
+  /**
+   * @param ReflectionClass $class
+   * @param ReflectionMethod $handler
+   * @return ExecutionContext
+   */
+  private function createContext(ReflectionClass $class, ReflectionMethod $handler): ExecutionContext
+  {
+    return new ExecutionContext(class: $class, handler: $handler);
   }
 }
