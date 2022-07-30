@@ -323,24 +323,6 @@ final class Router
     $controllerReflection = new ReflectionClass($controller);
     $context = $this->createContext(class: $controllerReflection, handler: $activatedHandler);
 
-    // TODO: Implement controller scope interceptor consumption
-    # Consume controller guards
-    $useInterceptorsAttributes = $controllerReflection->getAttributes(UseInterceptors::class);
-    $controllerInterceptorCallHandlers = [];
-
-    if ($useInterceptorsAttributes)
-    {
-      /** @var UseInterceptors $controllerUseInterceptorsInstance */
-      $controllerUseInterceptorsInstance = $useInterceptorsAttributes[0]->newInstance();
-
-      $controllerInterceptorCallHandlers =
-        $this->interceptorsConsumer
-          ->intercept(
-            interceptors: $controllerUseInterceptorsInstance->interceptorsList,
-            context: $context
-          );
-    }
-
     # Consume controller guards
     $useGuardsAttributes = $controllerReflection->getAttributes(UseGuards::class);
     if ($useGuardsAttributes)
@@ -354,11 +336,22 @@ final class Router
       }
     }
 
-    // TODO: Implement handler scope interceptor consumption
-    $useInterceptorsAttributes = $activatedHandler->getAttributes(UseInterceptors::class);
+    # Consume controller interceptors
+    $controllerInterceptorCallHandlers = [];
+    $useInterceptorsAttributes = $controllerReflection->getAttributes(UseInterceptors::class);
 
     if ($useInterceptorsAttributes)
-    {}
+    {
+      /** @var UseInterceptors $controllerUseInterceptorsInstance */
+      $controllerUseInterceptorsInstance = $useInterceptorsAttributes[0]->newInstance();
+
+      $controllerInterceptorCallHandlers =
+        $this->interceptorsConsumer
+          ->intercept(
+            interceptors: $controllerUseInterceptorsInstance->interceptorsList,
+            context: $context
+          );
+    }
 
     # Consume handler guards
     $useGuardsAttributes = $activatedHandler->getAttributes(UseGuards::class);
@@ -374,6 +367,24 @@ final class Router
       }
     }
 
+    # Consume handler interceptors
+    $handlerInterceptorCallHandlers = [];
+    $useInterceptorsAttributes = $activatedHandler->getAttributes(UseInterceptors::class);
+
+    if ($useInterceptorsAttributes)
+    {
+      /** @var UseInterceptors $handlerUseInterceptorsInstance */
+      $handlerUseInterceptorsInstance = $useInterceptorsAttributes[0]->newInstance();
+
+      $handlerInterceptorCallHandlers =
+        $this->interceptorsConsumer
+          ->intercept(
+            interceptors: $handlerUseInterceptorsInstance->interceptorsList,
+            context: $context
+          );
+    }
+
+    # Resolve handler parameters
     $params = $activatedHandler->getParameters();
     $dependencies = [];
 
@@ -403,6 +414,14 @@ final class Router
     }
 
     $context->switchToHttp()->getResponse()->setBody($result);
+
+    # Run handler Interceptors
+    /** @var callable $handler */
+    foreach ($handlerInterceptorCallHandlers as $handler)
+    {
+      /** @var ExecutionContext $context */
+      $context = $handler($context);
+    }
 
     # Run controller Interceptors
     /** @var callable $handler */
