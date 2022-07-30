@@ -22,6 +22,8 @@ use Throwable;
 //use Psr\Log\LoggerAwareInterface;
 //use Psr\Log\LoggerInterface;
 
+require __DIR__ . '/Util/Definitions.php';
+
 /**
  * @since 1.0.0
  * @version 1.0.0
