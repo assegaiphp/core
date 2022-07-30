@@ -231,6 +231,7 @@ final class Router
     $handlerPath = $this->getHandlerPath(handler: $handler);
 
     $pattern = $this->getPathMatchingPattern(path: "$controllerPrefix/$handlerPath");
+
     $request->extractParams(path: $path, pattern: $pattern);
 
     $attributes = $handler->getAttributes();
@@ -241,10 +242,12 @@ final class Router
     }
 
     $requestMapperClassFound = false;
+    $foundPathMatch = false;
+
     /** @var ReflectionAttribute $attribute */
     foreach ($attributes as $attribute)
     {
-      if ($this->isPathMatch(pattern: $pattern, path: $path))
+      if ($foundPathMatch = $this->isPathMatch(pattern: $pattern, path: $path))
       {
         switch($request->getMethod())
         {
@@ -299,7 +302,7 @@ final class Router
       }
     }
 
-    return $requestMapperClassFound;
+    return $foundPathMatch && $requestMapperClassFound;
   }
 
   /**
@@ -492,7 +495,7 @@ final class Router
   {
     $path = preg_replace('/^\//', '', $path);
     $pattern = str_replace('/', '\/', $pattern);
-    $result = preg_match_all("/$pattern/", $path);
+    $result = preg_match("/^$pattern$/", $path);
 
     return boolval($result) === true;
   }
