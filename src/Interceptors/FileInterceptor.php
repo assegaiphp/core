@@ -28,7 +28,9 @@ class FileInterceptor implements IAssegaiInterceptor
     $requestBody = Request::getInstance()->getBody();
     $key = $this->fieldName;
     $file = $requestBody->$key;
+    $file['target_dir'] = $options->dest;
     $file['target_path'] = $options->dest . '/' . $file['name'];
+    $file['extension'] = strtolower(pathinfo($file['target_path'], PATHINFO_EXTENSION));
 
     Request::getInstance()->setFile($file);
 

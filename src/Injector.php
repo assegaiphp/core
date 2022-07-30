@@ -281,6 +281,13 @@ final class Injector implements ITokenStoreOwner, IContainer
 
         case Res::class:
           return Response::getInstance();
+
+        default:
+          $paramAttributeInstance = $paramAttribute->newInstance();
+          if (property_exists($paramAttributeInstance, 'value'))
+          {
+            return $paramAttributeInstance->value;
+          }
       }
     }
 
