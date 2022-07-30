@@ -27,6 +27,7 @@ class Request
   protected ?Query $query;
   protected string $uri;
   protected array $params = [];
+  protected array|object|null $file = null;
 
   protected static ?Request $instance = null;
 
@@ -399,6 +400,23 @@ class Request
     {
       $this->params[$key] = $param;
     }
+  }
+
+
+  /**
+   * @return object|array
+   */
+  public function getFile(): object|array
+  {
+    return $this->file;
+  }
+
+  /**
+   * @param mixed|null $file
+   */
+  public function setFile(array|object $file): void
+  {
+    $this->file = $file;
   }
 }
 
