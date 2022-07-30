@@ -137,7 +137,8 @@ class App
       $this->config = $config;
     }
 
-    if ($config instanceof IConsumer) {
+    if ($config instanceof IConsumer)
+    {
 
     }
 

@@ -12,5 +12,5 @@ use Assegai\Core\ExecutionContext;
  */
 interface IAssegaiInterceptor
 {
-  public function intercept(ExecutionContext $context): ExecutionContext;
+  public function intercept(ExecutionContext $context): ?callable;
 }

@@ -2,6 +2,8 @@
 
 namespace Assegai\Core\Interfaces;
 
+use Assegai\Core\Http\Responses\Response;
+
 /**
  * Interface providing access to the response stream.
  *
@@ -15,5 +17,5 @@ interface ICallHandler
    * handler.
    * @return mixed
    */
-  public function handle(): mixed;
+  public function handle(): Response;
 }
