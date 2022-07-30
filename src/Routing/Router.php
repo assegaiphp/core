@@ -416,6 +416,10 @@ final class Router
       return $result;
     }
 
+    if (is_null($result))
+    {
+      $result = [];
+    }
     $context->switchToHttp()->getResponse()->setBody($result);
 
     # Run handler Interceptors
