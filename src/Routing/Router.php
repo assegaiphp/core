@@ -11,6 +11,7 @@ use Assegai\Core\Attributes\Http\Patch;
 use Assegai\Core\Attributes\Http\Post;
 use Assegai\Core\Attributes\Http\Put;
 use Assegai\Core\Attributes\UseGuards;
+use Assegai\Core\Attributes\UseInterceptors;
 use Assegai\Core\Consumers\GuardsConsumer;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Container\ContainerException;
@@ -22,6 +23,7 @@ use Assegai\Core\ExecutionContext;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
+use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Util\Validator;
 use Exception;
 use ReflectionAttribute;
@@ -33,12 +35,14 @@ use stdClass;
 final class Router
 {
   private static ?Router $instance = null;
-  protected Injector $injector;
-  protected GuardsConsumer $guardsConsumer;
+  private Injector $injector;
+  private GuardsConsumer $guardsConsumer;
+  private InterceptorsConsumer $interceptorsConsumer;
 
   private final function __construct()
   {
     $this->injector = Injector::getInstance();
+    $this->interceptorsConsumer = InterceptorsConsumer::getInstance();
     $this->guardsConsumer = GuardsConsumer::getInstance();
   }
 
@@ -319,19 +323,37 @@ final class Router
     $controllerReflection = new ReflectionClass($controller);
     $context = $this->createContext(class: $controllerReflection, handler: $activatedHandler);
 
+    # Consume controller guards
     $useGuardsAttributes = $controllerReflection->getAttributes(UseGuards::class);
-
     if ($useGuardsAttributes)
     {
-      /** @var UseGuards $controllerUseGuardsAttribute */
-      $controllerUseGuardsAttribute = $useGuardsAttributes[0]->newInstance();
+      /** @var UseGuards $controllerUseGuardsInstance */
+      $controllerUseGuardsInstance = $useGuardsAttributes[0]->newInstance();
 
-      if (! $this->guardsConsumer->canActivate(guards: $controllerUseGuardsAttribute->guards, context: $context) )
+      if (! $this->guardsConsumer->canActivate(guards: $controllerUseGuardsInstance->guards, context: $context) )
       {
         throw new ForbiddenException();
       }
     }
 
+    # Consume controller interceptors
+    $controllerInterceptorCallHandlers = [];
+    $useInterceptorsAttributes = $controllerReflection->getAttributes(UseInterceptors::class);
+
+    if ($useInterceptorsAttributes)
+    {
+      /** @var UseInterceptors $controllerUseInterceptorsInstance */
+      $controllerUseInterceptorsInstance = $useInterceptorsAttributes[0]->newInstance();
+
+      $controllerInterceptorCallHandlers =
+        $this->interceptorsConsumer
+          ->intercept(
+            interceptors: $controllerUseInterceptorsInstance->interceptorsList,
+            context: $context
+          );
+    }
+
+    # Consume handler guards
     $useGuardsAttributes = $activatedHandler->getAttributes(UseGuards::class);
 
     if ($useGuardsAttributes)
@@ -345,6 +367,24 @@ final class Router
       }
     }
 
+    # Consume handler interceptors
+    $handlerInterceptorCallHandlers = [];
+    $useInterceptorsAttributes = $activatedHandler->getAttributes(UseInterceptors::class);
+
+    if ($useInterceptorsAttributes)
+    {
+      /** @var UseInterceptors $handlerUseInterceptorsInstance */
+      $handlerUseInterceptorsInstance = $useInterceptorsAttributes[0]->newInstance();
+
+      $handlerInterceptorCallHandlers =
+        $this->interceptorsConsumer
+          ->intercept(
+            interceptors: $handlerUseInterceptorsInstance->interceptorsList,
+            context: $context
+          );
+    }
+
+    # Resolve handler parameters
     $params = $activatedHandler->getParameters();
     $dependencies = [];
 
@@ -373,10 +413,25 @@ final class Router
       return $result;
     }
 
-    $response = Response::getInstance();
-    $response->setBody($result);
+    $context->switchToHttp()->getResponse()->setBody($result);
 
-    return $response;
+    # Run handler Interceptors
+    /** @var callable $handler */
+    foreach ($handlerInterceptorCallHandlers as $handler)
+    {
+      /** @var ExecutionContext $context */
+      $context = $handler($context);
+    }
+
+    # Run controller Interceptors
+    /** @var callable $handler */
+    foreach ($controllerInterceptorCallHandlers as $handler)
+    {
+      /** @var ExecutionContext $context */
+      $context = $handler($context);
+    }
+
+    return $context->switchToHttp()->getResponse();
   }
 
   /**
