@@ -21,7 +21,7 @@ class UseGuards
    * @throws GuardException
    * @throws ReflectionException
    */
-  public function __construct(public readonly array|ICanActivate|string $guard)
+  public function __construct(protected readonly array|ICanActivate|string $guard)
   {
     $guardsList = [];
 
