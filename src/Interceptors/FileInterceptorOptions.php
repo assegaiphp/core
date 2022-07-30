@@ -2,7 +2,7 @@
 
 namespace Assegai\Core\Interceptors;
 
-use PhpParser\Node\Expr\Closure;
+use Closure;
 
 class FileInterceptorOptions
 {
