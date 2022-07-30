@@ -38,6 +38,10 @@ class Responder
     {
       $this->setResponseCode($code);
     }
+    else if ($response instanceof Response)
+    {
+      $this->setResponseCode($response->getStatus());
+    }
 
     $responseString = match(true) {
       is_countable($response) => new ApiResponse(data: $response),
