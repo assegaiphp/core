@@ -139,7 +139,7 @@ class App
 
     if ($config instanceof IConsumer)
     {
-
+      // TODO: Complete configuration logic
     }
 
     return $this;
