@@ -14,14 +14,14 @@ class Response
 {
   protected static ?Response $instance = null;
   protected string|array|object $body;
-  protected ContentType $contentType;
+  protected ContentType $contentType = ContentType::JSON;
   protected HttpStatusCode|int $status;
 
   private final function __construct()
   {
-    $this->contentType = ContentType::JSON;
     $this->body = new stdClass();
     $this->status = http_response_code();
+    $this->setContentType(ContentType::JSON);
   }
 
   /**
