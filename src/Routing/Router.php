@@ -149,6 +149,14 @@ final class Router
 
     $dependencies = [];
 
+    # Instantiate attributes
+    $controllerAttributes = $reflectionController->getAttributes();
+
+    foreach ($controllerAttributes as $controllerAttribute)
+    {
+      $controllerAttribute->newInstance();
+    }
+
     foreach ($constructorParams as $param)
     {
       $dependencies[] = $this->injector->resolve($param->getType()->getName());
