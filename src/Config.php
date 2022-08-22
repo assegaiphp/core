@@ -82,6 +82,19 @@ class Config
   }
 
   /**
+   * Get database configs.
+   * @param string $type The type of the database. DEFAULT: 'mysql'
+   * @param string $name The name of the database
+   * @param bool $associative When TRUE, returned objects will be converted into associative arrays.
+   * @return array|object|null
+   */
+  public static function database(string $type, string $name, bool $associative = true): array|object|null
+  {
+    $config = self::get('databases')[$type][$name] ?? [];
+    return $associative ? $config : (object)$config;
+  }
+
+  /**
    * @param string $name
    * @param mixed $value
    * @return void
