@@ -240,7 +240,7 @@ final class Injector implements ITokenStoreOwner, IContainer
     foreach ($paramAttributes as $paramAttribute)
     {
       $paramAttributeArgs = $paramAttribute->getArguments();
-
+      $paramAttributeInstance = $paramAttribute->newInstance();
       switch ($paramAttribute->getName())
       {
         case Param::class:
@@ -272,9 +272,10 @@ final class Injector implements ITokenStoreOwner, IContainer
           else
           {
             $key = $param->getName();
-            $body = $request->getBody()->$key ?? null;
+            $body = $paramAttributeInstance->value ?? null;
           }
-          return Types::castObjectToUserType($body, $paramTypeName);
+
+          return is_object($body) ? Types::castObjectToUserType($body, $paramTypeName) : $body;
 
         case Req::class:
           return $request;
@@ -283,7 +284,6 @@ final class Injector implements ITokenStoreOwner, IContainer
           return Response::getInstance();
 
         default:
-          $paramAttributeInstance = $paramAttribute->newInstance();
           if (property_exists($paramAttributeInstance, 'value'))
           {
             return $paramAttributeInstance->value;
