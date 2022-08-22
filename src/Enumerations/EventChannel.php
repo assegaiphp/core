@@ -8,6 +8,8 @@ enum EventChannel: string
   case APP_INIT_FINISH = 'app-init-finish';
   case APP_LISTENING_START = 'app-listening-start';
   case APP_LISTENING_FINISH = 'app-listening-finish';
+  case APP_SHUTDOWN_START = 'app-shutdown-start';
+  case APP_SHUTDOWN_FINISH = 'app-shutdown-finish';
   case MODULE_RESOLUTION_START = 'module-resolution-start';
   case MODULE_RESOLUTION_FINISH = 'module-resolution-finish';
   case PROVIDER_RESOLUTION_START = 'provider-resolution-start';

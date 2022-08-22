@@ -3,6 +3,9 @@
 namespace Assegai\Core;
 
 use Assegai\Core\Enumerations\EnvironmentType;
+use Assegai\Core\Enumerations\EventChannel;
+use Assegai\Core\Events\Event;
+use Assegai\Core\Events\EventManager;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
@@ -94,6 +97,7 @@ class App
     protected readonly Injector $injector
   )
   {
+    EventManager::broadcast(EventChannel::APP_INIT_START, new Event());
     set_exception_handler(function (Throwable $exception) {
       if ($exception instanceof HttpException)
       {
@@ -125,6 +129,18 @@ class App
     $this->response = $this->host->switchToHttp()->getResponse();
 
     $this->responder = Responder::getInstance();
+    EventManager::broadcast(EventChannel::APP_INIT_FINISH, new Event($this->host));
+  }
+
+  /**
+   * Destructs the App.
+   */
+  public function __destruct()
+  {
+    EventManager::broadcast(EventChannel::APP_SHUTDOWN_START, new Event());
+
+    EventManager::broadcast(EventChannel::APP_SHUTDOWN_FINISH, new Event());
+
   }
 
   /**
@@ -164,6 +180,7 @@ class App
    */
   public function run(): void
   {
+    EventManager::broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
     try
     {
       $this->resolveModules();
@@ -189,7 +206,9 @@ class App
    */
   public function resolveModules(): void
   {
+    EventManager::broadcast(EventChannel::MODULE_RESOLUTION_START, new Event());
     $this->modules = $this->moduleManager->buildModuleTokensList(rootToken: $this->rootModuleClass);
+    EventManager::broadcast(EventChannel::MODULE_RESOLUTION_FINISH, new Event($this->modules));
   }
 
   /**
@@ -199,7 +218,9 @@ class App
    */
   private function resolveProviders(): void
   {
+    EventManager::broadcast(EventChannel::PROVIDER_RESOLUTION_START, new Event());
     $this->providers = $this->moduleManager->buildProviderTokensList();
+    EventManager::broadcast(EventChannel::PROVIDER_RESOLUTION_FINISH, new Event($this->providers));
   }
 
   /**
@@ -209,8 +230,10 @@ class App
    */
   private function resolveControllers(): void
   {
+    EventManager::broadcast(EventChannel::CONTROLLER_RESOLUTION_START, new Event());
     $this->controllers = $this->controllerManager->buildControllerTokensList($this->moduleManager->getModuleTokens());
     $this->controllerMap = $this->controllerManager->getControllerPathTokenIdMap();
+    EventManager::broadcast(EventChannel::CONTROLLER_RESOLUTION_FINISH, new Event([$this->controllers, $this->controllerMap]));
   }
 
   /**
@@ -223,9 +246,13 @@ class App
    */
   private function handleRequest(): void
   {
+    EventManager::broadcast(EventChannel::REQUEST_HANDLING_START, new Event());
     $this->request = $this->router->route();
+    EventManager::broadcast(EventChannel::CONTROLLER_WILL_ACTIVATE, new Event());
     $this->activatedController =
       $this->router->getActivatedController(request: $this->request, controllerTokensList: $this->controllers);
+    EventManager::broadcast(EventChannel::CONTROLLER_DID_ACTIVATE, new Event($this->activatedController));
+    EventManager::broadcast(EventChannel::REQUEST_HANDLING_FINISH, new Event($this->request));
   }
 
   /**
@@ -238,7 +265,9 @@ class App
    */
   private function handleResponse(): void
   {
+    EventManager::broadcast(EventChannel::RESPONSE_HANDLING_START, new Event());
     $this->response = $this->router->handleRequest(request: $this->request, controller: $this->activatedController);
+    EventManager::broadcast(EventChannel::RESPONSE_HANDLING_FINISH, new Event());
     $this->responder->respond(response: $this->response);
   }
 }
