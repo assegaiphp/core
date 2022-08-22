@@ -52,6 +52,11 @@ class Param
       }
     }
 
-    $this->value = $value;
+    $this->value = match(true) {
+      is_array($value) => (object)$value,
+      is_bool($value),
+      is_numeric($value) => (string)$value,
+      default => $value
+    };
   }
 }
