@@ -11,6 +11,11 @@
             "Assegai\\Core\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Assegai\\Orm\\": "../orm/src"
+        }
+    },
     "authors": [
         {
             "name": "Andrew Masiye",
@@ -19,6 +24,8 @@
     ],
     "require": {
         "psr/log": ">=3.0.0",
-        "vlucas/phpdotenv": "^5.4"
+        "vlucas/phpdotenv": "^5.4",
+        "twig/twig": "^3.0",
+        "ext-fileinfo": "*"
     }
 }
