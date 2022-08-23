@@ -55,9 +55,12 @@ class ModuleManager
    */
   public function buildModuleTokensList(string $rootToken): array
   {
-    try {
+    try
+    {
       $reflectionModule = new ReflectionClass($rootToken);
-      if (!$this->isValidModule($reflectionModule))
+      $this->lastLoadedAttributes = $this->loadModuleAttributes($reflectionModule);
+
+      if (!$this->isValidModule($this->lastLoadedAttributes))
       {
         Log::error(__CLASS__, "Invalid Token ID: $rootToken");
         throw new HttpException();
@@ -101,14 +104,12 @@ class ModuleManager
   }
 
   /**
-   * @param ReflectionClass $reflectionClass
+   * @param array $lastLoadedAttributes
    * @return bool
    */
-  private function isValidModule(ReflectionClass $reflectionClass): bool
+  private function isValidModule(array $lastLoadedAttributes): bool
   {
-    $this->lastLoadedAttributes = $reflectionClass->getAttributes(Module::class);
-
-    return !empty($this->lastLoadedAttributes);
+    return !empty($lastLoadedAttributes);
   }
 
   /**
@@ -151,5 +152,14 @@ class ModuleManager
     {
       throw new EntryNotFoundException($tokenId);
     }
+  }
+
+  /**
+   * @param ReflectionClass $reflectionClass
+   * @return array
+   */
+  private function loadModuleAttributes(ReflectionClass $reflectionClass): array
+  {
+    return $reflectionClass->getAttributes(Module::class);
   }
 }
