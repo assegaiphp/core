@@ -16,6 +16,7 @@ use Assegai\Core\Http\Responses\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IConsumer;
 use Assegai\Core\Routing\Router;
+use Assegai\Core\Util\Paths;
 use Exception;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -183,11 +184,23 @@ class App
     EventManager::broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
     try
     {
-      $this->resolveModules();
-      $this->resolveProviders();
-      $this->resolveControllers();
-      $this->handleRequest();
-      $this->handleResponse();
+      $resourcePath = Paths::getPublicPath($_SERVER['REQUEST_URI']);
+
+      if (is_file($resourcePath) && !preg_match('/index.(htm|html|php|xhtml)$/', $resourcePath))
+      {
+        $mimeType = Paths::getMimeType($resourcePath);
+
+        header("Content-Type: $mimeType");
+        require_once($resourcePath);
+      }
+      else
+      {
+        $this->resolveModules();
+        $this->resolveProviders();
+        $this->resolveControllers();
+        $this->handleRequest();
+        $this->handleResponse();
+      }
     }
     catch(HttpException $exception)
     {
