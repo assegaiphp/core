@@ -6,18 +6,37 @@ use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Rendering\View;
+use Assegai\Core\Rendering\ViewEngine;
 use Assegai\Orm\Queries\QueryBuilder\Results\DeleteResult;
 use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
 use Assegai\Orm\Queries\QueryBuilder\Results\UpdateResult;
 
+/**
+ * Contains useful methods for managing the Response object.
+ */
 class Responder
 {
+  /**
+   * @var Responder|null
+   */
   private static ?Responder $instance = null;
+  /**
+   * @var ViewEngine
+   */
+  private ViewEngine $viewEngine;
 
+  /**
+   *
+   */
   private final function __construct()
   {
+    $this->viewEngine = ViewEngine::getInstance();
   }
 
+  /**
+   * @return Responder
+   */
   public static function getInstance(): Responder
   {
     if (!self::$instance) {
@@ -27,11 +46,19 @@ class Responder
     return self::$instance;
   }
 
+  /**
+   * @return Request
+   */
   public function getRequest(): Request
   {
     return Request::getInstance();
   }
 
+  /**
+   * @param mixed $response
+   * @param HttpStatusCode|int|null $code
+   * @return never
+   */
   public function respond(mixed $response, HttpStatusCode|int|null $code = null): never
   {
     if ($code)
@@ -41,6 +68,11 @@ class Responder
     else if ($response instanceof Response)
     {
       $this->setResponseCode($response->getStatus());
+    }
+
+    if ($response?->getBody() instanceof View)
+    {
+      $this->viewEngine->render($response->getBody());
     }
 
     $responseString = match(true) {
@@ -61,6 +93,10 @@ class Responder
     exit($responseString);
   }
 
+  /**
+   * @param HttpStatusCode|int|null $code
+   * @return void
+   */
   public function setResponseCode(HttpStatusCode|int|null $code = 200): void
   {
     $codeObject = $code;

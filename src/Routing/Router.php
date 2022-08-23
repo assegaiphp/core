@@ -84,7 +84,7 @@ final class Router
     {
       if ($this->canActivateController($reflectionController))
       {
-        $activatedController = $this->activateController($reflectionController);
+        return $this->activateController($reflectionController);
       }
     }
 
@@ -133,7 +133,8 @@ final class Router
       }
     }
 
-    return false;
+    $method = trim($path, '/');
+    return $reflectionController->hasMethod($method);
   }
 
   /**
@@ -252,10 +253,16 @@ final class Router
     $requestMapperClassFound = false;
     $foundPathMatch = false;
 
-    /** @var ReflectionAttribute $attribute */
     foreach ($attributes as $attribute)
     {
-      if ($foundPathMatch = $this->isPathMatch(pattern: $pattern, path: $path))
+      $foundPathMatch = $this->isPathMatch(pattern: $pattern, path: $path);
+
+      if ($foundPathMatch === false && $handler->getShortName() === trim($request->getPath(), '/'))
+      {
+        $foundPathMatch = true;
+      }
+
+      if ($foundPathMatch)
       {
         switch($request->getMethod())
         {

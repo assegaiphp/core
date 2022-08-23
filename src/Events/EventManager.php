@@ -19,6 +19,8 @@ class EventManager implements IEventBroadcaster
     'APP_INIT_FINISH' => [],
     'APP_LISTENING_START' => [],
     'APP_LISTENING_FINISH' => [],
+    'APP_SHUTDOWN_START' => [],
+    'APP_SHUTDOWN_FINISH' => [],
     'MODULE_RESOLUTION_START' => [],
     'MODULE_RESOLUTION_FINISH' => [],
     'PROVIDER_RESOLUTION_START' => [],
