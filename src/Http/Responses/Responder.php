@@ -12,16 +12,31 @@ use Assegai\Orm\Queries\QueryBuilder\Results\DeleteResult;
 use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
 use Assegai\Orm\Queries\QueryBuilder\Results\UpdateResult;
 
+/**
+ * Contains useful methods for managing the Response object.
+ */
 class Responder
 {
+  /**
+   * @var Responder|null
+   */
   private static ?Responder $instance = null;
+  /**
+   * @var ViewEngine
+   */
   private ViewEngine $viewEngine;
 
+  /**
+   *
+   */
   private final function __construct()
   {
     $this->viewEngine = ViewEngine::getInstance();
   }
 
+  /**
+   * @return Responder
+   */
   public static function getInstance(): Responder
   {
     if (!self::$instance) {
@@ -31,11 +46,19 @@ class Responder
     return self::$instance;
   }
 
+  /**
+   * @return Request
+   */
   public function getRequest(): Request
   {
     return Request::getInstance();
   }
 
+  /**
+   * @param mixed $response
+   * @param HttpStatusCode|int|null $code
+   * @return never
+   */
   public function respond(mixed $response, HttpStatusCode|int|null $code = null): never
   {
     if ($code)
@@ -70,6 +93,10 @@ class Responder
     exit($responseString);
   }
 
+  /**
+   * @param HttpStatusCode|int|null $code
+   * @return void
+   */
   public function setResponseCode(HttpStatusCode|int|null $code = 200): void
   {
     $codeObject = $code;

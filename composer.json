@@ -11,6 +11,11 @@
             "Assegai\\Core\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Assegai\\Orm\\": "../orm/src"
+        }
+    },
     "authors": [
         {
             "name": "Andrew Masiye",
