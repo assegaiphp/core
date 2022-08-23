@@ -6,6 +6,8 @@ use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Rendering\View;
+use Assegai\Core\Rendering\ViewEngine;
 use Assegai\Orm\Queries\QueryBuilder\Results\DeleteResult;
 use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
 use Assegai\Orm\Queries\QueryBuilder\Results\UpdateResult;
@@ -13,9 +15,11 @@ use Assegai\Orm\Queries\QueryBuilder\Results\UpdateResult;
 class Responder
 {
   private static ?Responder $instance = null;
+  private ViewEngine $viewEngine;
 
   private final function __construct()
   {
+    $this->viewEngine = ViewEngine::getInstance();
   }
 
   public static function getInstance(): Responder
@@ -41,6 +45,11 @@ class Responder
     else if ($response instanceof Response)
     {
       $this->setResponseCode($response->getStatus());
+    }
+
+    if ($response?->getBody() instanceof View)
+    {
+      $this->viewEngine->render($response->getBody());
     }
 
     $responseString = match(true) {
