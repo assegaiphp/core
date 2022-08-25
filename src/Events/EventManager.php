@@ -35,6 +35,7 @@ class EventManager implements IEventBroadcaster
     'REQUEST_HANDLING_FINISH' => [],
     'RESPONSE_HANDLING_START' => [],
     'RESPONSE_HANDLING_FINISH' => [],
+    'SESSION_START' => []
   ];
 
   /**
