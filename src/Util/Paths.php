@@ -34,7 +34,7 @@ final class Paths
    */
   public static function getViewDirectory(): string
   {
-    return self::join(self::getWorkingDirectory(), 'views');
+    return self::join(self::getWorkingDirectory(), 'src/Views');
   }
 
   /**
