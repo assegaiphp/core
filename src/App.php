@@ -195,6 +195,8 @@ class App
       }
       else
       {
+        session_start();
+        EventManager::broadcast(EventChannel::SESSION_START, new Event());
         $this->resolveModules();
         $this->resolveProviders();
         $this->resolveControllers();
