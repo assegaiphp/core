@@ -146,22 +146,24 @@ final class Router
    */
   private function activateController(ReflectionClass $reflectionController): object
   {
-    $constructor = $reflectionController->getConstructor();
-    $constructorParams = $constructor->getParameters();
-
     $dependencies = [];
 
-    # Instantiate attributes
-    $controllerAttributes = $reflectionController->getAttributes();
-
-    foreach ($controllerAttributes as $controllerAttribute)
+    if ($constructor = $reflectionController->getConstructor())
     {
-      $controllerAttribute->newInstance();
-    }
+      $constructorParams = $constructor->getParameters();
 
-    foreach ($constructorParams as $param)
-    {
-      $dependencies[] = $this->injector->resolve($param->getType()->getName());
+      # Instantiate attributes
+      $controllerAttributes = $reflectionController->getAttributes();
+
+      foreach ($controllerAttributes as $controllerAttribute)
+      {
+        $controllerAttribute->newInstance();
+      }
+
+      foreach ($constructorParams as $param)
+      {
+        $dependencies[] = $this->injector->resolve($param->getType()->getName());
+      }
     }
 
     return $reflectionController->newInstanceArgs($dependencies);
