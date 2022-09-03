@@ -230,7 +230,7 @@ class ViewProperties
   public function generateBodyScriptTags(): string
   {
     $html = '';
-    if ($this->styles)
+    if ($this->bodyScripts)
     {
       $html .= "<script>";
       foreach ($this->bodyScripts as $code)
