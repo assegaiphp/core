@@ -38,17 +38,9 @@ require __DIR__ . '/Util/Definitions.php';
 class App
 {
   /**
-   * @var ReflectionAttribute[] $modules
-   */
-  protected array $modules = [];
-  /**
    * @var ReflectionClass[] $providers
    */
   protected array $controllers = [];
-  /**
-   * @var string[] $providers
-   */
-  protected array $providers = [];
   /**
    * @var array
    */
@@ -201,7 +193,6 @@ class App
         $this->resolveProviders();
         $this->resolveControllers();
         $this->handleRequest();
-        $this->handleResponse();
       }
     }
     catch(HttpException $exception)
@@ -222,8 +213,8 @@ class App
   public function resolveModules(): void
   {
     EventManager::broadcast(EventChannel::MODULE_RESOLUTION_START, new Event());
-    $this->modules = $this->moduleManager->buildModuleTokensList(rootToken: $this->rootModuleClass);
-    EventManager::broadcast(EventChannel::MODULE_RESOLUTION_FINISH, new Event($this->modules));
+    $this->moduleManager->buildModuleTokensList(rootToken: $this->rootModuleClass);
+    EventManager::broadcast(EventChannel::MODULE_RESOLUTION_FINISH, new Event($this->getModuleTokens()));
   }
 
   /**
@@ -234,8 +225,8 @@ class App
   private function resolveProviders(): void
   {
     EventManager::broadcast(EventChannel::PROVIDER_RESOLUTION_START, new Event());
-    $this->providers = $this->moduleManager->buildProviderTokensList();
-    EventManager::broadcast(EventChannel::PROVIDER_RESOLUTION_FINISH, new Event($this->providers));
+    $this->moduleManager->buildProviderTokensList();
+    EventManager::broadcast(EventChannel::PROVIDER_RESOLUTION_FINISH, new Event($this->getProviderTokens()));
   }
 
   /**
@@ -246,7 +237,7 @@ class App
   private function resolveControllers(): void
   {
     EventManager::broadcast(EventChannel::CONTROLLER_RESOLUTION_START, new Event());
-    $this->controllers = $this->controllerManager->buildControllerTokensList($this->moduleManager->getModuleTokens());
+    $this->controllers = $this->controllerManager->buildControllerTokensList($this->getModuleTokens());
     $this->controllerMap = $this->controllerManager->getControllerPathTokenIdMap();
     EventManager::broadcast(EventChannel::CONTROLLER_RESOLUTION_FINISH, new Event([$this->controllers, $this->controllerMap]));
   }
@@ -268,6 +259,9 @@ class App
       $this->router->getActivatedController(request: $this->request, controllerTokensList: $this->controllers);
     EventManager::broadcast(EventChannel::CONTROLLER_DID_ACTIVATE, new Event($this->activatedController));
     EventManager::broadcast(EventChannel::REQUEST_HANDLING_FINISH, new Event($this->request));
+    EventManager::broadcast(EventChannel::RESPONSE_START, new Event());
+    $this->response = $this->router->handleRequest(request: $this->request, controller: $this->activatedController);
+    $this->respond();
   }
 
   /**
@@ -278,11 +272,25 @@ class App
    * @throws NotFoundException
    * @throws ReflectionException
    */
-  private function handleResponse(): void
+  private function respond(): void
   {
-    EventManager::broadcast(EventChannel::RESPONSE_HANDLING_START, new Event());
-    $this->response = $this->router->handleRequest(request: $this->request, controller: $this->activatedController);
-    EventManager::broadcast(EventChannel::RESPONSE_HANDLING_FINISH, new Event());
+    EventManager::broadcast(EventChannel::RESPONSE_FINISH, new Event());
     $this->responder->respond(response: $this->response);
+  }
+
+  /**
+   * @return ReflectionAttribute[]
+   */
+  public function getModuleTokens(): array
+  {
+    return $this->moduleManager->getModuleTokens();
+  }
+
+  /**
+   * @return string[]
+   */
+  public function getProviderTokens(): array
+  {
+    return $this->moduleManager->getProviderTokens();
   }
 }
