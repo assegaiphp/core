@@ -21,7 +21,7 @@ class ModuleManager
   /**
    * @var ReflectionAttribute[] A list of all the imported module tokens
    */
-  protected array $moduleTokensList = [];
+  protected array $moduleTokens = [];
 
   /**
    * @var array A list of all the imported module tokens
@@ -31,8 +31,16 @@ class ModuleManager
   /**
    * @var array A list of all the imported module tokens
    */
-  protected array $providerTokensList = [];
+  protected array $providerTokens = [];
 
+  /**
+   * @var array
+   */
+  protected array $config = [];
+
+  /**
+   * Constructs a ModuleManager
+   */
   private final function __construct()
   {
   }
@@ -51,9 +59,11 @@ class ModuleManager
   }
 
   /**
+   * @param string $rootToken
+   * @return void
    * @throws HttpException
    */
-  public function buildModuleTokensList(string $rootToken): array
+  public function buildModuleTokensList(string $rootToken): void
   {
     try
     {
@@ -67,13 +77,19 @@ class ModuleManager
       }
       $reflectionModuleAttribute = $this->lastLoadedAttributes[0];
 
-      /** @var ['imports' => 'array', 'exports' => 'array', 'providers' => 'array', 'controllers' => 'array'] $args */
+      /** @var ['imports' => 'array', 'exports' => 'array', 'providers' => 'array', 'controllers' => 'array', 'config' => 'array'] $args */
       $args = $reflectionModuleAttribute->getArguments();
 
       # 1. Add rootToken to the list
-      $this->moduleTokensList[$rootToken] = $reflectionModuleAttribute;
+      $this->moduleTokens[$rootToken] = $reflectionModuleAttribute;
 
-      # 2. For each import
+      # 2. Store config
+      if (isset($args['config']))
+      {
+        $this->config = array_merge($this->config, $args['config']);
+      }
+
+      # 3. For each import
       foreach ($args['imports'] as $import)
       {
         $this->buildModuleTokensList($import);
@@ -83,8 +99,6 @@ class ModuleManager
     {
       throw new HttpException($e->getMessage());
     }
-
-    return $this->getModuleTokens();
   }
 
   /**
@@ -92,15 +106,15 @@ class ModuleManager
    */
   public function getModuleTokens(): array
   {
-    return $this->moduleTokensList;
+    return $this->moduleTokens;
   }
 
   /**
    * @return array
    */
-  public function getProviderTokensList(): array
+  public function getProviderTokens(): array
   {
-    return $this->providerTokensList;
+    return $this->providerTokens;
   }
 
   /**
@@ -113,12 +127,12 @@ class ModuleManager
   }
 
   /**
-   * @return string[] Returns a list of Provider tokenIds
+   * @return void
    * @throws EntryNotFoundException
    */
-  public function buildProviderTokensList(): array
+  public function buildProviderTokensList(): void
   {
-    foreach ($this->moduleTokensList as $module)
+    foreach ($this->moduleTokens as $module)
     {
       /** @var ['imports' => 'array', 'exports' => 'array', 'providers' => 'array'] $args */
       $args = $module->getArguments();
@@ -127,12 +141,10 @@ class ModuleManager
       {
         if ($provider = $this->validateProvider($tokenId))
         {
-          $this->providerTokensList[$tokenId] = $provider;
+          $this->providerTokens[$tokenId] = $provider;
         }
       }
     }
-
-    return $this->getProviderTokensList();
   }
 
   /**
@@ -161,5 +173,14 @@ class ModuleManager
   private function loadModuleAttributes(ReflectionClass $reflectionClass): array
   {
     return $reflectionClass->getAttributes(Module::class);
+  }
+
+  /**
+   * @param string $key
+   * @return mixed
+   */
+  public function getConfig(string $key): mixed
+  {
+    return $this->config[$key] ?? null;
   }
 }
