@@ -133,7 +133,6 @@ class App
     EventManager::broadcast(EventChannel::APP_SHUTDOWN_START, new Event());
 
     EventManager::broadcast(EventChannel::APP_SHUTDOWN_FINISH, new Event());
-
   }
 
   /**
