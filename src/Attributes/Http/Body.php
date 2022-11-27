@@ -18,6 +18,7 @@ class Body
 
   /**
    * @param string|null $key
+   * @param array|IPipeTransform|string|null $pipes
    */
   public function __construct(
     public readonly ?string $key = null,
