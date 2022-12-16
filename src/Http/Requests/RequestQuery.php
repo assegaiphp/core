@@ -26,4 +26,12 @@ class RequestQuery extends stdClass
   {
     return $this->props[$key] ?? $this->props;
   }
+
+  /**
+   * @return array
+   */
+  public function toArray(): array
+  {
+    return $this->props;
+  }
 }
