@@ -2,7 +2,7 @@
 
 namespace Assegai\Core\Attributes\Http;
 
-use Assegai\Core\Http\Requests\Query;
+use Assegai\Core\Http\Requests\RequestQuery;
 use Assegai\Core\Http\Requests\Request;
 use Attribute;
 
@@ -10,12 +10,12 @@ use Attribute;
  * Binds the current client request `Query` object to the target parameter.
  */
 #[Attribute(Attribute::TARGET_PARAMETER)]
-class Queries
+class Query
 {
   /**
-   * @var string|Query
+   * @var string|RequestQuery
    */
-  public string|Query $value;
+  public string|RequestQuery $value;
 
   /**
    * @param string|null $key
