@@ -4,7 +4,7 @@
     "type": "library",
     "require-dev": {
         "codeception/codeception": "^4.2",
-        "assegaiphp/orm": "^0.2"
+        "assegaiphp/orm": "^0.3"
     },
     "license": "MIT",
     "autoload": {
