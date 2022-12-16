@@ -4,7 +4,7 @@ namespace Assegai\Core\Http\Requests;
 
 use stdClass;
 
-class Query extends stdClass
+class RequestQuery extends stdClass
 {
   public readonly string $raw;
   protected array $props;
