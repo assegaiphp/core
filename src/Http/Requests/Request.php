@@ -24,7 +24,7 @@ class Request
   protected ?string $scheme;
   protected ?string $host;
   protected string $path;
-  protected ?Query $query;
+  protected ?RequestQuery $query;
   protected string $uri;
   protected array $params = [];
   protected array|object|null $file = null;
@@ -48,7 +48,7 @@ class Request
     $this->scheme = $scheme ?? ($_SERVER['REQUEST_SCHEME'] ?? 'http');
     $this->host = $host ?? ($_SERVER['REMOTE_HOST'] ?? 'localhost');
     $this->path = $path;
-    $this->query = new Query();
+    $this->query = new RequestQuery();
     $this->body = new stdClass();
 
     $this->requestMethod = match ($_SERVER['REQUEST_METHOD']) {
@@ -316,13 +316,13 @@ class Request
   }
 
   /**
-   * @return Query
+   * @return RequestQuery
    */
-  public function getQuery(): Query
+  public function getQuery(): RequestQuery
   {
     if (!$this->query)
     {
-      $this->query = new Query();
+      $this->query = new RequestQuery();
     }
 
     return $this->query;

@@ -5,7 +5,7 @@
 namespace Assegai\Core;
 
 use Assegai\Core\Attributes\Http\Body;
-use Assegai\Core\Attributes\Http\Queries;
+use Assegai\Core\Attributes\Http\Query;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Param;
 use Assegai\Core\Attributes\Req;
@@ -234,28 +234,29 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public function resolveBuiltIn(ReflectionParameter $param, Request $request): mixed
   {
-    $paramTypeName = $param->getType()->getName();
+    $paramTypeName = $param->getType()?->getName() ?? 'stdClass';
     $paramAttributes = $param->getAttributes();
 
     foreach ($paramAttributes as $paramAttribute)
     {
       $paramAttributeArgs = $paramAttribute->getArguments();
       $paramAttributeInstance = $paramAttribute->newInstance();
+
       switch ($paramAttribute->getName())
       {
         case Param::class:
           if (empty($paramAttributeArgs))
           {
-            return ($param->getType()->getName() === 'string')
+            return ($paramTypeName === 'string')
               ? json_encode($request->getParams())
               : (object)$request->getParams();
           }
           return $request->getParams()[$param->getPosition()] ?? null;
 
-        case Queries::class:
+        case Query::class:;
           if (empty($paramAttributeArgs))
           {
-            return ($param->getType()->getName() === 'string')
+            return ($paramTypeName === 'string')
               ? json_encode($request->getQuery())
               : (object)$request->getQuery();
           }
@@ -265,7 +266,7 @@ final class Injector implements ITokenStoreOwner, IContainer
           $body = null;
           if (empty($paramAttributeArgs))
           {
-            $body = ($param->getType()->getName() === 'string')
+            $body = ($paramTypeName === 'string')
               ? json_encode($request->getBody())
               : $request->getBody();
           }
