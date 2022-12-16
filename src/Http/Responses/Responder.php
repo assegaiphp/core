@@ -76,7 +76,7 @@ class Responder
     }
 
     $responseString = match(true) {
-      is_countable($response) => new ApiResponse(data: $response),
+      is_countable($response) =>  (is_array($response) && isset($response[0]) && is_scalar($response[0]) ?  : new ApiResponse(data: $response) ),
       ($response instanceof Response) => match($response->getContentType()) {
         ContentType::JSON => match (true) {
           ($response->getBody() instanceof DeleteResult) => strval($response->getBody()->affected),

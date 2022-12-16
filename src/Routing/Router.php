@@ -418,12 +418,12 @@ final class Router
 
     foreach ($params as $param)
     {
-      $paramTypeName = $param->getType()->getName();
+      $paramTypeName = $param->getType()?->getName() ?? 'stdClass';
       $isStandardClassType = is_subclass_of($paramTypeName, stdClass::class) || $paramTypeName === 'stdClass';
       $dependencies[$param->getPosition()] = match(true) {
-        $param->getType()->isBuiltin(),
+        $param->getType()?->isBuiltin(),
         $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
-        default => $this->injector->resolve($param->getType()->getName())
+        default => $this->injector->resolve($paramTypeName)
       };
     }
 

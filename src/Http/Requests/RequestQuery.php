@@ -4,7 +4,7 @@ namespace Assegai\Core\Http\Requests;
 
 use stdClass;
 
-class Query extends stdClass
+class RequestQuery extends stdClass
 {
   public readonly string $raw;
   protected array $props;
@@ -25,5 +25,13 @@ class Query extends stdClass
   public function getProps(?string $key = null): array|string
   {
     return $this->props[$key] ?? $this->props;
+  }
+
+  /**
+   * @return array
+   */
+  public function toArray(): array
+  {
+    return $this->props;
   }
 }
