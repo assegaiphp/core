@@ -144,8 +144,8 @@ That will compile fresh packages and afterward, move them all to `sample` direct
 ### <a name="common-cli-commands"></a> Commonly used CLI commands
 
 ```bash
-# Generate a feature
-$ assegai generate feature <YOUR_FEATURE_NAME>
+# Generate a resource
+$ assegai generate resource <YOUR_FEATURE_NAME>
 
 # Run the full unit tests suite
 $ assegai test
