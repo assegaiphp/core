@@ -71,6 +71,7 @@ class ViewProperties
    * @param array $bodyScriptUrls
    * @param string $base
    * @param string $lang
+   * @param array $favicon
    */
   public function __construct(
     public readonly ViewType $type = self::DEFAULT_TYPE,
@@ -84,6 +85,7 @@ class ViewProperties
     public readonly array $bodyScriptUrls = self::DEFAULT_BODY_SCRIPT_URLS,
     public readonly string $base = self::DEFAULT_BASE,
     public readonly string $lang = self::DEFAULT_LANG,
+    public readonly array $favicon = ['favicon.ico', 'image/x-icon']
   )
   {
     $this->meta = is_array($meta) ? ViewMeta::fromArray($meta) : $meta;
@@ -96,6 +98,7 @@ class ViewProperties
   {
     $html = $this->generateMetaTags();
     $html .= $this->generateTitleTag();
+    $html .= $this->generateFaviconLinkTag();
     $html .= $this->generateStyleTag();
     $html .= $this->generateLinkTags();
     $html .= $this->generateHeadScriptTags();
@@ -256,8 +259,30 @@ class ViewProperties
     return $html;
   }
 
+  /**
+   * @param int $level
+   * @return string
+   */
   private function getIndent(int $level = 1): string
   {
     return str_repeat(self::PADDING, $level);
+  }
+
+  /**
+   * @return string
+   */
+  private function generateFaviconLinkTag(): string
+  {
+    [$href, $type] = $this->favicon;
+    if (!$href)
+    {
+      $href = 'favicon.ico';
+    }
+    if (!$type)
+    {
+      $type = 'image/x-icon';
+    }
+
+    return "<link rel='shortcut icon' href='$href' type='$type'>";
   }
 }
