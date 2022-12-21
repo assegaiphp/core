@@ -25,6 +25,7 @@ use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
+use Assegai\Core\Util\Debug\Console\Enumerations\Color;
 use Assegai\Core\Util\Validator;
 use Exception;
 use ReflectionAttribute;
@@ -511,8 +512,7 @@ final class Router
     }
 
     $path = str_replace('*', '.*', $path);
-
-    return preg_replace(pattern: '/(\/?):\w+/', replacement: '$1(\w+)', subject: $path);
+    return preg_replace(pattern: '/(\/?):\w+/', replacement: '$1([\w-]+)', subject: $path);
   }
 
   /**
