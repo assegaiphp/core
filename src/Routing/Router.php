@@ -146,22 +146,24 @@ final class Router
    */
   private function activateController(ReflectionClass $reflectionController): object
   {
-    $constructor = $reflectionController->getConstructor();
-    $constructorParams = $constructor->getParameters();
-
     $dependencies = [];
 
-    # Instantiate attributes
-    $controllerAttributes = $reflectionController->getAttributes();
-
-    foreach ($controllerAttributes as $controllerAttribute)
+    if ($constructor = $reflectionController->getConstructor())
     {
-      $controllerAttribute->newInstance();
-    }
+      $constructorParams = $constructor->getParameters();
 
-    foreach ($constructorParams as $param)
-    {
-      $dependencies[] = $this->injector->resolve($param->getType()->getName());
+      # Instantiate attributes
+      $controllerAttributes = $reflectionController->getAttributes();
+
+      foreach ($controllerAttributes as $controllerAttribute)
+      {
+        $controllerAttribute->newInstance();
+      }
+
+      foreach ($constructorParams as $param)
+      {
+        $dependencies[] = $this->injector->resolve($param->getType()->getName());
+      }
     }
 
     return $reflectionController->newInstanceArgs($dependencies);
@@ -416,12 +418,12 @@ final class Router
 
     foreach ($params as $param)
     {
-      $paramTypeName = $param->getType()->getName();
+      $paramTypeName = $param->getType()?->getName() ?? 'stdClass';
       $isStandardClassType = is_subclass_of($paramTypeName, stdClass::class) || $paramTypeName === 'stdClass';
       $dependencies[$param->getPosition()] = match(true) {
-        $param->getType()->isBuiltin(),
+        $param->getType()?->isBuiltin(),
         $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
-        default => $this->injector->resolve($param->getType()->getName())
+        default => $this->injector->resolve($paramTypeName)
       };
     }
 
