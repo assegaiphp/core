@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Attributes;
 
+use Assegai\Core\Http\Responses\Response;
 use Attribute;
 
 /**
@@ -10,4 +11,9 @@ use Attribute;
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class Res
 {
+  public readonly mixed $value;
+  public function __construct()
+  {
+    $this->value = Response::getInstance();
+  }
 }
