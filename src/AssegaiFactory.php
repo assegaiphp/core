@@ -10,6 +10,10 @@ final class AssegaiFactory
   {
   }
 
+  /**
+   * @param string $moduleName
+   * @return App
+   */
   public static function create(string $moduleName): App
   {
     return new App(

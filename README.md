@@ -1,4 +1,4 @@
-<div style="display: flex; justify-content: center; align-items: center;">
+<div align="center">
     <a href="https://assegai.ml/" target="blank"><img src="https://assegai.ml/images/logo-small.png" width="492" alt="Assegai Logo"></a>
 </div>
 

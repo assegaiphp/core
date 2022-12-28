@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d433fd3e8e00409d86a197b272eeae30",
+    "content-hash": "bd925ee41c0115ce39c2a63fd6f9c7e1",
     "packages": [
         {
             "name": "graham-campbell/result-type",
@@ -603,55 +603,6 @@
         }
     ],
     "packages-dev": [
-        {
-            "name": "assegaiphp/orm",
-            "version": "0.2.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/assegaiphp/orm.git",
-                "reference": "ff938f35ff8ed77c6138271f489eaeb6178105b1"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/assegaiphp/orm/zipball/ff938f35ff8ed77c6138271f489eaeb6178105b1",
-                "reference": "ff938f35ff8ed77c6138271f489eaeb6178105b1",
-                "shasum": ""
-            },
-            "require": {
-                "ext-curl": "*",
-                "ext-intl": "*",
-                "ext-pdo": "*",
-                "ext-pdo_mysql": "*",
-                "ext-pdo_pgsql": "*",
-                "ext-pdo_sqlite": "*",
-                "php": ">=8.1"
-            },
-            "require-dev": {
-                "codeception/codeception": "^4.2"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Assegai\\Orm\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Andrew Masiye",
-                    "email": "amasiye313@gmail.com"
-                }
-            ],
-            "description": "AssegaiORM is an ORM written in modern PHP. It supports both Active Record and Data Mapper patterns. AssegaiORM is highly influenced by other ORMs, such as TypeORM, Doctrine and Entity Framework.",
-            "support": {
-                "issues": "https://github.com/assegaiphp/orm/issues",
-                "source": "https://github.com/assegaiphp/orm/tree/0.2.0"
-            },
-            "time": "2022-08-17T21:09:42+00:00"
-        },
         {
             "name": "behat/gherkin",
             "version": "v4.9.0",
@@ -1371,16 +1322,16 @@
         },
         {
             "name": "phpunit/php-code-coverage",
-            "version": "9.2.21",
+            "version": "9.2.22",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "3f893e19712bb0c8bc86665d1562e9fd509c4ef0"
+                "reference": "e4bf60d2220b4baaa0572986b5d69870226b06df"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/3f893e19712bb0c8bc86665d1562e9fd509c4ef0",
-                "reference": "3f893e19712bb0c8bc86665d1562e9fd509c4ef0",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/e4bf60d2220b4baaa0572986b5d69870226b06df",
+                "reference": "e4bf60d2220b4baaa0572986b5d69870226b06df",
                 "shasum": ""
             },
             "require": {
@@ -1436,7 +1387,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sebastianbergmann/php-code-coverage/issues",
-                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/9.2.21"
+                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/9.2.22"
             },
             "funding": [
                 {
@@ -1444,7 +1395,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2022-12-14T13:26:54+00:00"
+            "time": "2022-12-18T16:40:55+00:00"
         },
         {
             "name": "phpunit/php-file-iterator",

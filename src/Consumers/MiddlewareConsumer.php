@@ -5,7 +5,7 @@ namespace Assegai\Core\Consumers;
 use Assegai\Core\Interfaces\IConsumer;
 use Assegai\Core\Routing\Route;
 
-class MiddlewareConsumers implements IConsumer
+class MiddlewareConsumer implements IConsumer
 {
   protected array $middleware = [];
   protected array $routeMap = [];

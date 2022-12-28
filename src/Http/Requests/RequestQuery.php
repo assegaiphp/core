@@ -22,7 +22,20 @@ class RequestQuery extends stdClass
     }
   }
 
-  public function getProps(?string $key = null): array|string
+  /**
+   * @param string $key
+   * @return bool
+   */
+  public function has(string $key): bool
+  {
+    return isset($this->props[$key]);
+  }
+
+  /**
+   * @param string|null $key
+   * @return array|string
+   */
+  public function get(?string $key = null): array|string
   {
     return $this->props[$key] ?? $this->props;
   }

@@ -10,6 +10,9 @@ use Assegai\Core\Interfaces\IPipeTransform;
 use Attribute;
 use stdClass;
 
+/**
+ * Binds the current request body to the target parameter.
+ */
 #[Injectable]
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class Body
