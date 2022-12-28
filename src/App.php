@@ -15,6 +15,7 @@ use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IConsumer;
+use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Util\Paths;
 use Exception;
@@ -74,6 +75,11 @@ class App
    * @var LoggerInterface|null
    */
   protected ?LoggerInterface $logger = null;
+
+  /**
+   * @var array A list of application scoped pipes
+   */
+  protected array $pipes = [];
 
   /**
    * @param string $rootModuleClass
@@ -155,6 +161,12 @@ class App
     return $this;
   }
 
+  public function useGlobalPipes(IPipeTransform|array $pipes): self
+  {
+    $this->pipes = array_merge($this->pipes, (is_array($pipes) ? $pipes : [$pipes]));
+    return $this;
+  }
+
   /**
    * Sets a logger instance that should be user by the `App` instance.
    *
@@ -209,7 +221,7 @@ class App
    * @return void
    * @throws HttpException
    */
-  public function resolveModules(): void
+  private function resolveModules(): void
   {
     EventManager::broadcast(EventChannel::MODULE_RESOLUTION_START, new Event());
     $this->moduleManager->buildModuleTokensList(rootToken: $this->rootModuleClass);
@@ -280,7 +292,7 @@ class App
   /**
    * @return ReflectionAttribute[]
    */
-  public function getModuleTokens(): array
+  private function getModuleTokens(): array
   {
     return $this->moduleManager->getModuleTokens();
   }
@@ -288,7 +300,7 @@ class App
   /**
    * @return string[]
    */
-  public function getProviderTokens(): array
+  private function getProviderTokens(): array
   {
     return $this->moduleManager->getProviderTokens();
   }
