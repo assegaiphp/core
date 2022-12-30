@@ -9,7 +9,7 @@ use Attribute;
  * how the component should be processed, instantiated and used at runtime.
  */
 #[Attribute(Attribute::TARGET_CLASS)]
-class Component
+readonly class Component
 {
   /**
    * Constructs a component attribute.
@@ -26,12 +26,13 @@ class Component
    * @param array|null $styles One or more inline CSS stylesheets to use in this component.
    */
   public function __construct(
-    public readonly ?array $providers = [],
-    public readonly ?string $moduleId = null,
-    public readonly ?string $templateURL = null,
-    public readonly ?string $template = null,
-    public readonly ?array $styleUrls = [],
-    public readonly ?array $styles = [],
+    public string $selector,
+    public ?array  $providers = [],
+    public ?string $moduleId = null,
+    public ?string $templateUrl = null,
+    public ?string $template = null,
+    public ?array  $styleUrls = [],
+    public ?array  $styles = [],
   )
   {
   }
