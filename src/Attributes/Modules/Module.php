@@ -5,9 +5,10 @@ namespace Assegai\Core\Attributes\Modules;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-class Module extends ModuleMetaData
+readonly class Module
 {
   /**
+   * @param array $declarations
    * @param array $providers
    * @param array $controllers
    * @param array $imports
@@ -15,13 +16,13 @@ class Module extends ModuleMetaData
    * @param array $config
    */
   public function __construct(
-    public readonly array $providers = [],
-    public readonly array $controllers = [],
-    public readonly array $imports = [],
-    public readonly array $exports = [],
-    public readonly array $config = [],
+    public array $declarations = [],
+    public array $providers = [],
+    public array $controllers = [],
+    public array $imports = [],
+    public array $exports = [],
+    public array $config = [],
   )
   {
-    parent::__construct($this->providers,$this->controllers,$this->imports,$this->exports);
   }
 }
