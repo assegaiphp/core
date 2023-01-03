@@ -27,7 +27,7 @@ class Responder
   private ViewEngine $viewEngine;
 
   /**
-   *
+   * Constructs a Responder.
    */
   private final function __construct()
   {
@@ -72,7 +72,7 @@ class Responder
 
     if ($response?->getBody() instanceof View)
     {
-      $this->viewEngine->render($response->getBody());
+      $this->viewEngine->load($response->getBody())->render();
     }
 
     $responseString = match(true) {

@@ -18,6 +18,7 @@ use Assegai\Core\Interfaces\IConsumer;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Util\Paths;
+use Assegai\Core\Util\Debug\Log;
 use Exception;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -202,6 +203,7 @@ class App
         EventManager::broadcast(EventChannel::SESSION_START, new Event());
         $this->resolveModules();
         $this->resolveProviders();
+        $this->resolveDeclarations();
         $this->resolveControllers();
         $this->handleRequest();
       }
@@ -238,6 +240,13 @@ class App
     EventManager::broadcast(EventChannel::PROVIDER_RESOLUTION_START, new Event());
     $this->moduleManager->buildProviderTokensList();
     EventManager::broadcast(EventChannel::PROVIDER_RESOLUTION_FINISH, new Event($this->getProviderTokens()));
+  }
+
+  private function resolveDeclarations(): void
+  {
+    EventManager::broadcast(EventChannel::DECLARATION_RESOLUTION_START, new Event());
+    $this->moduleManager->buildDeclarationMap();
+    EventManager::broadcast(EventChannel::DECLARATION_RESOLUTION_FINISH, new Event());
   }
 
   /**

@@ -3,8 +3,12 @@
 namespace Assegai\Core\Rendering;
 
 use Assegai\Core\Attributes\Component;
+use Assegai\Core\Exceptions\FileException;
+use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Interceptors\IRenderer;
+use Assegai\Core\ModuleManager;
+use Assegai\Core\Util\Paths;
 use ReflectionClass;
 use Stringable;
 
@@ -30,8 +34,72 @@ abstract class ViewComponent implements IRenderer, Stringable
     # Process
   }
 
-  public final function __toString()
+  /**
+   * @param string $selector
+   * @return string
+   */
+  public static function getTemplateContentBySelector(string $selector): string
   {
-    return $this->render();
+    $selectedAttribute = ModuleManager::getInstance()->getDeclaredAttributes()[$selector];
+    $selectedReflection = ModuleManager::getInstance()->getDeclaredReflections()[$selector];
+
+    if (!$selectedAttribute || !$selectedReflection)
+    {
+      die(new RenderingException("Invalid selector"));
+    }
+
+    if (!$selectedAttribute->templateUrl)
+    {
+      return $selectedAttribute->template;
+    }
+
+    $componentPath = Paths::join($selectedReflection->getFileName(), $selectedAttribute->templateUrl);
+
+    if (!file_exists($componentPath))
+    {
+      die(new NotFoundException($componentPath));
+    }
+
+    $content = file_get_contents($componentPath);
+
+    if (!$content)
+    {
+      die(new FileException("Failed to open file {$content}"));
+    }
+
+    return $content;
+  }
+
+  /**
+   * Returns the path to the template file identified by the given selector.
+   *
+   * @param string $selector The selector for the template file.
+   * @return string The path to the template file, or false if an error occurs.
+   * @throws RenderingException If the given selector is invalid.
+   * @throws NotFoundException If the template file does not exist.
+   */
+  public static function getTemplatePathBySelector(string $selector): string
+  {
+    $selectedAttribute = ModuleManager::getInstance()->getDeclaredAttributes()[$selector];
+    $selectedReflection = ModuleManager::getInstance()->getDeclaredReflections()[$selector];
+
+    if (!$selectedAttribute || !$selectedReflection)
+    {
+      throw new RenderingException("Invalid selector");
+    }
+
+    $path = Paths::join($selectedReflection->getFileName(), $selectedAttribute->templateUrl);
+
+    if (!file_exists($path))
+    {
+      throw new NotFoundException($path);
+    }
+
+    return $path;
+  }
+
+  public final function __toString(): string
+  {
+    return $this->render() ?? '';
   }
 }
