@@ -32,6 +32,7 @@ use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+use ReflectionParameter;
 use stdClass;
 
 final class Router
@@ -325,12 +326,17 @@ final class Router
   }
 
   /**
-   * @param Request $request
-   * @param object $controller
-   * @return Response
-   * @throws ContainerException
-   * @throws ReflectionException|NotFoundException|EntryNotFoundException
-   * @throws HttpException
+   * Handles an incoming client request using the given controller.
+   *
+   * @param Request $request The request to be processed.
+   * @param object $controller The controller to handle the request.
+   * @return Response The response to be sent back to the client.
+   * @throws ContainerException If there was an error during dependency injection.
+   * @throws EntryNotFoundException If a dependency was not found in the DI container.
+   * @throws ForbiddenException If the request is forbidden.
+   * @throws HttpException If there was an error processing the request.
+   * @throws NotFoundException If the requested resource could not be found.
+   * @throws ReflectionException If there was an error processing a reflection.
    */
   public function handleRequest(Request $request, object $controller): Response
   {
@@ -446,7 +452,7 @@ final class Router
     {
       $result = [];
     }
-    $context->switchToHttp()->getResponse()->setBody($result);
+    $context?->switchToHttp()->getResponse()->setBody($result);
 
     # Run handler Interceptors
     /** @var callable $handler */
@@ -464,24 +470,27 @@ final class Router
       $context = $handler($context);
     }
 
-    return $context->switchToHttp()->getResponse();
+    return $context?->switchToHttp()->getResponse() ?? Response::getInstance();
   }
 
   /**
-   * @param object $controller
-   * @return string
+   * Returns the path prefix for the given controller.
+   * @param object $controller The controller to get the path prefix for.
+   * @return string The path prefix for the given controller.
    */
   private function getControllerPrefix(object $controller): string
   {
     $reflectionController = new ReflectionClass($controller);
     $attributes = $reflectionController->getAttributes(Controller::class);
 
+    # Find a Controller attribute
     foreach ($attributes as $attribute)
     {
       $instance = $attribute->newInstance();
       return $instance->path;
     }
 
+    # If no attributes are found, return an empty string.
     return '';
   }
 
@@ -491,6 +500,10 @@ final class Router
    */
   private function getHandlerPath(ReflectionMethod $handler): string
   {
+    # TODO: Filter by Request class
+    /*
+     * There is need to create a Request base class from which all HTTP verb methods inherit
+     */
     $attributes = $handler->getAttributes();
     foreach ($attributes as $attribute)
     {

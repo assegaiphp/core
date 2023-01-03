@@ -3,8 +3,9 @@
 namespace Assegai\Core\Interceptors;
 
 use Assegai\Core\ExecutionContext;
+use Assegai\Core\Interfaces\IAssegaiInterceptor;
 
-class EmptyResultInterceptor implements \Assegai\Core\Interfaces\IAssegaiInterceptor
+class EmptyResultInterceptor implements IAssegaiInterceptor
 {
   public function __construct(public readonly int $code = 404)
   {
@@ -16,6 +17,7 @@ class EmptyResultInterceptor implements \Assegai\Core\Interfaces\IAssegaiInterce
 
     return function (ExecutionContext $context) use ($code) {
       $response = $context->switchToHttp()->getResponse();
+      $response->setBody([]);
 
       if (empty($response->getBody()))
       {

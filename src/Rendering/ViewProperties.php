@@ -200,7 +200,7 @@ class ViewProperties
       {
         $html .= $this->getIndent(3) . $code . PHP_EOL;
       }
-      $html .= $this->getIndent(2) . "<script>" . PHP_EOL;
+      $html .= $this->getIndent(2) . "</script>" . PHP_EOL;
     }
 
     return $html;
@@ -240,7 +240,7 @@ class ViewProperties
       {
         $html .= $code . PHP_EOL;
       }
-      $html .= "<script>";
+      $html .= "</script>";
     }
 
     return $html;
@@ -283,6 +283,6 @@ class ViewProperties
       $type = 'image/x-icon';
     }
 
-    return "<link rel='shortcut icon' href='$href' type='$type'>";
+    return $this->getIndent(2) . "<link rel='shortcut icon' href='$href' type='$type' />" . PHP_EOL;
   }
 }
