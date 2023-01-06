@@ -9,9 +9,16 @@ use Assegai\Core\Interfaces\IPipeTransform;
 use Attribute;
 use stdClass;
 
+/**
+ * An attribute that binds a function parameter to a request parameter. If no key is specified, then the whole request
+ * parameter object will be bound.
+ */
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class Param
 {
+  /**
+   * @var string|stdClass|array|mixed|object
+   */
   public readonly string|stdClass $value;
 
   /**

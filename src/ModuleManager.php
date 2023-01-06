@@ -2,6 +2,7 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Attributes\Component;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
@@ -24,7 +25,7 @@ class ModuleManager
   protected array $moduleTokens = [];
 
   /**
-   * @var array A list of all the imported module tokens
+   * @var array A list of all the controller tokens
    */
   protected array $controllerTokensList = [];
 
@@ -32,6 +33,26 @@ class ModuleManager
    * @var array A list of all the imported module tokens
    */
   protected array $providerTokens = [];
+
+  /**
+   * @var array A list of all the declared component class names.
+   */
+  protected array $declarationTokens = [];
+
+  /**
+   * @var array A map of all the declared component attributes.
+   */
+  protected array $declaredAttributes = [];
+
+  /**
+   * @var array A map of all the declared component reflections.
+   */
+  protected array $declaredReflections = [];
+
+  /**
+   * @var array A map of all the declared components.
+   */
+  protected array $declaredClassInstances = [];
 
   /**
    * @var array
@@ -77,7 +98,7 @@ class ModuleManager
       }
       $reflectionModuleAttribute = $this->lastLoadedAttributes[0];
 
-      /** @var ['imports' => 'array', 'exports' => 'array', 'providers' => 'array', 'controllers' => 'array', 'config' => 'array'] $args */
+      /** @var ['declarations' => 'array', 'imports' => 'array', 'exports' => 'array', 'providers' => 'array', 'controllers' => 'array', 'config' => 'array'] $args */
       $args = $reflectionModuleAttribute->getArguments();
 
       # 1. Add rootToken to the list
@@ -89,7 +110,13 @@ class ModuleManager
         $this->config = array_merge($this->config, $args['config']);
       }
 
-      # 3. For each import
+      # 3. Store declarations
+      if (isset($args['declarations']))
+      {
+        $this->declarationTokens = array_merge($this->declarationTokens, $args['declarations']);
+      }
+
+      # 4. For each import
       foreach ($args['imports'] as $import)
       {
         $this->buildModuleTokensList($import);
@@ -98,6 +125,36 @@ class ModuleManager
     catch (ReflectionException $e)
     {
       throw new HttpException($e->getMessage());
+    }
+  }
+
+  /**
+   * @return void
+   */
+  public function buildDeclarationMap(): void
+  {
+    try
+    {
+      foreach ($this->declarationTokens as $declarationToken)
+      {
+        $componentClassReflection = new ReflectionClass($declarationToken);
+        $componentAttribute = $this->getComponentAttribute($componentClassReflection);
+
+        if (!$componentAttribute)
+        {
+          continue;
+        }
+
+        // TODO: Refactor declarations to allow components, directives and pipes
+        // See https://angular.io/guide/feature-modules
+        $this->declaredAttributes[$componentAttribute->selector] = $componentAttribute;
+        $this->declaredReflections[$componentAttribute->selector] = $componentClassReflection;
+        $this->declaredClassInstances[$componentAttribute->selector] = $componentClassReflection->newInstance();
+      }
+    }
+    catch (ReflectionException $exception)
+    {
+      die(new HttpException($exception->getMessage()));
     }
   }
 
@@ -183,4 +240,45 @@ class ModuleManager
   {
     return $this->config[$key] ?? null;
   }
+
+  /**
+   * @return Component[]
+   */
+  public function getDeclaredAttributes(): array
+  {
+    return $this->declaredAttributes;
+  }
+
+  /**
+   * @return ReflectionClass[]
+   */
+  public function getDeclaredReflections(): array
+  {
+    return $this->declaredReflections;
+  }
+
+  /**
+   * @return object[]
+   */
+  public function getDeclarations(): array
+  {
+    return $this->declaredClassInstances;
+  }
+
+  /**
+   * @param ReflectionClass $reflection
+   * @return false|Component
+   */
+  private function getComponentAttribute(ReflectionClass $reflection): false|Component
+  {
+    $componentAttributes = $reflection->getAttributes(Component::class);
+
+    if (!$componentAttributes)
+    {
+      return false;
+    }
+
+    return $componentAttributes[0]->newInstance();
+  }
+
 }

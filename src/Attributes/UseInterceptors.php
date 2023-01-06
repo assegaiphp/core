@@ -8,6 +8,9 @@ use Attribute;
 use ReflectionClass;
 use ReflectionException;
 
+/**
+ * An attribute that specifies which interceptors to run during the request/response lifecycle.
+ */
 #[Attribute]
 class UseInterceptors
 {
