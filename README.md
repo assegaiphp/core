@@ -1,5 +1,5 @@
-<div align="center">
-    <a href="https://assegai.ml/" target="blank"><img src="https://assegai.ml/images/logo-small.png" width="492" alt="Assegai Logo"></a>
+<div align="center" style="padding-bottom: 48px">
+    <a href="https://assegaiphp.com/" target="blank"><img src="https://assegaiphp.com/images/logos/logo-cropped.png" width="200" alt="Assegai Logo"></a>
 </div>
 
 <p style="text-align: center">A progressive <a href="https://php.net">PHP</a> framework for building effecient and scalable server-side applications.</p>
@@ -20,7 +20,7 @@ Assegai is a framework for building efficient, scalable <a href="https://php.net
 $ composer require assegaiphp/core
 ```
 
-* To check out the [guide](https://docs.assegai.ml), visit [docs.assegai.ml](https://docs.assegai.ml). :books:
+* To check out the [guide](https://assegaiphp.com/guide), visit [assegaiphp.com](https://assegaiphp.com). :books:
 
 ## Questions
 
@@ -32,16 +32,16 @@ Please make sure to read the [Issues Reporting Checklist](CONTRIBUTING.md#issues
 
 ## Consulting
 
-With official support, you can get expert help straight from the Assegai core team. We provide dedicated technical support, migration stratgies, advice on best practices (and design decisions), PR reviews, and team augmentation. Read more about [support here](https://enterprise.assegai.ml).
+With official support, you can get expert help straight from the Assegai core team. We provide dedicated technical support, migration stratgies, advice on best practices (and design decisions), PR reviews, and team augmentation. Read more about [support here](https://assegaiphp.com).
 
 ## Support
 
-Assegai is an MIT-licensed open source project. It can grow thanks to sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.assegai.ml/support).
+Assegai is an MIT-licensed open source project. It can grow thanks to sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://assegaiphp.com/support).
 
 ## Stay in touch
 
 * Author - [Andrew Masiye](https://twitter.com/feenix11)
-* Website - [https://atatusoft.com](https://atatusoft.com/)
+* Website - [https://assegaiphp.com](https://assegaiphp.com/)
 * Twitter - [@assegaiphp](https://twitter.com/assegaiphp)
 
 ## License
