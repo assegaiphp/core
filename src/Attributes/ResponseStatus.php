@@ -6,6 +6,9 @@ use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Responses\Responder;
 use Attribute;
 
+/**
+ * An attribute that defines the default HTTP response code of a handler.
+ */
 #[Attribute(Attribute::TARGET_FUNCTION|Attribute::TARGET_METHOD)]
 class ResponseStatus
 {

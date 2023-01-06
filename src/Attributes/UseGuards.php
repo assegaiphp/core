@@ -9,7 +9,7 @@ use ReflectionClass;
 use ReflectionException;
 
 /**
- * Specifies which Guards determine whether an endpoint can be activated.
+ * An attribute that specifies which Guards to use when determining whether an endpoint can be activated.
  */
 #[Attribute]
 class UseGuards
