@@ -26,12 +26,14 @@ use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
 use Assegai\Core\Util\Debug\Console\Enumerations\Color;
+use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Validator;
 use Exception;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+use ReflectionParameter;
 use stdClass;
 
 final class Router
@@ -325,12 +327,17 @@ final class Router
   }
 
   /**
-   * @param Request $request
-   * @param object $controller
-   * @return Response
-   * @throws ContainerException
-   * @throws ReflectionException|NotFoundException|EntryNotFoundException
-   * @throws HttpException
+   * Handles an incoming client request using the given controller.
+   *
+   * @param Request $request The request to be processed.
+   * @param object $controller The controller to handle the request.
+   * @return Response The response to be sent back to the client.
+   * @throws ContainerException If there was an error during dependency injection.
+   * @throws EntryNotFoundException If a dependency was not found in the DI container.
+   * @throws ForbiddenException If the request is forbidden.
+   * @throws HttpException If there was an error processing the request.
+   * @throws NotFoundException If the requested resource could not be found.
+   * @throws ReflectionException If there was an error processing a reflection.
    */
   public function handleRequest(Request $request, object $controller): Response
   {
@@ -446,7 +453,7 @@ final class Router
     {
       $result = [];
     }
-    $context->switchToHttp()->getResponse()->setBody($result);
+    $context?->switchToHttp()->getResponse()->setBody($result);
 
     # Run handler Interceptors
     /** @var callable $handler */
@@ -464,24 +471,27 @@ final class Router
       $context = $handler($context);
     }
 
-    return $context->switchToHttp()->getResponse();
+    return $context?->switchToHttp()->getResponse() ?? Response::getInstance();
   }
 
   /**
-   * @param object $controller
-   * @return string
+   * Returns the path prefix for the given controller.
+   * @param object $controller The controller to get the path prefix for.
+   * @return string The path prefix for the given controller.
    */
   private function getControllerPrefix(object $controller): string
   {
     $reflectionController = new ReflectionClass($controller);
     $attributes = $reflectionController->getAttributes(Controller::class);
 
+    # Find a Controller attribute
     foreach ($attributes as $attribute)
     {
       $instance = $attribute->newInstance();
       return $instance->path;
     }
 
+    # If no attributes are found, return an empty string.
     return '';
   }
 
@@ -491,6 +501,10 @@ final class Router
    */
   private function getHandlerPath(ReflectionMethod $handler): string
   {
+    # TODO: Filter by Request class
+    /*
+     * There is need to create a Request base class from which all HTTP verb methods inherit
+     */
     $attributes = $handler->getAttributes();
     foreach ($attributes as $attribute)
     {
@@ -501,17 +515,23 @@ final class Router
   }
 
   /**
-   * @param string $path
-   * @return string
+   * Returns the regular expression pattern for matching the given path.
+   *
+   * @param string $path The path to be matched.
+   * @return string The regular expression pattern for matching the given path.
    */
   private function getPathMatchingPattern(string $path): string
   {
+    // Remove trailing slash if it exists
     if (str_ends_with($path, '/'))
     {
-      $path = preg_replace('/\/$/', '', $path);
+      $path = rtrim($path, '/');
     }
 
-    $path = str_replace('*', '.*', $path);
+    // Replace `*` with `.+` to match any character one or more times
+    $path = str_replace('*', '.+', $path);
+
+    // Replace named placeholders with regex pattern to match any word characters one or more times
     return preg_replace(pattern: '/(\/?):\w+/', replacement: '$1([\w-]+)', subject: $path);
   }
 
@@ -524,7 +544,7 @@ final class Router
   {
     $path = preg_replace('/^\//', '', $path);
     $pattern = str_replace('/', '\/', $pattern);
-    $result = preg_match("/^$pattern$/", $path);
+    $result = preg_match("/^$pattern\/?$/", $path);
 
     return boolval($result) === true;
   }

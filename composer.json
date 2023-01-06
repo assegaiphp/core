@@ -3,7 +3,8 @@
     "description": "A progressive PHP framework for building efficient and scalable server-side applications.",
     "type": "library",
     "require-dev": {
-        "codeception/codeception": "^4.2"
+        "codeception/codeception": "^4.2",
+        "assegaiphp/orm": ">=0.2"
     },
     "license": "MIT",
     "autoload": {

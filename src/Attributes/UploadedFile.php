@@ -9,7 +9,7 @@ use Assegai\Core\Interfaces\IPipeTransform;
 use Attribute;
 
 /**
- *
+ * An attribute that binds the uploaded file in temp storage to the target function/method parameter.
  */
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class UploadedFile
