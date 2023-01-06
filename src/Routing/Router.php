@@ -26,6 +26,7 @@ use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
 use Assegai\Core\Util\Debug\Console\Enumerations\Color;
+use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Validator;
 use Exception;
 use ReflectionAttribute;
@@ -514,17 +515,23 @@ final class Router
   }
 
   /**
-   * @param string $path
-   * @return string
+   * Returns the regular expression pattern for matching the given path.
+   *
+   * @param string $path The path to be matched.
+   * @return string The regular expression pattern for matching the given path.
    */
   private function getPathMatchingPattern(string $path): string
   {
+    // Remove trailing slash if it exists
     if (str_ends_with($path, '/'))
     {
-      $path = preg_replace('/\/$/', '', $path);
+      $path = rtrim($path, '/');
     }
 
-    $path = str_replace('*', '.*', $path);
+    // Replace `*` with `.+` to match any character one or more times
+    $path = str_replace('*', '.+', $path);
+
+    // Replace named placeholders with regex pattern to match any word characters one or more times
     return preg_replace(pattern: '/(\/?):\w+/', replacement: '$1([\w-]+)', subject: $path);
   }
 
@@ -537,7 +544,7 @@ final class Router
   {
     $path = preg_replace('/^\//', '', $path);
     $pattern = str_replace('/', '\/', $pattern);
-    $result = preg_match("/^$pattern$/", $path);
+    $result = preg_match("/^$pattern\/?$/", $path);
 
     return boolval($result) === true;
   }
