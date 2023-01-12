@@ -7,6 +7,9 @@ namespace Assegai\Core\Rendering;
  */
 class ViewMeta
 {
+  const DEFAULT_PROPS = [
+    'name' => 'width=device-width, initial-scale=1.0'
+  ];
   /**
    *
    */
