@@ -25,14 +25,14 @@ class Config
     {
       $config = require($configPath);
 
-      $_ENV = array_merge($_ENV, $config);
+      $_ENV = $_ENV + $config;
     }
     $configPath = str_replace('default', 'local', $configPath);
     if (file_exists($configPath))
     {
       $config = require($configPath);
 
-      $_ENV = array_merge($_ENV, $config);
+      $_ENV = $_ENV + $config;
     }
 
     if (!isset($GLOBALS['config']))
@@ -51,7 +51,7 @@ class Config
           file_exists($productionConfigPath)
             ? require($productionConfigPath)
             : [];
-        $config = array_merge($config, $productionConfig);
+        $config = $config + $productionConfig;
       }
 
       if (file_exists($localConfigPath))
@@ -60,7 +60,7 @@ class Config
           file_exists($localConfigPath)
             ? require($localConfigPath)
             : [];
-        $config = array_merge($config, $localConfig);
+        $config = $config + $localConfig;
       }
 
       $GLOBALS['config'] = $config;
