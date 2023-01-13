@@ -32,7 +32,7 @@ class Config
     {
       $config = require($configPath);
 
-      $_ENV = $_ENV + $config;
+      $_ENV = array_replace_recursive($_ENV, $config);
     }
 
     if (!isset($GLOBALS['config']))
@@ -51,7 +51,7 @@ class Config
           file_exists($productionConfigPath)
             ? require($productionConfigPath)
             : [];
-        $config = $config + $productionConfig;
+        $config = array_replace_recursive($config, $productionConfig);
       }
 
       if (file_exists($localConfigPath))
@@ -60,7 +60,8 @@ class Config
           file_exists($localConfigPath)
             ? require($localConfigPath)
             : [];
-        $config = $config + $localConfig;
+
+        $config = array_replace_recursive($config, $localConfig);
       }
 
       $GLOBALS['config'] = $config;
