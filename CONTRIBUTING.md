@@ -50,18 +50,18 @@ We want to fix all the issues as oon as possible, but before fixing a bug we nee
 
 Unfortunately, we are not able to investigate / fix bugs without a minimal reproduction, so if we don't hear back from you we are going to close an issue that doesn't have enough info to be reproduced.
 
-You can file new issues by filling out our [new issue form](https://github.com/amasiye/assegai-php/issues)
+You can file new issues by filling out our [new issue form](https://github.com/assegaiphp/core/issues)
 
 ### <a name="submitting-a-pull-request"></a> Submitting a Pull Request (PR)
 
 Before you submit your Pull Request (PR) consider the following guidelines:
 
-1. Search [GitHub](https://github.com/amasiye/assegai-php/pulls) for an open or closed PR that relates to your submission. You don't want to duplicate effort.
-1. Fork the amasiye/assegai-php repo.
+1. Search [GitHub](https://github.com/assegaiphp/core/pulls) for an open or closed PR that relates to your submission. You don't want to duplicate effort.
+1. Fork the assegaiphp/core repo.
 1. Make your changes in a new git branch:
 
    ```shell
-   git checkout -b my-fix-branch master
+   git checkout -b my-fix-branch main
    ```
 1. Create your patch, **including appropriate test cases**.
 1. Follow our [Coding Rules](#coding-rules).
@@ -80,7 +80,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
    git push origin my-fix-branch
    ```
 
-1. In GitHub, send a pull request to `assegai-php:master`.
+1. In GitHub, send a pull request to `assegai-php:main`.
 
 - If we suggest changes then:
 
@@ -89,7 +89,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
     - Rebase your branch and force push to your GitHub repository (this will update you Pull Request):
 
    ```shell
-   git rebase master -i
+   git rebase main -i
    git push -f
    ```
 
@@ -105,10 +105,10 @@ After your pull request is merged, you can safely delete you branch and pull the
    git push origin --delete my-fix-branch
    ```
 
-- Check out the master branch:
+- Check out the main branch:
 
    ```shell
-   git checkout master -f
+   git checkout main -f
    ```
 
 - Delete the local branch:
@@ -117,10 +117,10 @@ After your pull request is merged, you can safely delete you branch and pull the
    git branch -D my-fix-branch
    ```
 
-- Update your master with the lates upstream version:
+- Update your main with the lates upstream version:
 
    ```shell
-   git pull --ff upstream master
+   git pull --ff upstream main
    ```
 
 ## <a name="development-setup"></a> Development Setup
@@ -192,7 +192,7 @@ Any line of the commit message cannot be longer than 100 characters! This allows
 
 The **footer** should contain a [closing reference to an issue](https://help.github.com/articles/closing-issues-via-commit-messages/) if any.
 
-Samples: (even more [samples](https://github.com/amasiye/assegai-php/commits/master))
+Samples: (even more [samples](https://github.com/assegaiphp/core/commits/main))
 
 ```
 docs(changelog): update change log to beta.2
@@ -261,7 +261,7 @@ The footer should contain any information about **Breaking Changes** and is also
 A detailed explanation can be found in this [document][commit-message-format]
 
 [commit-message-format]: https://docs.google.com/document/d/1QrDFcIiPjSLDn3EL15IJygNPiHORgU1_OOAqWjiDU5Y/edit#
-[dev-doc]: https://github.com/amasiye/assegai-php/blob/master/docs/DEVELOPER.md
-[github]: https://github.com/amasiye/assegai-php
+[dev-doc]: https://github.com/assegaiphp/core/blob/main/docs/DEVELOPER.md
+[github]: https://github.com/assegaiphp/core
 [discord]: https://discord.gg/sR9hPAXR4z
 [individual-cla]: http://code.google.com/legal/individual-cla-v1.0.html
