@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1310d44cd98ff18a71ca9315e15732ee",
+    "content-hash": "3f5e67a1a85844d876ebfc29579e7d76",
     "packages": [
         {
             "name": "arubacao/tld-checker",
