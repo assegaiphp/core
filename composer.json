@@ -28,6 +28,7 @@
         "psr/log": "^3.0.0",
         "vlucas/phpdotenv": "^5.4",
         "twig/twig": "^3.0",
-        "ext-fileinfo": "*"
+        "ext-fileinfo": "*",
+        "assegaiphp/validation": "^0.3.1"
     }
 }
