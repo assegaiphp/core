@@ -2,8 +2,7 @@
 
 namespace Assegai\Core\Pipes;
 
-use Assegai\Core\Exceptions\Http\BadRequestException;
-use Assegai\Core\Http\Responses\Responder;
+use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Validation\Validator;
 use ReflectionException;
@@ -18,7 +17,7 @@ class ValidationPipe implements IPipeTransform
 
   /**
    * @inheritDoc
-   * @throws ReflectionException
+   * @throws ReflectionException|HttpException
    */
   public function transform(mixed $value, array|stdClass|null $metaData = null): mixed
   {
@@ -31,7 +30,7 @@ class ValidationPipe implements IPipeTransform
 
     if (!$isValidClass)
     {
-      Responder::getInstance()->respond(new BadRequestException("$value is not a numeric string"));
+      throw new HttpException("Value passed to Validation pipe is not a valid class");
     }
 
     return $value;
