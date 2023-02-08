@@ -74,11 +74,13 @@ class Responder
     else if ($response instanceof Response)
     {
       $this->setResponseCode($response->getStatus());
-    }
 
-    if ($response?->getBody() instanceof View)
-    {
-      $this->viewEngine->load($response->getBody())->render();
+      $responseBody = $response->getBody();
+
+      if ($responseBody instanceof View)
+      {
+        $this->viewEngine->load($responseBody)->render();
+      }
     }
 
     $responseString = match(true) {
