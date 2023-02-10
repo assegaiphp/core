@@ -550,7 +550,7 @@ final class Router
   }
 
   /**
-   * @param ReflectionMethod $activatedHandler
+   * @param ReflectionMethod $activatedHandler A reflection instance of the handler method to be parsed.
    * @return void
    */
   private function parseHandlerAttributes(ReflectionMethod $activatedHandler): void
