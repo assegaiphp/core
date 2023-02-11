@@ -3,8 +3,10 @@
     "description": "A progressive PHP framework for building efficient and scalable server-side applications.",
     "type": "library",
     "require-dev": {
-        "codeception/codeception": "^4.2",
-        "assegaiphp/orm": ">=0.2"
+        "assegaiphp/orm": ">=0.2",
+        "codeception/codeception": "^5.0",
+        "codeception/module-phpbrowser": "*",
+        "codeception/module-asserts": "*"
     },
     "license": "MIT",
     "autoload": {
@@ -28,6 +30,10 @@
         "psr/log": "^3.0.0",
         "vlucas/phpdotenv": "^5.4",
         "twig/twig": "^3.0",
-        "ext-fileinfo": "*"
+        "ext-fileinfo": "*",
+        "assegaiphp/validation": "^0.3.1"
+    },
+    "scripts": {
+        "test": "codecept run unit"
     }
 }
