@@ -3,6 +3,9 @@
 namespace Assegai\Core\Util;
 
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
+use Assegai\Core\Injector;
+use DateTime;
+use ReflectionProperty;
 use stdClass;
 
 class TypeManager
@@ -20,6 +23,7 @@ class TypeManager
   public static function castObjectToUserType(stdClass $object, string $targetType): mixed
   {
     $instance = new $targetType;
+    $injector = Injector::getInstance();
 
     if (! class_exists($targetType) )
     {
@@ -30,7 +34,15 @@ class TypeManager
     {
       if (property_exists($instance, $key))
       {
-        $instance->$key = $value;
+        $propertyReflection = new ReflectionProperty($instance, $key);
+        if ($propertyReflection->getType()->getName() === 'DateTime')
+        {
+          $instance->$key = DateTime::createFromFormat(DATE_ATOM, $value);
+        }
+        else
+        {
+          $instance->$key = $value;
+        }
       }
     }
 
