@@ -3,12 +3,9 @@
 namespace Assegai\Core\Util;
 
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
-use Assegai\Core\Exceptions\Http\HttpException;
-use ReflectionClass;
-use ReflectionException;
 use stdClass;
 
-class Types
+class TypeManager
 {
   private function __construct()
   {
