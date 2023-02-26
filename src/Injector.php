@@ -18,7 +18,7 @@ use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
-use Assegai\Core\Util\Types;
+use Assegai\Core\Util\TypeManager;
 use Assegai\Orm\Attributes\InjectRepository;
 use ReflectionClass;
 use ReflectionEnum;
@@ -276,7 +276,7 @@ final class Injector implements ITokenStoreOwner, IContainer
             $body = $paramAttributeInstance->value ?? null;
           }
 
-          return is_object($body) ? Types::castObjectToUserType($body, $paramTypeName) : $body;
+          return is_object($body) ? TypeManager::castObjectToUserType($body, $paramTypeName) : $body;
 
         case Req::class:
           return $request;
