@@ -15,10 +15,12 @@ class TypeManager
   }
 
   /**
-   * @param stdClass $object
-   * @param string $targetType
-   * @return mixed
-   * @throws EntryNotFoundException
+   * Casts an object of type stdClass to an object of a given type.
+   *
+   * @param stdClass $object The object to cast.
+   * @param string $targetType The target type to cast to.
+   * @return mixed The object cast to the user-defined type.
+   * @throws EntryNotFoundException If the target type cannot be found.
    */
   public static function castObjectToUserType(stdClass $object, string $targetType): mixed
   {
