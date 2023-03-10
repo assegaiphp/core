@@ -12,7 +12,8 @@
     "autoload": {
         "psr-4": {
             "Assegai\\Core\\": "src/"
-        }
+        },
+        "files": ["src/Util/Definitions.php"]
     },
     "autoload-dev": {
         "psr-4": {
