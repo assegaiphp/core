@@ -3,6 +3,10 @@
 namespace Assegai\Core;
 
 use Assegai\Core\Enumerations\EnvironmentType;
+use Assegai\Core\Exceptions\ConfigurationException;
+use Assegai\Core\Util\Debug\Log;
+use Assegai\Core\Util\Paths;
+use Dotenv\Dotenv;
 use Exception;
 
 /**
@@ -11,54 +15,71 @@ use Exception;
  */
 class Config
 {
+  private const ERR_MSG_CONFIG_NOT_FOUND = 'Config Not Found: ';
+
   /**
+   * Hydrate the environment variables and configuration options
+   *
+   * @param string|null $configDirectory The directory containing the config files
+   *
    * @return void
    */
-  public static function hydrate(): void
+  public static function hydrate(?string $configDirectory = null): void
   {
     $config = [];
-    $workingDirectory = shell_exec('pwd');
-    $configPath = trim($workingDirectory) . '/config/default.php';
-    $envPath = trim($workingDirectory) . '/.env';
+    $workingDirectory = $configDirectory ?? getcwd();
+    $configFilename = Paths::join(trim($workingDirectory), 'config', 'default.php');
+    $envPath = Paths::join(trim($workingDirectory), '.env');
 
-    if (file_exists($configPath))
+    // Load .env file
+    if (is_file($envPath))
     {
-      $config = require($configPath);
+      $dotEnv = Dotenv::createImmutable($workingDirectory);
+      $dotEnv->load();
+    }
+
+    // Load the default config file
+    if (is_file($configFilename))
+    {
+      $config = require($configFilename);
 
       $_ENV = $_ENV + $config;
     }
-    $configPath = str_replace('default', 'local', $configPath);
-    if (file_exists($configPath))
+
+    // Attempt to load the local file
+    $configFilename = str_replace('default', 'local', $configFilename);
+    if (is_file($configFilename))
     {
-      $config = require($configPath);
+      $config = require($configFilename);
 
       $_ENV = array_replace_recursive($_ENV, $config);
     }
 
     if (!isset($GLOBALS['config']))
     {
-      $defaultConfigPath = 'config/default.php';
-      $localConfigPath = 'config/local.php';
-      $productionConfigPath = 'config/production.php';
+      $defaultConfigFilename = Paths::join(trim($workingDirectory), 'config', 'default.php');
+      $localConfigFilename = Paths::join(trim($workingDirectory), 'config', 'local.php');
+      $productionConfigFilename = Paths::join(trim($workingDirectory), 'config', 'production.php');
 
-      $config = file_exists($defaultConfigPath)
-        ? require($defaultConfigPath)
+      $config = is_file($defaultConfigFilename)
+        ? require($defaultConfigFilename)
         : [];
 
-      if (Config::environment() === EnvironmentType::PRODUCTION && file_exists($productionConfigPath))
+      // If the environment is production, merge the production config with the default config
+      if (Config::environment() === EnvironmentType::PRODUCTION && is_file($productionConfigFilename))
       {
         $productionConfig =
-          file_exists($productionConfigPath)
-            ? require($productionConfigPath)
+          is_file($productionConfigFilename)
+            ? require($productionConfigFilename)
             : [];
         $config = array_replace_recursive($config, $productionConfig);
       }
 
-      if (file_exists($localConfigPath))
+      if (is_file($localConfigFilename))
       {
         $localConfig =
-          file_exists($localConfigPath)
-            ? require($localConfigPath)
+          is_file($localConfigFilename)
+            ? require($localConfigFilename)
             : [];
 
         $config = array_replace_recursive($config, $localConfig);
@@ -72,11 +93,11 @@ class Config
    * @param string $name
    * @return mixed
    */
-  public static function get(string $name): mixed
+  public static function get(string $name, ?string $configPath = null): mixed
   {
     if (!isset($GLOBALS['config']))
     {
-      Config::hydrate();
+      Config::hydrate($configPath);
     }
 
     return $GLOBALS['config'][$name] ?? NULL;
@@ -89,9 +110,14 @@ class Config
    * @param bool $associative When TRUE, returned objects will be converted into associative arrays.
    * @return array|object|null
    */
-  public static function database(string $type, string $name, bool $associative = true): array|object|null
+  public static function database(
+    string $type,
+    string $name,
+    bool $associative = true,
+    ?string $configPath = null
+  ): array|object|null
   {
-    $config = self::get('databases')[$type][$name] ?? [];
+    $config = self::get(name: 'databases', configPath: $configPath)[$type][$name] ?? [];
     return $associative ? $config : (object)$config;
   }
 
@@ -109,11 +135,11 @@ class Config
    * @param string $name
    * @return mixed
    */
-  public static function asObject(string $name): mixed
+  public static function getAsObject(string $name): ?object
   {
     $config = Config::get(name: $name);
 
-    return is_array($config) ? json_decode(json_encode($config)) : $config;
+    return is_array($config) ? (object)$config : $config;
   }
 
   /**
@@ -158,37 +184,54 @@ class Config
    * @return mixed Returns the configuration value of given name if it exists,
    * or `NULL` if the `assegai.json` file or configuration doesn't exist.
    */
-  public static function workspace(string $name): mixed
+  public static function getWorkspaceConfig(string $name, ?string $workspaceDirectory = null): mixed
   {
-    if (!file_exists('assegai.json'))
+    if (!$workspaceDirectory)
     {
-      return NULL;
+      $workspaceDirectory = getcwd();
     }
-    $config = file_get_contents('assegai.json');
+
+    $workspaceConfigFilename = Paths::join($workspaceDirectory, 'assegai.json');
+
+    if (!file_exists($workspaceConfigFilename))
+    {
+      throw new Exception(self::ERR_MSG_CONFIG_NOT_FOUND . $workspaceConfigFilename);
+    }
+
+    $config = file_get_contents($workspaceConfigFilename);
 
     if (!empty($config) && str_starts_with($config, '{'))
     {
       $config = json_decode($config);
     }
 
-    return $config->$name ?? NULL;
+    return $config->$name ?? null;
   }
 
   /**
+   * Updates the workspace configuration file.
+   *
    * @param string $value The new value to set the configuration to.
    *
    * @throws Exception
    */
-  public static function setWorkspace(string $name, mixed $value): void
+  public static function updateWorkspaceConfig(string $name, mixed $value, ?string $workspaceDirectory = null): void
   {
-    if (!file_exists('assegai.json'))
+    if (!$workspaceDirectory)
     {
-      throw new Exception('Missing workspace config file: assegai.json');
+      $workspaceDirectory = getcwd();
     }
 
-    $config = file_get_contents('assegai.json');
+    $workspaceConfigFilename = Paths::join($workspaceDirectory, 'assegai.json');
 
-    if (!empty($config) && str_starts_with($config, '{'))
+    if (!file_exists($workspaceConfigFilename))
+    {
+      throw new Exception(self::ERR_MSG_CONFIG_NOT_FOUND . $workspaceConfigFilename);
+    }
+
+    $config = file_get_contents($workspaceConfigFilename);
+
+    if (!empty($config) && json_is_valid($config))
     {
       $config = json_decode($config);
     }
@@ -198,6 +241,16 @@ class Config
     }
 
     $config->$name = $value;
+
+    $configContents = json_encode($config, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
+    $bytesWritten = file_put_contents($workspaceConfigFilename, $configContents);
+
+    if (false === $bytesWritten)
+    {
+      throw new ConfigurationException("Failed to write to configuration file.");
+    }
+
+    Log::info('UPDATE', basename($workspaceConfigFilename) . " ($bytesWritten bytes)");
   }
 
   /**
