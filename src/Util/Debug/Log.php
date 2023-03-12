@@ -22,17 +22,17 @@ class Log
 
   public static function debug(string $tag, string $message): void
   {
-    printf(STDOUT, "%sD/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message);
+    printf("%sD/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message);
   }
 
   public static function info(string $tag, string $message): void
   {
-    printf(STDOUT, "%sI/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message);
+    printf("%sI/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message);
   }
 
   public static function warn(string $tag, string $message): void
   {
-    printf(STDOUT, "%sW/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message);
+    printf("%sW/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message);
   }
 
   public static function error(string $tag, string $message, int $type = 0, ?string $destination = null, ?string $headers = null): void
