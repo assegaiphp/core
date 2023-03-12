@@ -1,0 +1,20 @@
+{
+    "name": "assegai-test-app",
+    "description": "A simple REST API for testing Assegai projects.",
+    "version": "0.0.1",
+    "projectType": "application",
+    "root": "",
+    "sourceRoot": "src",
+    "prefix": "app",
+    "scripts": {
+        "test": "./vendor/bin/codecept run Unit"
+    },
+    "development": {
+        "server": {
+            "host": "localhost",
+            "port": 5200,
+            "openBrowser": true
+        }
+    },
+    "test_key": "test_value_1678659806"
+}
