@@ -2,3 +2,4 @@
 .vscode
 /.dev/
 /vendor/
+/tests/Unit/src_test/assegai.json
