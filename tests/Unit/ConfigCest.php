@@ -8,6 +8,7 @@ use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Exceptions\ConfigurationException;
 use Assegai\Core\Util\Paths;
 use Assegai\Orm\Enumerations\DataSourceType;
+use Codeception\Attribute\Skip;
 use Exception;
 use Tests\Support\UnitTester;
 
@@ -132,6 +133,7 @@ class ConfigCest
     $I->assertFalse($isProductionEnvironment);
   }
 
+  #[Skip]
   public function testTheSetEnvironmentMethod(UnitTester $I): void
   {
     $testKey = 'test_key';

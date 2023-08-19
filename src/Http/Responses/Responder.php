@@ -18,11 +18,11 @@ use Assegai\Orm\Queries\QueryBuilder\Results\UpdateResult;
 class Responder
 {
   /**
-   * @var Responder|null
+   * @var Responder|null The Responder instance.
    */
   private static ?Responder $instance = null;
   /**
-   * @var ViewEngine
+   * @var ViewEngine The ViewEngine instance.
    */
   private ViewEngine $viewEngine;
 
@@ -37,7 +37,7 @@ class Responder
   /**
    * Get an instance of Responder.
    *
-   * @return Responder
+   * @return Responder The Responder instance.
    */
   public static function getInstance(): Responder
   {
@@ -51,7 +51,7 @@ class Responder
   /**
    * Get Request instance
    *
-   * @return Request
+   * @return Request The Request instance.
    */
   public function getRequest(): Request
   {
@@ -61,8 +61,8 @@ class Responder
   /**
    * Send a response to the client and exit the script.
    *
-   * @param mixed $response
-   * @param HttpStatusCode|int|null $code
+   * @param mixed $response The response to send.
+   * @param HttpStatusCode|int|null $code The response code to send.
    * @return never
    */
   public function respond(mixed $response, HttpStatusCode|int|null $code = null): never
@@ -102,7 +102,9 @@ class Responder
   }
 
   /**
-   * @param HttpStatusCode|int|null $code
+   * Set the response code.
+   *
+   * @param HttpStatusCode|int|null $code The code to set.
    * @return void
    */
   public function setResponseCode(HttpStatusCode|int|null $code = 200): void

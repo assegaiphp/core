@@ -143,12 +143,9 @@ class Config
   }
 
   /**
-   * Gets an environment configuration value from the workspace file, `.env`.
+   * Determines the environment type based on the value of the `ENV` environment
    *
-   * @param string $name The name of configuration value to be returned.
-   *
-   * @return mixed Returns the current configuration value of the given name,
-   * or `NULL` if it doesn't exist.
+   * @return EnvironmentType|false Returns the environment type if it can be determined,
    */
   public static function environment(): EnvironmentType|false
   {
@@ -165,11 +162,10 @@ class Config
   }
 
   /**
-   * Sets the value of the pair identified by $name to $value, creating a new
-   * key/value pair if none existed for $name previously in the workspace `.env` file.
-   *
-   * @param string $name The name of configuration value to be set.
-   * @param string $value The new value to set the configuration to.
+   * @deprecated Use `Config::environment()` instead.
+   * @param string $name
+   * @param string $value
+   * @return void
    */
   public static function setEnvironment(string $name, string $value): void
   {
