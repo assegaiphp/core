@@ -100,7 +100,7 @@ class Config
       Config::hydrate($configPath);
     }
 
-    return $GLOBALS['config'][$name] ?? NULL;
+    return $_ENV[$name] ?? $GLOBALS['config'][$name] ?? NULL;
   }
 
   /**
