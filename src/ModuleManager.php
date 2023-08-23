@@ -67,7 +67,9 @@ class ModuleManager
   }
 
   /**
-   * @return ModuleManager
+   * Returns the singleton instance of the ModuleManager.
+   *
+   * @return ModuleManager The singleton instance of the ModuleManager.
    */
   public static function getInstance(): ModuleManager
   {
@@ -80,9 +82,11 @@ class ModuleManager
   }
 
   /**
-   * @param string $rootToken
+   * Builds a list of all the imported module tokens.
+   *
+   * @param string $rootToken The root token.
    * @return void
-   * @throws HttpException
+   * @throws HttpException If the module is invalid.
    */
   public function buildModuleTokensList(string $rootToken): void
   {
@@ -129,6 +133,8 @@ class ModuleManager
   }
 
   /**
+   * Builds a map of all the declared components.
+   *
    * @return void
    */
   public function buildDeclarationMap(): void
@@ -159,7 +165,9 @@ class ModuleManager
   }
 
   /**
-   * @return ReflectionAttribute[]
+   * Returns a list of all the imported module tokens.
+   *
+   * @return ReflectionAttribute[] A list of all the imported module tokens.
    */
   public function getModuleTokens(): array
   {
@@ -167,7 +175,9 @@ class ModuleManager
   }
 
   /**
-   * @return array
+   * Returns a list of all the imported module tokens.
+   *
+   * @return array A list of all the imported module tokens.
    */
   public function getProviderTokens(): array
   {
@@ -175,8 +185,10 @@ class ModuleManager
   }
 
   /**
-   * @param array $lastLoadedAttributes
-   * @return bool
+   * Determines if the given module is valid.
+   *
+   * @param array $lastLoadedAttributes The last loaded attributes.
+   * @return bool True if the given module is valid, false otherwise.
    */
   private function isValidModule(array $lastLoadedAttributes): bool
   {
@@ -184,8 +196,10 @@ class ModuleManager
   }
 
   /**
+   * Builds a list of all the provider tokens.
+   *
    * @return void
-   * @throws EntryNotFoundException
+   * @throws EntryNotFoundException If the provider is not found.
    */
   public function buildProviderTokensList(): void
   {
@@ -205,9 +219,11 @@ class ModuleManager
   }
 
   /**
-   * @param string $tokenId
-   * @return ReflectionAttribute|null
-   * @throws EntryNotFoundException
+   * Validates the given provider.
+   *
+   * @param string $tokenId The token ID of the provider.
+   * @return ReflectionAttribute|null The reflection class of the provider.
+   * @throws EntryNotFoundException If the provider is not found.
    */
   private function validateProvider(string $tokenId): ?ReflectionClass
   {
@@ -224,8 +240,10 @@ class ModuleManager
   }
 
   /**
-   * @param ReflectionClass $reflectionClass
-   * @return array
+   * Loads the module attributes.
+   *
+   * @param ReflectionClass $reflectionClass The reflection class.
+   * @return array The module attributes.
    */
   private function loadModuleAttributes(ReflectionClass $reflectionClass): array
   {
@@ -233,8 +251,10 @@ class ModuleManager
   }
 
   /**
-   * @param string $key
-   * @return mixed
+   * Returns the config value for the given key.
+   *
+   * @param string $key The config key.
+   * @return mixed The config value.
    */
   public function getConfig(string $key): mixed
   {
@@ -242,7 +262,9 @@ class ModuleManager
   }
 
   /**
-   * @return Component[]
+   * Returns a list of all the declared components.
+   *
+   * @return Component[] A list of all the declared components.
    */
   public function getDeclaredAttributes(): array
   {
@@ -250,7 +272,9 @@ class ModuleManager
   }
 
   /**
-   * @return ReflectionClass[]
+   * Returns a list of all the declared components.
+   *
+   * @return ReflectionClass[] A list of all the declared components.
    */
   public function getDeclaredReflections(): array
   {
@@ -258,7 +282,9 @@ class ModuleManager
   }
 
   /**
-   * @return object[]
+   * Returns a list of all the declared components.
+   *
+   * @return object[] A list of all the declared components.
    */
   public function getDeclarations(): array
   {
@@ -266,8 +292,10 @@ class ModuleManager
   }
 
   /**
-   * @param ReflectionClass $reflection
-   * @return false|Component
+   * Returns the component attribute for the given reflection.
+   *
+   * @param ReflectionClass $reflection The reflection class.
+   * @return false|Component The component attribute if found, false otherwise.
    */
   private function getComponentAttribute(ReflectionClass $reflection): false|Component
   {
