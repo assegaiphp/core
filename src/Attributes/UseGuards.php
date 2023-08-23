@@ -2,7 +2,9 @@
 
 namespace Assegai\Core\Attributes;
 
+use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\GuardException;
+use Assegai\Core\Injector;
 use Assegai\Core\Interfaces\ICanActivate;
 use Attribute;
 use ReflectionClass;
@@ -15,15 +17,18 @@ use ReflectionException;
 class UseGuards
 {
   public readonly array $guards;
+  protected Injector $injector;
 
   /**
    * @param ICanActivate[]|string[]|ICanActivate|string $guard
    * @throws GuardException
    * @throws ReflectionException
+   * @throws ContainerException
    */
   public function __construct(protected readonly array|ICanActivate|string $guard)
   {
     $guardsList = [];
+    $this->injector = Injector::getInstance();
 
     if ($this->guard instanceof ICanActivate)
     {
@@ -38,7 +43,15 @@ class UseGuards
         throw new GuardException(message: "$this->guard is not instantiable");
       }
 
-      $guardsList[] = $reflectionClass->newInstance();
+      $guardConstructorArgs = [];
+      $guardConstructorParameters = $reflectionClass->getConstructor()->getParameters();
+
+      foreach ($guardConstructorParameters as $reflectionParameter)
+      {
+        $guardConstructorArgs[] = $this->injector->resolve($reflectionParameter->getType()->getName());
+      }
+
+      $guardsList[] = $reflectionClass->newInstanceArgs($guardConstructorArgs);
     }
     else
     {

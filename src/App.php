@@ -40,7 +40,7 @@ require __DIR__ . '/Util/Definitions.php';
 class App
 {
   /**
-   * @var ReflectionClass[] $providers
+   * @var ReflectionClass[] $providers A list of all the imported module tokens
    */
   protected array $controllers = [];
   /**
@@ -48,32 +48,31 @@ class App
    */
   protected array $controllerMap = [];
   /**
-   * @var AppConfig|null
+   * @var AppConfig|null The application configuration.
    */
   protected ?AppConfig $config = null;
-
   /**
-   * @var ArgumentsHost
+   * @var ArgumentsHost The arguments host.
    */
   protected ArgumentsHost $host;
   /**
-   * @var Request
+   * @var Request The in comming HTTP request.
    */
   protected Request $request;
   /**
-   * @var Response
+   * @var Response The outgoing HTTP response.
    */
   protected Response $response;
   /**
-   * @var Responder
+   * @var Responder The response handler.
    */
   protected Responder $responder;
   /**
-   * @var object|null
+   * @var object|null The activated controller.
    */
   protected ?object $activatedController;
   /**
-   * @var LoggerInterface|null
+   * @var LoggerInterface|null The logger instance.
    */
   protected ?LoggerInterface $logger = null;
 
@@ -83,11 +82,13 @@ class App
   protected array $pipes = [];
 
   /**
-   * @param string $rootModuleClass
-   * @param Router $router
-   * @param ControllerManager $controllerManager
-   * @param ModuleManager $moduleManager
-   * @param Injector $injector
+   * Constructs an App instance.
+   *
+   * @param string $rootModuleClass The root module class.
+   * @param Router $router The router.
+   * @param ControllerManager $controllerManager The controller manager.
+   * @param ModuleManager $moduleManager The module manager.
+   * @param Injector $injector The injector.
    */
   public function __construct(
     protected readonly string $rootModuleClass,
@@ -108,19 +109,22 @@ class App
         $status = HttpStatus::fromInt(500);
         http_response_code($status->code);
 
-        $response = Config::environment() === EnvironmentType::PRODUCTION
-          ? [
+        $response = match (Config::environment()) {
+          EnvironmentType::PRODUCTION => [
             'statusCode' => $status->code,
             'message' => $status->name,
-          ]
-          : [
+          ],
+          default => [
             'statusCode' => $status->code,
             'message' =>  $exception->getMessage(),
             'error' => $status->name,
-          ];
+          ]
+        };
         echo json_encode($response);
       }
     });
+
+    // Initialize app properties
     $this->config = new AppConfig();
     $this->host = new ArgumentsHost();
 
@@ -144,10 +148,11 @@ class App
 
   /**
    * Sets the app configuration to the given configuration properties.
-   * @param mixed $config
-   * @return $this
+   *
+   * @param mixed $config The configuration properties.
+   * @return static
    */
-  public function configure(mixed $config = null): App
+  public function configure(mixed $config = null): static
   {
     if ($config instanceof  AppConfig)
     {
@@ -162,7 +167,13 @@ class App
     return $this;
   }
 
-  public function useGlobalPipes(IPipeTransform|array $pipes): self
+  /**
+   * Specifies a list of pipes that should be used by the `App` instance.
+   *
+   * @param IPipeTransform|array $pipes A list of pipes to be used by the `App` instance.
+   * @return static The current `App` instance.
+   */
+  public function useGlobalPipes(IPipeTransform|array $pipes): static
   {
     $this->pipes = array_merge($this->pipes, (is_array($pipes) ? $pipes : [$pipes]));
     return $this;
@@ -181,6 +192,7 @@ class App
 
   /**
    * Runs the current application.
+   *
    * @return void
    */
   public function run(): void
@@ -220,8 +232,9 @@ class App
 
   /**
    * Determines which modules will be available in the current execution context.
+   *
    * @return void
-   * @throws HttpException
+   * @throws HttpException If the module is not found.
    */
   private function resolveModules(): void
   {
@@ -232,6 +245,7 @@ class App
 
   /**
    * Determines which providers will be available in the current execution context.
+   *
    * @return void
    * @throws EntryNotFoundException
    */
@@ -242,6 +256,11 @@ class App
     EventManager::broadcast(EventChannel::PROVIDER_RESOLUTION_FINISH, new Event($this->getProviderTokens()));
   }
 
+  /**
+   * Determines which declarations will be available in the current execution context.
+   *
+   * @return void
+   */
   private function resolveDeclarations(): void
   {
     EventManager::broadcast(EventChannel::DECLARATION_RESOLUTION_START, new Event());
