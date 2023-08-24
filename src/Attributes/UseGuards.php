@@ -30,51 +30,70 @@ class UseGuards
     $guardsList = [];
     $this->injector = Injector::getInstance();
 
-    if ($this->guard instanceof ICanActivate)
-    {
-      $guardsList[] = $this->guard;
-    }
-    else if (is_string($this->guard))
-    {
-      $reflectionClass = new ReflectionClass($this->guard);
-
-      if (! $reflectionClass->isInstantiable() )
-      {
-        throw new GuardException(message: "$this->guard is not instantiable");
-      }
-
-      $guardConstructorArgs = [];
-      $guardConstructorParameters = $reflectionClass->getConstructor()->getParameters();
-
-      foreach ($guardConstructorParameters as $reflectionParameter)
-      {
-        $guardConstructorArgs[] = $this->injector->resolve($reflectionParameter->getType()->getName());
-      }
-
-      $guardsList[] = $reflectionClass->newInstanceArgs($guardConstructorArgs);
-    }
-    else
-    {
-      foreach ($this->guard as $item)
-      {
-        if ($item instanceof ICanActivate)
-        {
-          $guardsList[] = $item;
-        }
-        else if (is_string($item))
-        {
-          $reflectionClass = new ReflectionClass($item);
-
-          if (! $reflectionClass->isInstantiable() )
-          {
-            throw new GuardException(message: "$item is not instantiable");
-          }
-
-          $guardsList[] = $reflectionClass->newInstance();
-        }
-      }
-    }
+    $guardsList[] = match (true) {
+      is_array($this->guard) => $this->getGuardsFromList($this->guard),
+      $this->guard instanceof ICanActivate => $this->guard,
+      is_string($this->guard) => $this->getGuardClassName($this->guard),
+      default => throw new GuardException(message: "Invalid guard type")
+    };
 
     $this->guards = $guardsList;
+  }
+
+  /**
+   * Returns an array of guards objects from the given list of guards.
+   *
+   * @param ICanActivate[]|string[] $guardsList The list of guards.
+   * @return ICanActivate[] Returns an array of guards.
+   * @throws ContainerException
+   * @throws GuardException
+   * @throws ReflectionException
+   */
+  private function getGuardsFromList(array $guardsList): array
+  {
+    $guards = [];
+
+    foreach ($guardsList as $guard)
+    {
+      if ($guard instanceof ICanActivate)
+      {
+        $guards[] = $guard;
+      }
+      else if (is_string($guard))
+      {
+        $guards[] = $this->getGuardClassName($guard);
+      }
+    }
+
+    return $guards;
+  }
+
+  /**
+   * Returns a guard instance from the given class name.
+   *
+   * @param string $guardClass The guard class name.
+   * @return ICanActivate Returns a guard instance from the given class name.
+   * @throws GuardException
+   * @throws ReflectionException
+   * @throws ContainerException
+   */
+  private function getGuardClassName(string $guardClass): ICanActivate
+  {
+    $reflectionClass = new ReflectionClass($guardClass);
+
+    if (! $reflectionClass->isInstantiable() )
+    {
+      throw new GuardException(message: "$guardClass is not instantiable");
+    }
+
+    $guardConstructorArgs = [];
+    $guardConstructorParameters = $reflectionClass->getConstructor()->getParameters();
+
+    foreach ($guardConstructorParameters as $reflectionParameter)
+    {
+      $guardConstructorArgs[] = $this->injector->resolve($reflectionParameter->getType()->getName());
+    }
+
+    return $reflectionClass->newInstanceArgs($guardConstructorArgs);
   }
 }
