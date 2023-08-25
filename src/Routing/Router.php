@@ -66,7 +66,7 @@ final class Router
   /**
    * @return Request
    */
-  public function route(): Request
+  public function getRequest(): Request
   {
     return Request::getInstance();
   }
@@ -353,41 +353,10 @@ final class Router
     $context = $this->createContext(class: $controllerReflection, handler: $activatedHandler);
 
     # Consume controller guards
-    $useGuardsAttributes = $controllerReflection->getAttributes(UseGuards::class);
-    if ($useGuardsAttributes)
-    {
-      /** @var UseGuards $controllerUseGuardsInstance */
-      $controllerUseGuardsInstance = $useGuardsAttributes[0]->newInstance();
-
-      if (! $this->guardsConsumer->canActivate(guards: $controllerUseGuardsInstance->guards, context: $context) )
-      {
-        if ($controller instanceof IOnGuard)
-        {
-          $controller->onGuard(context: $context);
-        }
-        else
-        {
-          throw new ForbiddenException();
-        }
-      }
-    }
+    $this->consumeControllerGuards($controllerReflection, $controller, $context);
 
     # Consume controller interceptors
-    $controllerInterceptorCallHandlers = [];
-    $useInterceptorsAttributes = $controllerReflection->getAttributes(UseInterceptors::class);
-
-    if ($useInterceptorsAttributes)
-    {
-      /** @var UseInterceptors $controllerUseInterceptorsInstance */
-      $controllerUseInterceptorsInstance = $useInterceptorsAttributes[0]->newInstance();
-
-      $controllerInterceptorCallHandlers =
-        $this->interceptorsConsumer
-          ->intercept(
-            interceptors: $controllerUseInterceptorsInstance->interceptorsList,
-            context: $context
-          );
-    }
+    $controllerInterceptorCallHandlers = $this->consumeControllerInterceptors($controllerReflection, $context);
 
     # Consume handler guards
     $useGuardsAttributes = $activatedHandler->getAttributes(UseGuards::class);
@@ -421,19 +390,7 @@ final class Router
     }
 
     # Resolve handler parameters
-    $params = $activatedHandler->getParameters();
-    $dependencies = [];
-
-    foreach ($params as $param)
-    {
-      $paramTypeName = $param->getType()?->getName() ?? 'stdClass';
-      $isStandardClassType = is_subclass_of($paramTypeName, stdClass::class) || $paramTypeName === 'stdClass';
-      $dependencies[$param->getPosition()] = match(true) {
-        $param->getType()?->isBuiltin(),
-        $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
-        default => $this->injector->resolve($paramTypeName)
-      };
-    }
+    $dependencies = $this->resolveHandlerParameters($activatedHandler, $request);
 
     try
     {
@@ -453,7 +410,7 @@ final class Router
     {
       $result = [];
     }
-    $context?->switchToHttp()->getResponse()->setBody($result);
+    $context->switchToHttp()->getResponse()->setBody($result);
 
     # Run handler Interceptors
     /** @var callable $handler */
@@ -570,5 +527,98 @@ final class Router
   private function createContext(ReflectionClass $class, ReflectionMethod $handler): ExecutionContext
   {
     return new ExecutionContext(class: $class, handler: $handler);
+  }
+
+  /**
+   * Consumes the guards for the given controller.
+   *
+   * @param ReflectionClass $controllerReflection The reflection instance of the controller.
+   * @param object $controller The controller instance.
+   * @param ExecutionContext $context The execution context.
+   * @return void
+   * @throws ForbiddenException If the request is forbidden.
+   */
+  private function consumeControllerGuards(ReflectionClass $controllerReflection, object $controller, ExecutionContext $context): void
+  {
+    $useGuardsAttributes = $controllerReflection->getAttributes(UseGuards::class);
+    if ($useGuardsAttributes)
+    {
+      /** @var UseGuards $controllerUseGuardsInstance */
+      $controllerUseGuardsInstance = $useGuardsAttributes[0]->newInstance();
+
+      if (! $this->guardsConsumer->canActivate(guards: $controllerUseGuardsInstance->guards, context: $context) )
+      {
+        if ($controller instanceof IOnGuard)
+        {
+          $controller->onGuard(context: $context);
+        }
+        else
+        {
+          throw new ForbiddenException();
+        }
+      }
+    }
+  }
+
+  /**
+   *
+   *
+   * @param ReflectionClass $controllerReflection
+   * @param object $controller
+   * @param ExecutionContext $context
+   * @return InterceptorsConsumer[]
+   */
+  private function consumeControllerInterceptors(
+    ReflectionClass $controllerReflection,
+    ExecutionContext $context
+  ): array
+  {
+    $controllerInterceptorCallHandlers = [];
+    $useInterceptorsAttributes = $controllerReflection->getAttributes(UseInterceptors::class);
+
+    if ($useInterceptorsAttributes)
+    {
+      /** @var UseInterceptors $controllerUseInterceptorsInstance */
+      $controllerUseInterceptorsInstance = $useInterceptorsAttributes[0]->newInstance();
+
+      $controllerInterceptorCallHandlers =
+        $this->interceptorsConsumer
+          ->intercept(
+            interceptors: $controllerUseInterceptorsInstance->interceptorsList,
+            context: $context
+          );
+    }
+
+    return $controllerInterceptorCallHandlers;
+  }
+
+  /**
+   * Resolves the dependencies for the given handler.
+   *
+   * @param ReflectionMethod $activatedHandler
+   * @param Request $request
+   * @return array
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   * @throws ReflectionException
+   */
+  private function resolveHandlerParameters(ReflectionMethod $activatedHandler, Request $request): array
+  {
+    $dependencies = [];
+
+    $params = $activatedHandler->getParameters();
+    foreach ($params as $param)
+    {
+      $paramTypeName = $param->getType()?->getName() ?? 'stdClass';
+      $isStandardClassType = is_subclass_of($paramTypeName, stdClass::class) || $paramTypeName === 'stdClass';
+
+      $dependencies[] = match(true) {
+        $param->getType()?->isBuiltin(),
+        $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
+        default => $this->injector->resolve($paramTypeName)
+      };
+    }
+
+    return $dependencies;
   }
 }
