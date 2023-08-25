@@ -227,9 +227,11 @@ final class Injector implements ITokenStoreOwner, IContainer
   }
 
   /**
-   * @param ReflectionParameter $param
-   * @param Request $request
-   * @return mixed
+   * Resolves built-in parameters like scalar types, arrays, objects, etc.
+   *
+   * @param ReflectionParameter $param The parameter to resolve.
+   * @param Request $request The request object.
+   * @return mixed The resolved parameter.
    * @throws EntryNotFoundException
    */
   public function resolveBuiltIn(ReflectionParameter $param, Request $request): mixed
@@ -251,7 +253,8 @@ final class Injector implements ITokenStoreOwner, IContainer
               ? json_encode($request->getParams())
               : (object)$request->getParams();
           }
-          return $request->getParams()[$param->getPosition()] ?? null;
+          return $request->getParams()[$param->getPosition()] ??
+            ($param->isOptional() ? $param->getDefaultValue() : null);
 
         case Query::class:;
           if (empty($paramAttributeArgs))
@@ -260,7 +263,9 @@ final class Injector implements ITokenStoreOwner, IContainer
               ? json_encode($request->getQuery())
               : (object)$request->getQuery();
           }
-          return $request->getQuery()[$param->getPosition()] ?? null;
+
+          return $request->getQuery()->toArray()[$param->getName()] ??
+            ($param->isOptional() ? $param->getDefaultValue() : null);
 
         case Body::class:
           $body = null;

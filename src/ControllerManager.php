@@ -67,9 +67,9 @@ class ControllerManager
 
       foreach ($args['controllers'] as $tokenId)
       {
-        if ($controller = $this->getControllerReflection($tokenId))
+        if ($controllerReflection = $this->getControllerReflection($tokenId))
         {
-          $this->controllerTokensList[$tokenId] = $controller;
+          $this->controllerTokensList[$tokenId] = $controllerReflection;
 
           if (!empty($this->lastLoadedAttributes))
           {
