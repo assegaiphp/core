@@ -292,7 +292,7 @@ class App
   private function handleRequest(): void
   {
     EventManager::broadcast(EventChannel::REQUEST_HANDLING_START, new Event());
-    $this->request = $this->router->route();
+    $this->request = $this->router->getRequest();
     EventManager::broadcast(EventChannel::CONTROLLER_WILL_ACTIVATE, new Event());
     $this->activatedController =
       $this->router->getActivatedController(request: $this->request, controllerTokensList: $this->controllers);

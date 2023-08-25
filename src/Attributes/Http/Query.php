@@ -25,9 +25,9 @@ class Query
     $request = Request::getInstance();
     $this->value = $request->getQuery();
 
-    if (!empty($this->key) )
+    if ($this->key)
     {
-      $this->value = $this->value->$key;
+      $this->value = $this->value->get($key);
     }
   }
 }
