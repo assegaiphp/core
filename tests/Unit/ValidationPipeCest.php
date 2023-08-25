@@ -6,13 +6,14 @@ namespace Tests\Unit;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Pipes\ValidationPipe;
 use Exception;
+use ReflectionException;
 use Tests\Mocks\InvalidMockDto;
 use Tests\Mocks\ValidMockDto;
 use Tests\Support\UnitTester;
 
 class ValidationPipeCest
 {
-  public function _before(UnitTester $I)
+  public function _before(UnitTester $I): void
   {
     spl_autoload_register(function($className) {
       $className = str_replace('Tests\\Mocks\\', 'Mocks' . DIRECTORY_SEPARATOR, $className);
@@ -21,6 +22,10 @@ class ValidationPipeCest
   }
 
   // tests
+  /**
+   * @throws ReflectionException
+   * @throws HttpException
+   */
   public function checkTheTransformMethod(UnitTester $I): void
   {
     $pipe = new ValidationPipe();
