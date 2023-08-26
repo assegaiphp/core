@@ -71,7 +71,8 @@ class Responder
     {
       $this->setResponseCode($code);
     }
-    else if ($response instanceof Response)
+
+    if ($response instanceof Response)
     {
       $this->setResponseCode($response->getStatus());
 
