@@ -42,6 +42,12 @@ class ApiResponse
   public function toArray(): array
   {
     $data = $this->data;
+
+    if ($this->getTotal() === 1 && is_array($data))
+    {
+      return $data;
+    }
+
     return [
       'total' => $this->getTotal(),
       'limit' => $this->request->getLimit(),
@@ -84,6 +90,7 @@ class ApiResponse
       'double',
       'boolean' => strval($this->data),
       'string' => $this->data,
+      'array' => json_encode($this->data),
       default => $this->toJSON()
     };
   }
