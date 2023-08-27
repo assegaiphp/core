@@ -91,7 +91,7 @@ class Responder
           ($response->getBody() instanceof DeleteResult) => strval($response->getBody()->affected),
           ($response->getBody() instanceof InsertResult),
           ($response->getBody() instanceof UpdateResult) => json_encode($response->getBody()->identifiers),
-          default => new ApiResponse(data: $response->getBody()),
+          default => new ApiResponse(data: $response->getBody())
         },
         default => $response->getBody()
       },
