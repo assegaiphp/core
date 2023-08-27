@@ -16,6 +16,7 @@ class ApiResponse
    * @var Request The request object.
    */
   protected Request $request;
+  protected bool $isResultObject = false;
 
   /**
    * ApiResponse constructor.
@@ -31,6 +32,17 @@ class ApiResponse
   )
   {
     $this->request = $request ?? Request::getInstance();
+    $this->isResultObject = is_object($data) && method_exists($data, 'getData');
+  }
+
+  /**
+   * Returns the data.
+   *
+   * @return mixed The data.
+   */
+  public function getData(): mixed
+  {
+    return $this->isResultObject ? $this->data->getData() : $this->data;
   }
 
   /**
@@ -41,7 +53,7 @@ class ApiResponse
   #[ArrayShape(['data' => 'mixed', 'skip' => 'int', 'limit' => 'int', 'total' => 'int'])]
   public function toArray(): array
   {
-    $data = $this->data;
+    $data = $this->getData();
 
     if ($this->getTotal() === 1 && is_array($data))
     {
@@ -63,6 +75,11 @@ class ApiResponse
    */
   public function toJSON(): string
   {
+    if ($this->getTotal() === 1 && is_array($this->getData()))
+    {
+      return json_encode($this->getData()[0]);
+    }
+
     return json_encode($this->toArray());
   }
 
@@ -85,7 +102,11 @@ class ApiResponse
   public function __toString(): string
   {
     return match(gettype($this->data)) {
-      'object' => method_exists($this->data, 'toJSON') ? $this->data->toJSON() : json_encode($this->data),
+      'object' => match(true) {
+        method_exists($this->data, 'toJSON') => $this->data->toJSON(),
+        $this->isResultObject => $this->toJSON(),
+        default => json_encode($this->data)
+      },
       'integer',
       'double',
       'boolean' => strval($this->data),
@@ -102,6 +123,11 @@ class ApiResponse
    */
   private function getTotal(): int
   {
+    if ($this->isResultObject)
+    {
+      return $this->data->getTotal();
+    }
+
     if (!is_countable($this->data))
     {
       return empty($this->data) ? 0 : 1;
