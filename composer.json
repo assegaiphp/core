@@ -32,7 +32,8 @@
         "vlucas/phpdotenv": "^5.4",
         "twig/twig": "^3.0",
         "ext-fileinfo": "*",
-        "assegaiphp/validation": "^0.3.1"
+        "assegaiphp/validation": "^0.3.1",
+        "assegaiphp/util": "^0.4.0"
     },
     "scripts": {
         "test": "codecept run unit"
