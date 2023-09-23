@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ae72a7c44726ef417b9aabb2d2669ba6",
+    "content-hash": "1de65b014030509d1ec144bf34f6dc71",
     "packages": [
         {
             "name": "arubacao/tld-checker",
@@ -71,16 +71,16 @@
         },
         {
             "name": "assegaiphp/util",
-            "version": "0.4.1",
+            "version": "0.4.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/assegaiphp/util.git",
-                "reference": "91d2bfba856d67ed62c762745df834b41dd94a1d"
+                "reference": "4be7bc09f41941f8e5c9410f3a4d8ae300f59e88"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/assegaiphp/util/zipball/91d2bfba856d67ed62c762745df834b41dd94a1d",
-                "reference": "91d2bfba856d67ed62c762745df834b41dd94a1d",
+                "url": "https://api.github.com/repos/assegaiphp/util/zipball/4be7bc09f41941f8e5c9410f3a4d8ae300f59e88",
+                "reference": "4be7bc09f41941f8e5c9410f3a4d8ae300f59e88",
                 "shasum": ""
             },
             "require": {
@@ -113,9 +113,9 @@
             "description": "A  collection of useful PHP utility classes to simplify common tasks and enhance application development.",
             "support": {
                 "issues": "https://github.com/assegaiphp/util/issues",
-                "source": "https://github.com/assegaiphp/util/tree/0.4.1"
+                "source": "https://github.com/assegaiphp/util/tree/0.4.2"
             },
-            "time": "2023-09-17T15:46:28+00:00"
+            "time": "2023-09-18T10:17:53+00:00"
         },
         {
             "name": "assegaiphp/validation",

@@ -13,7 +13,7 @@
         "psr-4": {
             "Assegai\\Core\\": "src/"
         },
-        "files": ["src/Util/Definitions.php", "src/Util/Functions.php"]
+        "files": ["src/Util/Definitions.php"]
     },
     "autoload-dev": {
         "psr-4": {
@@ -33,7 +33,7 @@
         "twig/twig": "^3.0",
         "ext-fileinfo": "*",
         "assegaiphp/validation": "^0.3.1",
-        "assegaiphp/util": "^0.4.0"
+        "assegaiphp/util": "^0.4.2"
     },
     "scripts": {
         "test": "codecept run unit"
