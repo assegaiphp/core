@@ -6,7 +6,13 @@ namespace Assegai\Core\Http\Requests;
 use Assegai\Core\App;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Config;
+use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Enumerations\Http\RequestMethod;
+use Assegai\Core\Exceptions\Http\HttpException;
+use Assegai\Core\Interfaces\AppInterface;
+use Assegai\Forms\Enumerations\HttpMethod;
+use Assegai\Forms\Exceptions\InvalidFormException;
+use Assegai\Forms\Form;
 use JetBrains\PhpStorm\ArrayShape;
 use stdClass;
 
@@ -17,20 +23,64 @@ use stdClass;
 #[Injectable]
 class Request
 {
+  /**
+   * @var null|stdClass
+   */
   protected null|stdClass $body = null;
+  /**
+   * @var array
+   */
   protected array $allHeaders = [];
-  protected ?App $app = null;
+  /**
+   * @var null|AppInterface
+   */
+  protected ?AppInterface $app = null;
+  /**
+   * @var RequestMethod The request method.
+   */
   protected RequestMethod $requestMethod;
+  /**
+   * @var null|string The request scheme.
+   */
   protected ?string $scheme;
+  /**
+   * @var null|string The request host name.
+   */
   protected ?string $host;
+  /**
+   * @var string The request path.
+   */
   protected string $path;
+  /**
+   * @var null|RequestQuery
+   */
   protected ?RequestQuery $query;
+  /**
+   * @var string The request URI.
+   */
   protected string $uri;
+  /**
+   * @var array The request parameters.
+   */
   protected array $params = [];
+  /**
+   * @var null|object|array The request file.
+   */
   protected array|object|null $file = null;
-
+  /**
+   * @var null|Request The request instance.
+   */
   protected static ?Request $instance = null;
+  /**
+   * @var Form The request form.
+   */
+  protected Form $form;
+  protected ContentType $contentType;
 
+  /**
+   * @throws HttpException
+   * @throws InvalidFormException
+   */
   private final function __construct()
   {
     $this->uri = $_SERVER['REQUEST_URI'];
@@ -50,6 +100,7 @@ class Request
     $this->path = $path;
     $this->query = new RequestQuery();
     $this->body = new stdClass();
+    $this->contentType = ContentType::tryFrom($_SERVER['CONTENT_TYPE']);
 
     $this->requestMethod = match ($_SERVER['REQUEST_METHOD']) {
       'POST'    => RequestMethod::POST,
@@ -62,15 +113,7 @@ class Request
     };
     $this->path = str_replace('/^\//', '', $this->path);
 
-    $this->body = (object) match ($this->getMethod()) {
-      RequestMethod::GET      => $_GET,
-      RequestMethod::POST     => !empty($_POST) ? $_POST : ( !empty($_FILES) ? $_FILES : file_get_contents('php://input') ),
-      RequestMethod::PUT,
-      RequestMethod::PATCH    => file_get_contents('php://input'),
-      RequestMethod::DELETE   => !empty($_GET) ? $_GET : file_get_contents('php://input'),
-      RequestMethod::HEAD,
-      RequestMethod::OPTIONS  => NULL,
-    };
+    $this->body = $this->extractRequestBody();
 
     if (isset($this->body->path))
     {
@@ -100,18 +143,18 @@ class Request
   }
 
   /**
-   * @return App
+   * @return AppInterface|null The application instance.
    */
-  public function getApp(): App
+  public function getApp(): ?AppInterface
   {
     return $this->app;
   }
 
   /**
-   * @param App $app
+   * @param AppInterface|null $app
    * @return void
    */
-  public function setApp(App $app): void
+  public function setApp(?AppInterface $app): void
   {
     $this->app = $app;
   }
@@ -247,15 +290,31 @@ class Request
   }
 
   /**
-   * @return stdClass|null
+   * Returns the request body.
+   *
+   * @return stdClass|null The request body.
    */
   public function getBody(): ?stdClass
   {
-    if (isset($this->body->scalar))
+    if (isset($this->body->scalar) && json_is_valid($this->body->scalar))
     {
       $this->body = json_decode($this->body->scalar);
     }
     return $this->body;
+  }
+
+  /**
+   * Sets the request body.
+   *
+   * @param stdClass|null $body The request body.
+   * @return void
+   */
+  public function setBody(?stdClass $body): void
+  {
+    if (!is_null($body))
+    {
+      $this->body = $body;
+    }
   }
 
   /**
@@ -417,6 +476,66 @@ class Request
   public function setFile(array|object $file): void
   {
     $this->file = $file;
+  }
+
+  /**
+   * Filter form data.
+   *
+   * @param false|string $data The data to filter.
+   * @return array The filtered data.
+   * @throws HttpException
+   */
+  private function filterFormData(false|string $data): array
+  {
+    if ($data === false)
+    {
+      throw new HttpException('Invalid request body.');
+    }
+
+    return [];
+  }
+
+  /**
+   * Extracts the request body.
+   *
+   * @return object
+   * @throws HttpException
+   * @throws InvalidFormException
+   */
+  private function extractRequestBody(): object
+  {
+    # Check if content type is form
+    if ($this->contentType === ContentType::FORM_DATA || $this->contentType === ContentType::FORM_URL_ENCODED)
+    {
+      $this->form = new Form(method: HttpMethod::tryFrom($this->getMethod()->value));
+      return (object) match(true) {
+        !empty($_FILES)             => $_FILES,
+        $this->form->isSubmitted()  => $this->form->getData(),
+        default                     => file_get_contents('php://input')
+      };
+    }
+
+    $body = match ($this->getMethod()) {
+      RequestMethod::GET      => $_GET,
+      RequestMethod::POST     => !empty($_POST) ? $_POST : file_get_contents('php://input'),
+      RequestMethod::PUT,
+      RequestMethod::PATCH    => file_get_contents('php://input'),
+      RequestMethod::DELETE   => !empty($_GET) ? $_GET : file_get_contents('php://input'),
+      RequestMethod::HEAD,
+      RequestMethod::OPTIONS  => NULL,
+    };
+
+    if (is_string($body) && $this->contentType === ContentType::JSON)
+    {
+      if (!json_is_valid($body))
+      {
+        throw new HttpException('Invalid JSON request body.');
+      }
+
+      $body = json_decode($body);
+    }
+
+    return (object) $body;
   }
 }
 
