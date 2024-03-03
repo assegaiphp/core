@@ -17,4 +17,5 @@ enum ContentType: string
   case XML = 'application/xml';
   case WOFF = 'application/font-woff';
   case JWT = 'application/jwt';
+  case FORM_URL_ENCODED = 'application/x-www-form-urlencoded';
 }
