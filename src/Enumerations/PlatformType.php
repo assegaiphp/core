@@ -1,7 +1,10 @@
 <?php
 
-namespace Assegai\Core;
+namespace Assegai\Core\Enumerations;
 
+/**
+ * Enumerates the different types of platforms that Assegai supports.
+ */
 enum PlatformType
 {
   case DEFAULT;

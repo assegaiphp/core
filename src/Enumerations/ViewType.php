@@ -2,6 +2,9 @@
 
 namespace Assegai\Core\Enumerations;
 
+/**
+ * Enumerates the different types of views that Assegai supports.
+ */
 enum ViewType
 {
   case HTML;

@@ -8,11 +8,11 @@ use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Interfaces\IAssegaiInterceptor;
 
 #[Injectable]
-class FileInterceptor implements IAssegaiInterceptor
+readonly class FileInterceptor implements IAssegaiInterceptor
 {
   public function __construct(
-    public readonly string $fieldName,
-    public readonly ?FileInterceptorOptions $options = null
+    public string                  $fieldName,
+    public ?FileInterceptorOptions $options = null
   )
   {
   }
