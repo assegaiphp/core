@@ -3,7 +3,6 @@
 namespace Assegai\Core\Http\Requests;
 
 //use Assegai\Lib\Authentication\JWT\JWTToken;
-use Assegai\Core\App;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Config;
 use Assegai\Core\Enumerations\Http\ContentType;
