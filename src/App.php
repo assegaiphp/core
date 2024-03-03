@@ -14,6 +14,7 @@ use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Responder;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\IConsumer;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Routing\Router;
@@ -26,7 +27,7 @@ use ReflectionException;
 use Throwable;
 
 //use Psr\Log\LoggerAwareInterface;
-//use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerInterface;
 
 require __DIR__ . '/Util/Definitions.php';
 
@@ -37,7 +38,7 @@ require __DIR__ . '/Util/Definitions.php';
  *
  * @link https://docs.assegaiphp.com
  */
-class App
+class App implements AppInterface
 {
   /**
    * @var ReflectionClass[] $providers A list of all the imported module tokens
@@ -100,6 +101,7 @@ class App
   {
     EventManager::broadcast(EventChannel::APP_INIT_START, new Event());
     set_exception_handler(function (Throwable $exception) {
+      exit($exception);
       if ($exception instanceof HttpException)
       {
         echo $exception;
@@ -143,14 +145,13 @@ class App
   {
     EventManager::broadcast(EventChannel::APP_SHUTDOWN_START, new Event());
 
+    // Decommission app properties
+
     EventManager::broadcast(EventChannel::APP_SHUTDOWN_FINISH, new Event());
   }
 
   /**
-   * Sets the app configuration to the given configuration properties.
-   *
-   * @param mixed $config The configuration properties.
-   * @return static
+   * @inheritDoc
    */
   public function configure(mixed $config = null): static
   {
@@ -168,10 +169,7 @@ class App
   }
 
   /**
-   * Specifies a list of pipes that should be used by the `App` instance.
-   *
-   * @param IPipeTransform|array $pipes A list of pipes to be used by the `App` instance.
-   * @return static The current `App` instance.
+   * @inheritDoc
    */
   public function useGlobalPipes(IPipeTransform|array $pipes): static
   {
@@ -180,20 +178,16 @@ class App
   }
 
   /**
-   * Sets a logger instance that should be user by the `App` instance.
-   *
-   * @param LoggerInterface $logger
-   * @return void
+   * @inheritDoc
    */
-  public function setLogger(LoggerInterface $logger): void
+  public function setLogger(LoggerInterface $logger): static
   {
     $this->logger = $logger;
+    return $this;
   }
 
   /**
-   * Runs the current application.
-   *
-   * @return void
+   * @inheritDoc
    */
   public function run(): void
   {
