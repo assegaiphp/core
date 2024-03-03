@@ -27,20 +27,38 @@ use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionUnionType;
 
+/**
+ * Class Injector. The injector is responsible for resolving dependencies.
+ */
 final class Injector implements ITokenStoreOwner, IContainer
 {
+  /**
+   * @var array
+   */
   private array $store = [];
 
+  /**
+   * Constructs a new Injector instance.
+   */
   private final function __construct()
   {
   }
 
+  /**
+   * Returns a singleton instance of the Injector.
+   *
+   * @return Injector The Injector instance.
+   */
   public static function getInstance(): Injector
   {
     return new Injector();
   }
 
   /**
+   * Resolves a dependency.
+   *
+   * @param string $id The dependency ID.
+   * @return mixed The resolved dependency.
    * @throws ContainerException|ReflectionException
    */
   public function resolve(string $id): mixed
@@ -100,8 +118,10 @@ final class Injector implements ITokenStoreOwner, IContainer
   }
 
   /**
-   * @param string $entryId
-   * @return bool
+   * Determines if the container has a dependency.
+   *
+   * @param string $entryId The dependency ID.
+   * @return bool True if the container has the dependency, false otherwise.
    */
   public function has(string $entryId): bool
   {
@@ -109,8 +129,10 @@ final class Injector implements ITokenStoreOwner, IContainer
   }
 
   /**
-   * @param string $entryId
-   * @return mixed
+   * Returns a dependency from the container.
+   *
+   * @param string $entryId The dependency ID.
+   * @return mixed The dependency if it exists, null otherwise.
    */
   public function get(string $entryId): mixed
   {
@@ -118,9 +140,11 @@ final class Injector implements ITokenStoreOwner, IContainer
   }
 
   /**
-   * @param string $entryId
-   * @param mixed $token
-   * @return int
+   * Adds a dependency to the container.
+   *
+   * @param string $entryId The dependency ID.
+   * @param mixed $token The dependency.
+   * @return int The number of dependencies in the container.
    */
   public function add(string $entryId, mixed $token): int
   {
@@ -130,9 +154,11 @@ final class Injector implements ITokenStoreOwner, IContainer
   }
 
   /**
-   * @param $tokenId
-   * @return int|false
-   * @throws EntryNotFoundException
+   * Removes a dependency from the container.
+   *
+   * @param $tokenId The dependency ID.
+   * @return int|false The number of dependencies in the container, false if the dependency does not exist.
+   * @throws EntryNotFoundException If the dependency does not exist.
    */
   public function remove($tokenId): int|false
   {
@@ -153,23 +179,37 @@ final class Injector implements ITokenStoreOwner, IContainer
     return count($this->store);
   }
 
+  /**
+   * Determines if a class is injectable.
+   *
+   * @param ReflectionClass $reflectionClass The class to inspect.
+   * @return bool True if the class is injectable, false otherwise.
+   */
   public function isInjectable(ReflectionClass $reflectionClass): bool
   {
     $lastLoadedAttributes = $reflectionClass->getAttributes(Injectable::class);
     return !empty($lastLoadedAttributes);
   }
 
+  /**
+   * Determines if a class is not injectable.
+   *
+   * @param ReflectionClass $reflectionClass The class to inspect.
+   * @return bool True if the class is not injectable, false otherwise.
+   */
   public function isNotInjectable(ReflectionClass $reflectionClass): bool
   {
     return !$this->isInjectable($reflectionClass);
   }
 
   /**
-   * @param string $id
-   * @param ReflectionParameter[] $parameters
-   * @return array
-   * @throws ContainerException
-   * @throws ResolveException
+   * Resolves dependencies.
+   *
+   * @param string $id The dependency ID.
+   * @param ReflectionParameter[] $parameters The dependency parameters.
+   * @return array The resolved dependencies.
+   * @throws ContainerException If the dependency is not injectable.
+   * @throws ResolveException If the dependency cannot be resolved.
    */
   private function resolveDependencies(string $id, array $parameters): array
   {

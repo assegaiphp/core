@@ -25,15 +25,11 @@ use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
-use Assegai\Core\Util\Debug\Console\Enumerations\Color;
-use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Validator;
 use Exception;
-use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
-use ReflectionParameter;
 use stdClass;
 
 final class Router
@@ -144,7 +140,6 @@ final class Router
   /**
    * @param ReflectionClass $reflectionController
    * @return object Returns an instance of the activated controller
-   * @throws ContainerException
    * @throws ReflectionException
    */
   private function activateController(ReflectionClass $reflectionController): object
@@ -156,16 +151,28 @@ final class Router
       $constructorParams = $constructor->getParameters();
 
       # Instantiate attributes
-      $controllerAttributes = $reflectionController->getAttributes();
+      $controllerReflectionAttributes = $reflectionController->getAttributes();
+      $controllerAttributes = [];
 
-      foreach ($controllerAttributes as $controllerAttribute)
+      foreach ($controllerReflectionAttributes as $controllerAttribute)
       {
-        $controllerAttribute->newInstance();
+        $controllerAttributes[] = $controllerAttribute->newInstance();
       }
 
-      foreach ($constructorParams as $param)
-      {
-        $dependencies[] = $this->injector->resolve($param->getType()->getName());
+      foreach ($constructorParams as $param) {
+        try {
+          $dependencies[] = $this->injector->resolve($param->getType()->getName());
+        }
+        catch (Exception $exception)
+        {
+          exit(var_export([
+            'exception' => $exception,
+            'controllerAttributes' => $controllerAttributes,
+            'dependencies' => $dependencies,
+            'param' => $param,
+            'param-type' => $param->getType()->getName(),
+          ], true));
+        }
       }
     }
 

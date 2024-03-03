@@ -2,6 +2,9 @@
 
 namespace Assegai\Core\Enumerations;
 
+/**
+ * Enumerates the different types of environments that Assegai supports.
+ */
 enum EnvironmentType: string
 {
   case LOCAL = 'LOCAL';
