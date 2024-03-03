@@ -6,19 +6,15 @@
         "assegaiphp/orm": ">=0.2",
         "codeception/codeception": "^5.0",
         "codeception/module-phpbrowser": "*",
-        "codeception/module-asserts": "*"
+        "codeception/module-asserts": "*",
+        "assegaiphp/util": "^0.4.2"
     },
     "license": "MIT",
     "autoload": {
         "psr-4": {
             "Assegai\\Core\\": "src/"
         },
-        "files": ["src/Util/Definitions.php", "src/Util/Functions.php"]
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Assegai\\Orm\\": "../orm/src"
-        }
+        "files": ["src/Util/Definitions.php"]
     },
     "authors": [
         {
@@ -27,12 +23,13 @@
         }
     ],
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.3",
         "psr/log": "^3.0.0",
         "vlucas/phpdotenv": "^5.4",
         "twig/twig": "^3.0",
         "ext-fileinfo": "*",
-        "assegaiphp/validation": "^0.3.1"
+        "assegaiphp/validation": "^0.3.2",
+        "assegaiphp/forms": "^0.4.0"
     },
     "scripts": {
         "test": "codecept run unit"
