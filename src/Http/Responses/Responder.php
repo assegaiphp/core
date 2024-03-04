@@ -90,7 +90,7 @@ class Responder
         ContentType::JSON => match (true) {
           ($response->getBody() instanceof DeleteResult) => strval($response->getBody()->affected),
           ($response->getBody() instanceof InsertResult),
-          ($response->getBody() instanceof UpdateResult) => json_encode($response->getBody()->identifiers),
+          ($response->getBody() instanceof UpdateResult) => json_encode($response->getBody()->getData()),
           default => new ApiResponse(data: $response->getBody())
         },
         default => $response->getBody()
