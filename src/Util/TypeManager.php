@@ -31,7 +31,8 @@ class TypeManager
     $instance = new $targetType;
     $injector = Injector::getInstance();
 
-    if (!class_exists($targetType)) {
+    if (! class_exists($targetType) )
+    {
       throw new EntryNotFoundException($targetType);
     }
 
