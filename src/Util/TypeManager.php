@@ -36,6 +36,11 @@ class TypeManager
       throw new EntryNotFoundException($targetType);
     }
 
+    if (get_class($object) === $targetType)
+    {
+      return $object;
+    }
+
     foreach ($object as $key => $value)
     {
       if (property_exists($instance, $key))
