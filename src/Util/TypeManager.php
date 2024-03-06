@@ -31,9 +31,13 @@ class TypeManager
     $instance = new $targetType;
     $injector = Injector::getInstance();
 
-    if (! class_exists($targetType) )
-    {
+    if (!class_exists($targetType)) {
       throw new EntryNotFoundException($targetType);
+    }
+
+    if (get_class($object) === $targetType)
+    {
+      return $object;
     }
 
     foreach ($object as $key => $value)
