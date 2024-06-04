@@ -99,7 +99,7 @@ class Request
     $this->path = $path;
     $this->query = new RequestQuery();
     $this->body = new stdClass();
-    $this->contentType = ContentType::tryFrom($_SERVER['CONTENT_TYPE']) ?? ContentType::HTML;
+    $this->contentType = ContentType::tryFrom($_SERVER['CONTENT_TYPE'] ?? '') ?? ContentType::HTML;
 
     $this->requestMethod = match ($_SERVER['REQUEST_METHOD']) {
       'POST'    => RequestMethod::POST,
