@@ -120,8 +120,8 @@ class ModuleManager
         $this->declarationTokens = array_merge($this->declarationTokens, $args['declarations']);
       }
 
-      # 4. For each import
-      foreach ($args['imports'] as $import)
+      # 4. For each import, build the module tokens list
+      foreach ($args['imports'] ?? [] as $import)
       {
         $this->buildModuleTokensList($import);
       }
