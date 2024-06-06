@@ -59,11 +59,14 @@ class ModuleManager
    */
   protected array $config = [];
 
+  protected Injector $injector;
+
   /**
    * Constructs a ModuleManager
    */
   private final function __construct()
   {
+    $this->injector = Injector::getInstance();
   }
 
   /**
@@ -80,6 +83,8 @@ class ModuleManager
 
     return self::$instance;
   }
+
+  static int $buildIteration = 0;
 
   /**
    * Builds a list of all the imported module tokens.
@@ -102,7 +107,7 @@ class ModuleManager
       }
       $reflectionModuleAttribute = $this->lastLoadedAttributes[0];
 
-      /** @var ['declarations' => 'array', 'imports' => 'array', 'exports' => 'array', 'providers' => 'array', 'controllers' => 'array', 'config' => 'array'] $args */
+      /** @var array{declarations: string[], imports: string[], exports: string[], providers: string[], controllers: string[], config: array<string, mixed>} $args */
       $args = $reflectionModuleAttribute->getArguments();
 
       # 1. Add rootToken to the list
@@ -120,10 +125,16 @@ class ModuleManager
         $this->declarationTokens = array_merge($this->declarationTokens, $args['declarations']);
       }
 
-      # 4. For each import
-      foreach ($args['imports'] as $import)
+      # 4. For each import, build the module tokens list
+      foreach ($args['imports'] ?? [] as $import)
       {
         $this->buildModuleTokensList($import);
+      }
+
+      # 5. Store exported tokens
+      foreach ($args['exports'] ?? [] as $export)
+      {
+        $this->injector->add($export, $this->injector->resolve($export));
       }
     }
     catch (ReflectionException $e)
@@ -205,10 +216,10 @@ class ModuleManager
   {
     foreach ($this->moduleTokens as $module)
     {
-      /** @var ['imports' => 'array', 'exports' => 'array', 'providers' => 'array'] $args */
+      /** @var array{imports: string[], exports: string[], providers: string[]} $args */
       $args = $module->getArguments();
 
-      foreach ($args['providers'] as $tokenId)
+      foreach ($args['providers'] ?? [] as $tokenId)
       {
         if ($provider = $this->validateProvider($tokenId))
         {

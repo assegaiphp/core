@@ -33,9 +33,14 @@ use ReflectionUnionType;
 final class Injector implements ITokenStoreOwner, IContainer
 {
   /**
-   * @var array
+   * @var array<string, mixed> The store of dependencies.
    */
-  private array $store = [];
+  protected array $store = [];
+
+  /**
+   * @var Injector|null The Injector instance.
+   */
+  protected static ?Injector $instance = null;
 
   /**
    * Constructs a new Injector instance.
@@ -51,7 +56,12 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public static function getInstance(): Injector
   {
-    return new Injector();
+    if (is_null(self::$instance))
+    {
+      self::$instance = new Injector();
+    }
+
+    return self::$instance;
   }
 
   /**
@@ -248,8 +258,6 @@ final class Injector implements ITokenStoreOwner, IContainer
           return $param->allowsNull() ? null : [];
         }
 
-        # TODO: Check if param has Injectable class or attribute
-
         $repositoryAttributes = $param->getAttributes(InjectRepository::class);
 
         foreach ( $repositoryAttributes as $reflectionRepoAttr )
@@ -258,6 +266,9 @@ final class Injector implements ITokenStoreOwner, IContainer
           $injectRepositoryInstance = $reflectionRepoAttr->newInstance();
           return $injectRepositoryInstance->repository;
         }
+
+        # TODO: Check if param has Injectable class or attribute
+        $repositoryAttributes = $param->getAttributes(Injectable::class);
 
         return $this->get($paramType->getName());
       }
