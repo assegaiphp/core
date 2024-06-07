@@ -6,7 +6,8 @@
         "assegaiphp/orm": ">=0.2",
         "codeception/codeception": "^5.0",
         "codeception/module-phpbrowser": "*",
-        "codeception/module-asserts": "*"
+        "codeception/module-asserts": "*",
+        "phpstan/phpstan": "^1.11"
     },
     "license": "MIT",
     "autoload": {
@@ -17,7 +18,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Assegai\\Orm\\": "../orm/src"
+            "Assegai\\Orm\\": "../orm/src/",
+            "Assegai\\Form\\": "../forms/src/"
         }
     },
     "authors": [
@@ -33,9 +35,11 @@
         "twig/twig": "^3.0",
         "ext-fileinfo": "*",
         "assegaiphp/validation": "^0.3.1",
-        "assegaiphp/util": "^0.4.2"
+        "assegaiphp/util": "^0.4.2",
+        "assegaiphp/forms": "^0.4.4"
     },
     "scripts": {
-        "test": "codecept run unit"
+        "test": "codecept run unit",
+        "analyze": "vendor/bin/phpstan analyse src tests/Unit --level 8"
     }
 }
