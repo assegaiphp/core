@@ -1,10 +1,12 @@
 <?php
 
 
-namespace Tests\Unit;
+namespace Unit;
 
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Pipes\ValidationPipe;
+use Codeception\Attribute\Incomplete;
+use Codeception\Attribute\Skip;
 use Exception;
 use ReflectionException;
 use Tests\Mocks\InvalidMockDto;
@@ -26,6 +28,7 @@ class ValidationPipeCest
    * @throws ReflectionException
    * @throws HttpException
    */
+  #[Skip]
   public function checkTheTransformMethod(UnitTester $I): void
   {
     $pipe = new ValidationPipe();

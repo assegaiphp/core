@@ -4,7 +4,7 @@ namespace Unit;
 
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Interfaces\AppInterface;
-use Mocks\MockApp;
+use Tests\Mocks\MockApp;
 use Tests\Support\UnitTester;
 
 class RequestCest
