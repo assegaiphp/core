@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Tests\Unit;
+namespace Unit;
 
 use Assegai\Core\Config;
 use Assegai\Core\Enumerations\EnvironmentType;

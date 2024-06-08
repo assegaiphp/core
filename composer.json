@@ -19,7 +19,8 @@
     "autoload-dev": {
         "psr-4": {
             "Assegai\\Orm\\": "../orm/src/",
-            "Assegai\\Form\\": "../forms/src/"
+            "Assegai\\Form\\": "../forms/src/",
+            "Tests\\Mocks\\": "tests/Mocks/"
         }
     },
     "authors": [
@@ -39,7 +40,7 @@
         "assegaiphp/forms": "^0.4.4"
     },
     "scripts": {
-        "test": "codecept run unit",
+        "test": "vendor/bin/codecept run Unit",
         "analyze": "vendor/bin/phpstan analyse src tests/Unit --level 8"
     }
 }
