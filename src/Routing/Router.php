@@ -30,6 +30,7 @@ use Exception;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+use ReflectionUnionType;
 use stdClass;
 
 final class Router
@@ -106,14 +107,14 @@ final class Router
     $request = Request::getInstance();
     $path = str_starts_with($request->getPath(), '/') ? $request->getPath() : '/' . $request->getPath();
 
-    $attributes = $reflectionController->getAttributes(Controller::class);
+    $controllerClassAttributes = $reflectionController->getAttributes(Controller::class);
 
-    if (empty($attributes))
+    if (empty($controllerClassAttributes))
     {
       throw new HttpException("Invalid controller: " . $reflectionController->getName());
     }
 
-    foreach ($attributes as $attribute)
+    foreach ($controllerClassAttributes as $attribute)
     {
       $instance = $attribute->newInstance();
       $prefix = str_replace('/^\/\//', '', '/' . $instance->path);
@@ -133,12 +134,19 @@ final class Router
       }
     }
 
-    $method = trim($path, '/');
-    return $reflectionController->hasMethod($method);
+    // If this is the root controller and the path is empty
+    if ($this->isRootController($reflectionController, $path))
+    {
+      return true;
+    }
+
+    return false;
   }
 
   /**
-   * @param ReflectionClass $reflectionController
+   * Activates the given controller.
+   *
+   * @param ReflectionClass $reflectionController The reflection instance of the controller to be activated.
    * @return object Returns an instance of the activated controller
    * @throws ReflectionException
    */
@@ -159,8 +167,10 @@ final class Router
         $controllerAttributes[] = $controllerAttribute->newInstance();
       }
 
-      foreach ($constructorParams as $param) {
-        try {
+      foreach ($constructorParams as $param)
+      {
+        try
+        {
           $dependencies[] = $this->injector->resolve($param->getType()->getName());
         }
         catch (Exception $exception)
@@ -268,7 +278,7 @@ final class Router
 
     foreach ($attributes as $attribute)
     {
-      $foundPathMatch = $this->isPathMatch(pattern: $pattern, path: $path);
+      $foundPathMatch = $this->patternMatchesPath(pattern: $pattern, path: $path);
 
       if ($foundPathMatch === false && $handler->getShortName() === trim($request->getPath(), '/'))
       {
@@ -500,14 +510,16 @@ final class Router
   }
 
   /**
-   * @param string $pattern
-   * @param string $path
-   * @return bool
+   * Determines if the given pattern matches the given path.
+   *
+   * @param string $pattern The pattern to be matched.
+   * @param string $path The path to be matched.
+   * @return bool True if the pattern matches the path, false otherwise.
    */
-  private function isPathMatch(string $pattern, string $path): bool
+  private function patternMatchesPath(string $pattern, string $path): bool
   {
     $path = preg_replace('/^\//', '', $path);
-    $pattern = str_replace('/', '\/', $pattern);
+    $pattern = str_replace('/', '\/?', $pattern);
     $result = preg_match("/^$pattern\/?$/", $path);
 
     return boolval($result) === true;
@@ -616,16 +628,47 @@ final class Router
     $params = $activatedHandler->getParameters();
     foreach ($params as $param)
     {
-      $paramTypeName = $param->getType()?->getName() ?? 'stdClass';
+      $paramIsUnionType = $param->getType() instanceof ReflectionUnionType;
+
+      $paramTypeName = match (true) {
+        $paramIsUnionType => $param->getType()->getTypes()[0]->getName(),
+        !is_null($param->getType()) => $param->getType()->getName(),
+        default => 'stdClass'
+      };
       $isStandardClassType = is_subclass_of($paramTypeName, stdClass::class) || $paramTypeName === 'stdClass';
 
       $dependencies[] = match(true) {
-        $param->getType()?->isBuiltin(),
-        $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
-        default => $this->injector->resolve($paramTypeName)
-      };
+        $paramIsUnionType => match(true) {
+            $param->getType()->getTypes()[0]->isBuiltin(),
+            $param->getType()->getTypes()[1]->isBuiltin() => $this->injector->resolveBuiltIn($param, $request, true),
+          },
+          $param->getType()?->isBuiltin(),
+          $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
+          default => $this->injector->resolve($paramTypeName)
+        };
     }
 
     return $dependencies;
+  }
+
+  /**
+   * Determines if the given controller is the root controller.
+   *
+   * @param ReflectionClass $controllerReflection The reflection instance of the controller.
+   * @return bool True if the given controller is the root controller, false otherwise.
+   */
+  private function isRootController(ReflectionClass $controllerReflection, string $path): bool
+  {
+    if (str_ends_with($controllerReflection->getName(), 'AppController'))
+    {
+      return true;
+    }
+
+    if ($path === '/')
+    {
+      return true;
+    }
+
+    return false;
   }
 }

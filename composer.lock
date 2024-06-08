@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1de65b014030509d1ec144bf34f6dc71",
+    "content-hash": "49c835e61539c94bcd8a1e3d3807cef1",
     "packages": [
         {
             "name": "arubacao/tld-checker",
@@ -68,6 +68,99 @@
                 "source": "https://github.com/arubacao/tld-checker/tree/1.2.235"
             },
             "time": "2024-06-02T04:01:12+00:00"
+        },
+        {
+            "name": "assegaiphp/collections",
+            "version": "0.3.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/assegaiphp/collections.git",
+                "reference": "d19a002c41ed6c2f2b2602418e8de827f10b2e8c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/assegaiphp/collections/zipball/d19a002c41ed6c2f2b2602418e8de827f10b2e8c",
+                "reference": "d19a002c41ed6c2f2b2602418e8de827f10b2e8c",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "pestphp/pest": "^2.6"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/Util/Functions.php"
+                ],
+                "psr-4": {
+                    "Assegai\\Collections\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andrew Masiye",
+                    "email": "andrew.masiye@assegaiphp.com"
+                }
+            ],
+            "description": "The assegaiphp/collections package is a powerful tool for creating and managing groups of related objects in your AssegaiPHP projects. With this library, you can easily organize and manipulate data in a variety of ways, such as arrays, lists, sets, and maps. The package offers a wide range of methods for adding, removing, and manipulating items, as well as sorting, searching, and filtering your collections. It is fully compatible with PHP 7.x and above and is designed to be lightweight and easy to use. Whether you're building a web application, a CLI tool, or a standalone script, assegaiphp/collections is the perfect choice for working with data. With its simple and intuitive interface, you can easily start working with collections in your project right away.",
+            "support": {
+                "issues": "https://github.com/assegaiphp/collections/issues",
+                "source": "https://github.com/assegaiphp/collections/tree/0.3.2"
+            },
+            "time": "2023-07-15T09:26:04+00:00"
+        },
+        {
+            "name": "assegaiphp/forms",
+            "version": "0.4.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/assegaiphp/forms.git",
+                "reference": "43b5838be2b66138769a2df75bdd029443250cea"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/assegaiphp/forms/zipball/43b5838be2b66138769a2df75bdd029443250cea",
+                "reference": "43b5838be2b66138769a2df75bdd029443250cea",
+                "shasum": ""
+            },
+            "require": {
+                "assegaiphp/collections": "^0.3.2",
+                "assegaiphp/util": "^0.4.2",
+                "assegaiphp/validation": "^0.3.2",
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "pestphp/pest": "^2.16"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Assegai\\Forms\\": "src/",
+                    "Assegai\\Tests\\Forms\\": "tests/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andrew Masiye",
+                    "email": "amasiye313@gmail.com"
+                }
+            ],
+            "description": "A simple PHP library for dealing with HTML form submissions.",
+            "support": {
+                "issues": "https://github.com/assegaiphp/forms/issues",
+                "source": "https://github.com/assegaiphp/forms/tree/0.4.4"
+            },
+            "time": "2024-03-03T09:33:47+00:00"
         },
         {
             "name": "assegaiphp/util",
@@ -2134,6 +2227,64 @@
                 "source": "https://github.com/phar-io/version/tree/3.2.1"
             },
             "time": "2022-02-21T01:04:05+00:00"
+        },
+        {
+            "name": "phpstan/phpstan",
+            "version": "1.11.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/phpstan/phpstan.git",
+                "reference": "9100a76ce8015b9aa7125b9171ae3a76887b6c82"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/9100a76ce8015b9aa7125b9171ae3a76887b6c82",
+                "reference": "9100a76ce8015b9aa7125b9171ae3a76887b6c82",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.2|^8.0"
+            },
+            "conflict": {
+                "phpstan/phpstan-shim": "*"
+            },
+            "bin": [
+                "phpstan",
+                "phpstan.phar"
+            ],
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "bootstrap.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "PHPStan - PHP Static Analysis Tool",
+            "keywords": [
+                "dev",
+                "static analysis"
+            ],
+            "support": {
+                "docs": "https://phpstan.org/user-guide/getting-started",
+                "forum": "https://github.com/phpstan/phpstan/discussions",
+                "issues": "https://github.com/phpstan/phpstan/issues",
+                "security": "https://github.com/phpstan/phpstan/security/policy",
+                "source": "https://github.com/phpstan/phpstan-src"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/ondrejmirtes",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/phpstan",
+                    "type": "github"
+                }
+            ],
+            "time": "2024-06-06T12:19:22+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",

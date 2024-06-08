@@ -7,6 +7,7 @@ namespace Assegai\Core;
 use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Query;
 use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Attributes\Param;
 use Assegai\Core\Attributes\Req;
 use Assegai\Core\Attributes\Res;
@@ -80,6 +81,11 @@ final class Injector implements ITokenStoreOwner, IContainer
 
       if($this->isNotInjectable($reflectionClass))
       {
+        if ($this->isModule($reflectionClass))
+        {
+          return $this->resolveModule($reflectionClass);
+        }
+
         throw new ContainerException("$id is not injectable");
       }
     }
@@ -282,12 +288,19 @@ final class Injector implements ITokenStoreOwner, IContainer
    *
    * @param ReflectionParameter $param The parameter to resolve.
    * @param Request $request The request object.
+   * @param bool $isUnionType True if the parameter is a union type, false otherwise.
+   *
    * @return mixed The resolved parameter.
    * @throws EntryNotFoundException
    */
-  public function resolveBuiltIn(ReflectionParameter $param, Request $request): mixed
+  public function resolveBuiltIn(ReflectionParameter $param, Request $request, bool $isUnionType = false): mixed
   {
-    $paramTypeName = $param->getType()?->getName() ?? 'stdClass';
+    $paramType = $param->getType();
+    $paramTypeName = match(true) {
+      $isUnionType => ltrim(array_reduce($paramType->getTypes(), fn($carry, $type) => $carry . '|' . $type->getName(), '') ?? '', '|'),
+      $param->getType() => $param->getType()->getName(),
+      default => 'stdClass'
+    };
     $paramAttributes = $param->getAttributes();
 
     foreach ($paramAttributes as $paramAttribute)
@@ -349,5 +362,38 @@ final class Injector implements ITokenStoreOwner, IContainer
     }
 
     return null;
+  }
+
+  /**
+   * Resolves a module.
+   *
+   * @param ReflectionClass $reflectionClass The module reflection class.
+   * @return Module|null The resolved module if found, null otherwise.
+   */
+  public function resolveModule(ReflectionClass $reflectionClass): ?Module
+  {
+    $moduleAttributes = $reflectionClass->getAttributes(Module::class);
+
+    if (empty($moduleAttributes))
+    {
+      return null;
+    }
+
+    $moduleAttribute = array_pop($moduleAttributes);
+
+    return $moduleAttribute->newInstance();
+  }
+
+  /**
+   * Determines if a class is a module.
+   *
+   * @param string $id The class name.
+   * @return bool True if the class is a module, false otherwise.
+   */
+  private function isModule(ReflectionClass $reflectionClass): bool
+  {
+    $moduleAttributes = $reflectionClass->getAttributes(Module::class);
+
+    return !empty($moduleAttributes);
   }
 }
