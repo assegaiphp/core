@@ -28,6 +28,28 @@ class TypeManager
    */
   public static function castObjectToUserType(stdClass $object, string $targetType): mixed
   {
+    if (str_contains($targetType, '|'))
+    {
+      $targetTypes = explode('|', $targetType);
+      foreach ($targetTypes as $type)
+      {
+        try
+        {
+          return self::castObjectToUserType($object, $type);
+        }
+        catch (EntryNotFoundException $e)
+        {
+          continue;
+        }
+      }
+      throw new EntryNotFoundException($targetType);
+    }
+
+    if ($targetType === 'object')
+    {
+      $targetType = stdClass::class;
+    }
+
     $instance = new $targetType;
     $injector = Injector::getInstance();
 

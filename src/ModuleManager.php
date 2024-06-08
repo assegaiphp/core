@@ -12,6 +12,11 @@ use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
 
+/**
+ * The ModuleManager class is responsible for managing the modules.
+ *
+ * @package Assegai\Core
+ */
 class ModuleManager
 {
   protected static ?ModuleManager $instance = null;
@@ -134,7 +139,16 @@ class ModuleManager
       # 5. Store exported tokens
       foreach ($args['exports'] ?? [] as $export)
       {
-        $this->injector->add($export, $this->injector->resolve($export));
+        $resolvedExport = $this->injector->resolve($export);
+
+        if ($resolvedExport instanceof Module)
+        {
+          $this->buildModuleTokensList($export);
+        }
+        else
+        {
+          $this->injector->add($export, $resolvedExport);
+        }
       }
     }
     catch (ReflectionException $e)
