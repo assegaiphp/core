@@ -129,6 +129,7 @@ class App implements AppInterface
     // Initialize app properties
     $this->config = new AppConfig();
     $this->host = new ArgumentsHost();
+    Log::init();
 
     $this->request = $this->host->switchToHttp()->getRequest();
     $this->request->setApp($this);
