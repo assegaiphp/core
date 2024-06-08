@@ -37,39 +37,49 @@ class ConfigCest
     Config::hydrate($this->workingDirectory);
 
     $workspaceConfigFilename = Paths::join($this->workingDirectory, 'assegai.json');
-    if (is_file($workspaceConfigFilename))
+    if (! is_file($workspaceConfigFilename))
     {
-      $workspaceConfig = file_get_contents($workspaceConfigFilename);
-      if (json_is_valid($workspaceConfig))
+      // Assume the file does not exist and create it
+      $workspaceConfig = json_encode([$this->testKey => $this->testValue], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
+      $bytesWritten = file_put_contents($workspaceConfigFilename, $workspaceConfig);
+
+      if (false === $bytesWritten)
       {
-        $workspaceConfig = json_decode($workspaceConfig, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE)
-        {
-          throw new ConfigurationException("Failed to decode the workspace configuration file: $workspaceConfigFilename");
-        }
-
-        $testKey = $this->testKey;
-        if (isset($workspaceConfig->$testKey))
-        {
-          unset($workspaceConfig->$testKey);
-        }
-
-        $workspaceConfig = json_encode($workspaceConfig, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
-
-        if (json_last_error() !== JSON_ERROR_NONE)
-        {
-          throw new ConfigurationException("Failed to encode the workspace configuration: $workspaceConfig");
-        }
-
-        $bytesWritten = file_put_contents($workspaceConfigFilename, $workspaceConfig);
-
-        if (false === $bytesWritten)
-        {
-          throw new ConfigurationException("Failed to write to configuration file: $workspaceConfigFilename");
-        }
+        throw new ConfigurationException("Failed to write to configuration file: $workspaceConfigFilename");
       }
     }
+
+    $workspaceConfig = file_get_contents($workspaceConfigFilename);
+    if (json_is_valid($workspaceConfig))
+    {
+      $workspaceConfig = json_decode($workspaceConfig, true);
+
+      if (json_last_error() !== JSON_ERROR_NONE)
+      {
+        throw new ConfigurationException("Failed to decode the workspace configuration file: $workspaceConfigFilename");
+      }
+
+      $testKey = $this->testKey;
+      if (isset($workspaceConfig->$testKey))
+      {
+        unset($workspaceConfig->$testKey);
+      }
+
+      $workspaceConfig = json_encode($workspaceConfig, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
+
+      if (json_last_error() !== JSON_ERROR_NONE)
+      {
+        throw new ConfigurationException("Failed to encode the workspace configuration: $workspaceConfig");
+      }
+
+      $bytesWritten = file_put_contents($workspaceConfigFilename, $workspaceConfig);
+
+      if (false === $bytesWritten)
+      {
+        throw new ConfigurationException("Failed to write to configuration file: $workspaceConfigFilename");
+      }
+    }
+
     $this->testKey = 'test_key';
     $this->testValue = 'test_value_' . time();
   }
