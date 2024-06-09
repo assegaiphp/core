@@ -136,6 +136,7 @@ class App implements AppInterface
     $this->response = $this->host->switchToHttp()->getResponse();
 
     $this->responder = Responder::getInstance();
+    $this->moduleManager->setRootModuleClass($this->rootModuleClass);
     EventManager::broadcast(EventChannel::APP_INIT_FINISH, new Event($this->host));
   }
 

@@ -65,6 +65,7 @@ class ModuleManager
   protected array $config = [];
 
   protected Injector $injector;
+  protected string $rootModuleClass = '';
 
   /**
    * Constructs a ModuleManager
@@ -90,6 +91,27 @@ class ModuleManager
   }
 
   static int $buildIteration = 0;
+
+  /**
+   * Sets the root module class. This is the entry point of the application.
+   *
+   * @param string $rootModuleClass The root module class.
+   * @return void
+   */
+  public function setRootModuleClass(string $rootModuleClass): void
+  {
+    $this->rootModuleClass = $rootModuleClass;
+  }
+
+  /**
+   * Returns the root module class.
+   *
+   * @return string The root module class.
+   */
+  public function getRootModuleClass(): string
+  {
+    return $this->rootModuleClass;
+  }
 
   /**
    * Builds a list of all the imported module tokens.

@@ -83,13 +83,19 @@ final class Router
 
     foreach ($controllerTokensList as $reflectionController)
     {
+      if ($this->isRootController($reflectionController, $request->getPath()))
+      {
+        $activatedController = $this->activateController($reflectionController);
+        continue;
+      }
+
       if ($this->canActivateController($reflectionController))
       {
         return $this->activateController($reflectionController);
       }
     }
 
-    if (!$activatedController)
+    if (is_null($activatedController))
     {
       throw new NotFoundException(path: $request->getPath());
     }
@@ -660,11 +666,6 @@ final class Router
   private function isRootController(ReflectionClass $controllerReflection, string $path): bool
   {
     if (str_ends_with($controllerReflection->getName(), 'AppController'))
-    {
-      return true;
-    }
-
-    if ($path === '/')
     {
       return true;
     }
