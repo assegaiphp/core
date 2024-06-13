@@ -55,9 +55,18 @@ class Config
       $_ENV = array_replace_recursive($_ENV, $config);
     }
 
+    $configFilename = preg_replace('/(default|local|production)/', 'secure', $configFilename);
+    if (is_file($configFilename))
+    {
+      $config = require($configFilename);
+
+      $_ENV = array_replace_recursive($_ENV, $config);
+    }
+
     if (!isset($GLOBALS['config']))
     {
       $defaultConfigFilename = Paths::join(trim($workingDirectory), 'config', 'default.php');
+      $secureConfigFilename = Paths::join(trim($workingDirectory), 'config', 'default.php');
       $localConfigFilename = Paths::join(trim($workingDirectory), 'config', 'local.php');
       $productionConfigFilename = Paths::join(trim($workingDirectory), 'config', 'production.php');
 
@@ -83,6 +92,16 @@ class Config
             : [];
 
         $config = array_replace_recursive($config, $localConfig);
+      }
+
+      if (is_file($secureConfigFilename))
+      {
+        $secureConfig =
+          is_file($secureConfigFilename)
+            ? require($secureConfigFilename)
+            : [];
+
+        $config = array_replace_recursive($config, $secureConfig);
       }
 
       $GLOBALS['config'] = $config;
