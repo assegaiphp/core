@@ -14,11 +14,11 @@ readonly class Component
   /**
    * Constructs a component attribute.
    *
+   * @param string $selector The CSS selector that identifies this component in a template.
    * @param array|null $providers Defines the set of injectable objects that are visible to its view DOM children.
-   * @param string|null $moduleId The module ID of the module that contains the component. The component must be able 
+   * @param string|null $moduleId The module ID of the module that contains the component. The component must be able
    * to resolve relative URLs for templates and styles.
-   * @param string|null $templateURL The relative path or absolute URL of a template file for an AssegaiPHP component.
-   * If provided, do not supply an inline template using template.
+   * @param string|null $templateUrl The URL of an external file containing an AssegaiPHP component template.
    * @param string|null $template An inline template for an AssegaiPHP component. If provided, do not supply a
    * template file using templateUrl.
    * @param array|null $styleUrls One or more relative paths or absolute URLs for files containing CSS stylesheets

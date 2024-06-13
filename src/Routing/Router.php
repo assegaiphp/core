@@ -13,6 +13,7 @@ use Assegai\Core\Attributes\Http\Put;
 use Assegai\Core\Attributes\UseGuards;
 use Assegai\Core\Attributes\UseInterceptors;
 use Assegai\Core\Consumers\GuardsConsumer;
+use Assegai\Core\ControllerManager;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
@@ -33,18 +34,40 @@ use ReflectionMethod;
 use ReflectionUnionType;
 use stdClass;
 
+/**
+ * The Router class is responsible for routing incoming requests to the appropriate controller and handler.
+ *
+ * @package Assegai\Core\Routing
+ */
 final class Router
 {
+  /**
+   * @var Router|null The Router instance.
+   */
   private static ?Router $instance = null;
+  /**
+   * @var Injector The injector instance.
+   */
   private Injector $injector;
+  /**
+   * @var GuardsConsumer The guards consumer instance.
+   */
   private GuardsConsumer $guardsConsumer;
+  /**
+   * @var InterceptorsConsumer The interceptors consumer instance.
+   */
   private InterceptorsConsumer $interceptorsConsumer;
+  /**
+   * @var ControllerManager The controller manager instance.
+   */
+  private ControllerManager $controllerManager;
 
   private final function __construct()
   {
     $this->injector = Injector::getInstance();
     $this->interceptorsConsumer = InterceptorsConsumer::getInstance();
     $this->guardsConsumer = GuardsConsumer::getInstance();
+    $this->controllerManager = ControllerManager::getInstance();
   }
 
   /**
@@ -69,10 +92,12 @@ final class Router
   }
 
   /**
-   * @param Request $request
-   * @param ReflectionClass[] $controllerTokensList
-   * @return object
-   * @throws ContainerException
+   * Determines the controller to be activated based on the given request.
+   *
+   * @param Request $request The request to be processed.
+   * @param ReflectionClass[] $controllerTokensList A list of controller reflection instances.
+   * @return object The activated controller.
+   * @throws ContainerException If there was an error during dependency injection.
    * @throws NotFoundException
    * @throws ReflectionException
    * @throws HttpException
@@ -83,13 +108,19 @@ final class Router
 
     foreach ($controllerTokensList as $reflectionController)
     {
+      if ($this->isRootController($reflectionController))
+      {
+        $activatedController = $this->activateController($reflectionController);
+        continue;
+      }
+
       if ($this->canActivateController($reflectionController))
       {
         return $this->activateController($reflectionController);
       }
     }
 
-    if (!$activatedController)
+    if (is_null($activatedController))
     {
       throw new NotFoundException(path: $request->getPath());
     }
@@ -98,9 +129,12 @@ final class Router
   }
 
   /**
-   * @param ReflectionClass $reflectionController
-   * @return bool
-   * @throws HttpException
+   * Determines if the given controller can be activated.
+   *
+   * @param ReflectionClass $reflectionController The reflection instance of the controller to be activated.
+   * @return bool True if the controller can be activated, false otherwise.
+   * @throws HttpException If the controller is invalid.
+   * @throws ReflectionException If there was an error processing a reflection.
    */
   private function canActivateController(ReflectionClass $reflectionController): bool
   {
@@ -134,8 +168,7 @@ final class Router
       }
     }
 
-    // If this is the root controller and the path is empty
-    if ($this->isRootController($reflectionController, $path))
+    if ($this->isRootController($reflectionController))
     {
       return true;
     }
@@ -656,19 +689,10 @@ final class Router
    *
    * @param ReflectionClass $controllerReflection The reflection instance of the controller.
    * @return bool True if the given controller is the root controller, false otherwise.
+   * @throws ReflectionException If there was an error processing a reflection.
    */
-  private function isRootController(ReflectionClass $controllerReflection, string $path): bool
+  private function isRootController(ReflectionClass $controllerReflection): bool
   {
-    if (str_ends_with($controllerReflection->getName(), 'AppController'))
-    {
-      return true;
-    }
-
-    if ($path === '/')
-    {
-      return true;
-    }
-
-    return false;
+    return $controllerReflection->getName() === $this->controllerManager->getRootControllerClass();
   }
 }
