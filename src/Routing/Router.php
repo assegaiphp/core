@@ -487,7 +487,7 @@ final class Router
    * @param string $url The URL to redirect the client to.
    * @param int|null $statusCode The status code to be used for the redirect.
    * @return never
-   * @throws Exception If the HTTP status code could not be set.
+   * @throws HttpException If the HTTP status code could not be set.
    */
   public static function redirectTo(string $url, ?int $statusCode = null): never
   {
