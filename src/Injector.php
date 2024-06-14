@@ -69,15 +69,17 @@ final class Injector implements ITokenStoreOwner, IContainer
    * Resolves a dependency.
    *
    * @param string $id The dependency ID.
+   * @param \ReflectionAttribute[] $attributeReflections A list of reflection attributes.
    * @return mixed The resolved dependency.
    * @throws ContainerException|ReflectionException
    */
-  public function resolve(string $id): mixed
+  public function resolve(string $id, array $attributeReflections = []): mixed
   {
     # 1. Inspect the class that we are trying to get from the container
     try
     {
       $reflectionClass = new ReflectionClass($id);
+      $attributeReflections = $reflectionClass->getAttributes();
 
       if($this->isNotInjectable($reflectionClass))
       {
@@ -99,13 +101,13 @@ final class Injector implements ITokenStoreOwner, IContainer
       if ($reflectionClass->hasMethod('getInstance'))
       {
         /** @noinspection PhpUndefinedMethodInspection */
-        return $id::getInstance();
+        return $this->bindHandlerAttributes($id::getInstance(), $attributeReflections);
       }
 
       if ($reflectionClass->hasMethod('newInstance'))
       {
         /** @noinspection PhpUndefinedMethodInspection */
-        return $id::newInstance();
+        return $this->bindHandlerAttributes($id::newInstance(), $attributeReflections);
       }
 
       throw new ContainerException("Class '$id' is not instantiable");
@@ -116,7 +118,7 @@ final class Injector implements ITokenStoreOwner, IContainer
 
     if (! $constructor )
     {
-      return new $id;
+      return $this->bindHandlerAttributes(new $id, $attributeReflections);
     }
 
     # 3. Inspect the constructor parameters (dependencies)
@@ -124,13 +126,13 @@ final class Injector implements ITokenStoreOwner, IContainer
 
     if (! $parameters )
     {
-      return new $id;
+      return $this->bindHandlerAttributes(new $id, $attributeReflections);
     }
 
     # 4. If the constructor parameter is a class try to resolve it using the container
     $dependencies = $this->resolveDependencies(id: $id, parameters: $parameters);
 
-    return $reflectionClass->newInstanceArgs($dependencies);
+    return $this->bindHandlerAttributes($reflectionClass->newInstanceArgs($dependencies), $attributeReflections);
   }
 
   /**
@@ -298,8 +300,8 @@ final class Injector implements ITokenStoreOwner, IContainer
     $paramType = $param->getType();
     $paramTypeName = match(true) {
       $isUnionType => ltrim(array_reduce($paramType->getTypes(), fn($carry, $type) => $carry . '|' . $type->getName(), '') ?? '', '|'),
-      $param->getType() => $param->getType()->getName(),
-      default => 'stdClass'
+      method_exists($param->getType(), 'getName') => $param->getType()->getName(),
+      default => \stdClass::class
     };
     $paramAttributes = $param->getAttributes();
 
@@ -395,5 +397,31 @@ final class Injector implements ITokenStoreOwner, IContainer
     $moduleAttributes = $reflectionClass->getAttributes(Module::class);
 
     return !empty($moduleAttributes);
+  }
+
+  /**
+   * Binds handler attributes to an instance.
+   *
+   * @param mixed $instance The instance to bind the attributes to.
+   * @param \ReflectionAttribute[] $reflectionAttributes The reflection attributes.
+   * @return mixed The instance with the bound attributes.
+   */
+  private function bindHandlerAttributes(mixed $instance, array $reflectionAttributes): mixed
+  {
+    foreach ($reflectionAttributes as $attribute)
+    {
+      switch ($attribute->getName())
+      {
+        case Body::class:
+          /** @var Body $attributeInstance */
+          $attributeInstance = $attribute->newInstance();
+          $instance = $attributeInstance->value;
+          break;
+
+        default:
+      }
+    }
+
+    return $instance;
   }
 }
