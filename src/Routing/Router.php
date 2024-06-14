@@ -482,6 +482,32 @@ final class Router
   }
 
   /**
+   * Redirects the client to the given URL.
+   *
+   * @param string $url The URL to redirect the client to.
+   * @param int|null $statusCode The status code to be used for the redirect.
+   * @return never
+   * @throws Exception If the HTTP status code could not be set.
+   */
+  public static function redirectTo(string $url, ?int $statusCode = null): never
+  {
+    if ($statusCode)
+    {
+      $code = $statusCode;
+      if (false === http_response_code($code))
+      {
+        throw new HttpException("Failed to set HTTP status code to $code");
+      }
+    }
+    header("Content-Type: text/html");
+    exit(<<<HTML
+      <script>
+        window.location.href = "$url";
+</script>
+HTML);
+  }
+
+  /**
    * Returns the path prefix for the given controller.
    * @param object $controller The controller to get the path prefix for.
    * @return string The path prefix for the given controller.
