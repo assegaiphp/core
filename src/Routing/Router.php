@@ -613,12 +613,11 @@ final class Router
   }
 
   /**
+   * Consumes the interceptors for the given controller.
    *
-   *
-   * @param ReflectionClass $controllerReflection
-   * @param object $controller
-   * @param ExecutionContext $context
-   * @return InterceptorsConsumer[]
+   * @param ReflectionClass $controllerReflection The reflection instance of the controller.
+   * @param ExecutionContext $context The execution context.
+   * @return InterceptorsConsumer[] Returns a list of interceptor call handlers.
    */
   private function consumeControllerInterceptors(
     ReflectionClass $controllerReflection,
@@ -647,21 +646,23 @@ final class Router
   /**
    * Resolves the dependencies for the given handler.
    *
-   * @param ReflectionMethod $activatedHandler
-   * @param Request $request
-   * @return array
-   * @throws ContainerException
-   * @throws EntryNotFoundException
-   * @throws ReflectionException
+   * @param ReflectionMethod $activatedHandler The reflection instance of the handler method.
+   * @param Request $request The request to be processed.
+   * @return array<int|string, mixed> The resolved dependencies for the handler.
+   * @throws ContainerException If there was an error during dependency injection.
+   * @throws EntryNotFoundException If a dependency was not found in the DI container.
+   * @throws ReflectionException If there was an error processing a reflection.
    */
   private function resolveHandlerParameters(ReflectionMethod $activatedHandler, Request $request): array
   {
     $dependencies = [];
 
     $params = $activatedHandler->getParameters();
+
     foreach ($params as $param)
     {
       $paramIsUnionType = $param->getType() instanceof ReflectionUnionType;
+      $paramAttributeReflections = $param->getAttributes();
 
       $paramTypeName = match (true) {
         $paramIsUnionType => $param->getType()->getTypes()[0]->getName(),
@@ -672,13 +673,13 @@ final class Router
 
       $dependencies[] = match(true) {
         $paramIsUnionType => match(true) {
-            $param->getType()->getTypes()[0]->isBuiltin(),
-            $param->getType()->getTypes()[1]->isBuiltin() => $this->injector->resolveBuiltIn($param, $request, true),
-          },
-          $param->getType()?->isBuiltin(),
-          $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
-          default => $this->injector->resolve($paramTypeName)
-        };
+          $param->getType()->getTypes()[0]->isBuiltin(),
+          $param->getType()->getTypes()[1]->isBuiltin() => $this->injector->resolveBuiltIn($param, $request, true),
+        },
+        $param->getType()?->isBuiltin(),
+        $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
+        default => $this->injector->resolve($paramTypeName, $paramAttributeReflections)
+      };
     }
 
     return $dependencies;
