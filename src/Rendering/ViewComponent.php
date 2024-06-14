@@ -6,16 +6,16 @@ use Assegai\Core\Attributes\Component;
 use Assegai\Core\Exceptions\FileException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\RenderingException;
-use Assegai\Core\Interceptors\IRenderer;
 use Assegai\Core\ModuleManager;
+use Assegai\Core\Rendering\Interfaces\RendererInterface;
 use Assegai\Core\Util\Paths;
 use ReflectionClass;
 use Stringable;
 
 /**
- *
+ * Class ViewComponent. This class is for the view component.
  */
-abstract class ViewComponent implements IRenderer, Stringable
+abstract class ViewComponent implements RendererInterface, Stringable
 {
   /**
    * Constructs a ViewComponent object.
@@ -98,6 +98,9 @@ abstract class ViewComponent implements IRenderer, Stringable
     return $path;
   }
 
+  /**
+   * @inheritDoc
+   */
   public final function __toString(): string
   {
     return $this->render() ?? '';

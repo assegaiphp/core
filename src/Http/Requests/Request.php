@@ -3,13 +3,16 @@
 namespace Assegai\Core\Http\Requests;
 
 //use Assegai\Lib\Authentication\JWT\JWTToken;
+use Assegai\Core\App;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Config;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Http\HttpException;
+use Assegai\Core\Exceptions\Http\NotImplementedException;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Forms\Enumerations\HttpMethod;
+use Assegai\Forms\Exceptions\FormException;
 use Assegai\Forms\Exceptions\InvalidFormException;
 use Assegai\Forms\Form;
 use JetBrains\PhpStorm\ArrayShape;
@@ -77,6 +80,9 @@ class Request
   protected ContentType $contentType;
 
   /**
+   * Constructs a Request object.
+   *
+   * @throws FormException
    * @throws HttpException
    * @throws InvalidFormException
    */
@@ -159,7 +165,9 @@ class Request
   }
 
   /**
-   * @return array
+   * Returns an array representation of the request.
+   *
+   * @return array{app: App, body: mixed, cookies: string, fresh: bool, headers: array, host_name: string, method: string, remote_ip: string, path: string, protocol: string}
    */
   #[ArrayShape([
     'app' => 'App', 'body' => 'mixed', 'cookies' => 'string', 'fresh' => 'bool',
@@ -393,6 +401,7 @@ class Request
    *
    * @return null|string|stdClass|false Returns the access token provided with the
    * request, null if non was set and false if the supplied token is invalid.
+   * @throws NotImplementedException
    */
   public function accessToken(bool $deconstruct = false): null|string|stdClass|false
   {
@@ -423,7 +432,7 @@ class Request
 
     if ($deconstruct)
     {
-//      return (object) JWTToken::parse(tokenString: $tokenString, returnArray: true);
+      return $this->deconstructToken($tokenString);
     }
 
     return $tokenString;
@@ -500,6 +509,7 @@ class Request
    * @return object
    * @throws HttpException
    * @throws InvalidFormException
+   * @throws FormException
    */
   private function extractRequestBody(): object
   {
@@ -536,5 +546,17 @@ class Request
 
     return (object) $body;
   }
-}
 
+  /**
+   * Deconstructs the access token.
+   *
+   * @param mixed $tokenString The access token to deconstruct.
+   * @return object The deconstructed access token.
+   * @throws NotImplementedException
+   */
+  private function deconstructToken(mixed $tokenString): object
+  {
+    // TODO: Implement deconstructToken() method.
+    throw new NotImplementedException('Method not implemented.');
+  }
+}
