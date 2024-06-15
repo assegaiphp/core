@@ -7,6 +7,11 @@ use Assegai\Core\Interfaces\IExecutionContext;
 use ReflectionClass;
 use ReflectionMethod;
 
+/**
+ * Represents the context in which a controller method is executed.
+ *
+ * @package Assegai\Core
+ */
 class ExecutionContext extends ArgumentsHost implements IExecutionContext
 {
   public function __construct(
