@@ -10,19 +10,23 @@ use ReflectionException;
 
 /**
  * An attribute that specifies which interceptors to run during the request/response lifecycle.
+ *
+ * @package Assegai\Core\Attributes
  */
 #[Attribute]
-class UseInterceptors
+readonly class UseInterceptors
 {
   /** @var IAssegaiInterceptor[] $interceptorsList */
-  public readonly array $interceptorsList;
+  public array $interceptorsList;
 
   /**
-   * @param IAssegaiInterceptor[]|string[]|string|IAssegaiInterceptor $interceptors
-   * @throws InterceptorException
-   * @throws ReflectionException
+   * The constructor for the UseInterceptors attribute.
+   *
+   * @param IAssegaiInterceptor[]|string[]|IAssegaiInterceptor|string $interceptors
+   * @throws InterceptorException If the interceptor is not instantiable.
+   * @throws ReflectionException If the reflection class is not found.
    */
-  public function __construct(protected readonly array|string|IAssegaiInterceptor $interceptors)
+  public function __construct(protected array|string|IAssegaiInterceptor $interceptors)
   {
     $interceptorsList = [];
 
