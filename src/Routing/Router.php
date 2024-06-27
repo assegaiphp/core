@@ -75,8 +75,7 @@ final class Router
    */
   public static function getInstance(): Router
   {
-    if (!self::$instance)
-    {
+    if (!self::$instance) {
       self::$instance = new Router();
     }
 
@@ -106,22 +105,18 @@ final class Router
   {
     $activatedController = null;
 
-    foreach ($controllerTokensList as $reflectionController)
-    {
-      if ($this->isRootController($reflectionController))
-      {
+    foreach ($controllerTokensList as $reflectionController) {
+      if ($this->isRootController($reflectionController)) {
         $activatedController = $this->activateController($reflectionController);
         continue;
       }
 
-      if ($this->canActivateController($reflectionController))
-      {
+      if ($this->canActivateController($reflectionController)) {
         return $this->activateController($reflectionController);
       }
     }
 
-    if (is_null($activatedController))
-    {
+    if (is_null($activatedController)) {
       throw new NotFoundException(path: $request->getPath());
     }
 
@@ -143,33 +138,27 @@ final class Router
 
     $controllerClassAttributes = $reflectionController->getAttributes(Controller::class);
 
-    if (empty($controllerClassAttributes))
-    {
+    if (empty($controllerClassAttributes)) {
       throw new HttpException("Invalid controller: " . $reflectionController->getName());
     }
 
-    foreach ($controllerClassAttributes as $attribute)
-    {
+    foreach ($controllerClassAttributes as $attribute) {
       $instance = $attribute->newInstance();
       $prefix = str_replace('/^\/\//', '', '/' . $instance->path);
 
-      if ($path === $prefix)
-      {
+      if ($path === $prefix) {
         return true;
       }
 
-      if (str_starts_with($path, $prefix))
-      {
-        if (!empty($path) && $prefix === '/')
-        {
+      if (str_starts_with($path, $prefix)) {
+        if (!empty($path) && $prefix === '/') {
           continue;
         }
         return true;
       }
     }
 
-    if ($this->isRootController($reflectionController))
-    {
+    if ($this->isRootController($reflectionController)) {
       return true;
     }
 
@@ -187,27 +176,21 @@ final class Router
   {
     $dependencies = [];
 
-    if ($constructor = $reflectionController->getConstructor())
-    {
+    if ($constructor = $reflectionController->getConstructor()) {
       $constructorParams = $constructor->getParameters();
 
       # Instantiate attributes
       $controllerReflectionAttributes = $reflectionController->getAttributes();
       $controllerAttributes = [];
 
-      foreach ($controllerReflectionAttributes as $controllerAttribute)
-      {
+      foreach ($controllerReflectionAttributes as $controllerAttribute) {
         $controllerAttributes[] = $controllerAttribute->newInstance();
       }
 
-      foreach ($constructorParams as $param)
-      {
-        try
-        {
+      foreach ($constructorParams as $param) {
+        try {
           $dependencies[] = $this->injector->resolve($param->getType()->getName());
-        }
-        catch (Exception $exception)
-        {
+        } catch (Exception $exception) {
           exit(var_export([
             'exception' => $exception,
             'controllerAttributes' => $controllerAttributes,
@@ -232,10 +215,8 @@ final class Router
     $reflectionClass = new ReflectionClass($controller);
     $reflectionMethods = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
 
-    foreach($reflectionMethods as $reflectionMethod)
-    {
-      if ($this->isValidHandler($reflectionMethod))
-      {
+    foreach($reflectionMethods as $reflectionMethod) {
+      if ($this->isValidHandler($reflectionMethod)) {
         $handlers[] = $reflectionMethod;
       }
     }
@@ -251,10 +232,8 @@ final class Router
    */
   public function getActivatedHandler(array $handlers, object $controller, Request $request): ?ReflectionMethod
   {
-    foreach ($handlers as $handler)
-    {
-      if ($this->canActivateHandler(handler: $handler, controller: $controller, request: $request))
-      {
+    foreach ($handlers as $handler) {
+      if ($this->canActivateHandler(handler: $handler, controller: $controller, request: $request)) {
         $this->parseHandlerAttributes($handler);
         return $handler;
       }
@@ -272,10 +251,8 @@ final class Router
     $attributes = $method->getAttributes();
 
     $foundRequestMapperAttribute = false;
-    foreach ($attributes as $attribute)
-    {
-      if (Validator::isValidRequestMapperAttribute($attribute))
-      {
+    foreach ($attributes as $attribute) {
+      if (Validator::isValidRequestMapperAttribute($attribute)) {
         $foundRequestMapperAttribute = true;
       }
     }
@@ -301,72 +278,60 @@ final class Router
 
     $attributes = $handler->getAttributes();
 
-    if (empty($attributes))
-    {
+    if (empty($attributes)) {
       return false;
     }
 
     $requestMapperClassFound = false;
     $foundPathMatch = false;
 
-    foreach ($attributes as $attribute)
-    {
+    foreach ($attributes as $attribute) {
       $foundPathMatch = $this->patternMatchesPath(pattern: $pattern, path: $path);
 
-      if ($foundPathMatch === false && $handler->getShortName() === trim($request->getPath(), '/'))
-      {
+      if ($foundPathMatch === false && $handler->getShortName() === trim($request->getPath(), '/')) {
         $foundPathMatch = true;
       }
 
-      if ($foundPathMatch)
-      {
-        switch($request->getMethod())
-        {
+      if ($foundPathMatch) {
+        switch($request->getMethod()) {
           case RequestMethod::OPTIONS:
-            if ($attribute->getName() === Options::class)
-            {
+            if ($attribute->getName() === Options::class) {
               $requestMapperClassFound = true;
             }
             break;
 
           case RequestMethod::GET:
-            if ($attribute->getName() === Get::class)
-            {
+            if ($attribute->getName() === Get::class) {
               $requestMapperClassFound = true;
             }
             break;
 
           case RequestMethod::POST:
-            if ($attribute->getName() === Post::class)
-            {
+            if ($attribute->getName() === Post::class) {
               $requestMapperClassFound = true;
             }
             break;
 
           case RequestMethod::PUT:
-            if ($attribute->getName() === Put::class)
-            {
+            if ($attribute->getName() === Put::class) {
               $requestMapperClassFound = true;
             }
             break;
 
           case RequestMethod::PATCH:
-            if ($attribute->getName() === Patch::class)
-            {
+            if ($attribute->getName() === Patch::class) {
               $requestMapperClassFound = true;
             }
             break;
 
           case RequestMethod::DELETE:
-            if ($attribute->getName() === Delete::class)
-            {
+            if ($attribute->getName() === Delete::class) {
               $requestMapperClassFound = true;
             }
             break;
 
           case RequestMethod::HEAD:
-            if ($attribute->getName() === Head::class)
-            {
+            if ($attribute->getName() === Head::class) {
               $requestMapperClassFound = true;
             }
         }
@@ -394,8 +359,7 @@ final class Router
     $handlers = $this->getControllerHandlers(controller: $controller);
     $activatedHandler = $this->getActivatedHandler(handlers: $handlers, controller: $controller, request: $request);
 
-    if (!$activatedHandler)
-    {
+    if (!$activatedHandler) {
       throw new NotFoundException($request->getPath());
     }
 
@@ -411,13 +375,11 @@ final class Router
     # Consume handler guards
     $useGuardsAttributes = $activatedHandler->getAttributes(UseGuards::class);
 
-    if ($useGuardsAttributes)
-    {
+    if ($useGuardsAttributes) {
       /** @var UseGuards $handlerUseGuardsAttribute */
       $handlerUseGuardsAttribute = $useGuardsAttributes[0]->newInstance();
 
-      if (! $this->guardsConsumer->canActivate(guards: $handlerUseGuardsAttribute->guards, context: $context) )
-      {
+      if (! $this->guardsConsumer->canActivate(guards: $handlerUseGuardsAttribute->guards, context: $context) ) {
         throw new ForbiddenException();
       }
     }
@@ -426,8 +388,7 @@ final class Router
     $handlerInterceptorCallHandlers = [];
     $useInterceptorsAttributes = $activatedHandler->getAttributes(UseInterceptors::class);
 
-    if ($useInterceptorsAttributes)
-    {
+    if ($useInterceptorsAttributes) {
       /** @var UseInterceptors $handlerUseInterceptorsInstance */
       $handlerUseInterceptorsInstance = $useInterceptorsAttributes[0]->newInstance();
 
@@ -442,43 +403,40 @@ final class Router
     # Resolve handler parameters
     $dependencies = $this->resolveHandlerParameters($activatedHandler, $request);
 
-    try
-    {
+    try {
       $result = $activatedHandler->invokeArgs($controller, $dependencies);
-    }
-    catch (Exception $e)
-    {
+    } catch (Exception $e) {
       throw new HttpException(message: $e->getMessage());
     }
 
-    if ($result instanceof Response)
-    {
+    if ($result instanceof Response) {
       return $result;
     }
 
-    if (is_null($result))
-    {
+    if (is_null($result)) {
       $result = [];
     }
     $context->switchToHttp()->getResponse()->setBody($result);
 
     # Run handler Interceptors
     /** @var callable $handler */
-    foreach ($handlerInterceptorCallHandlers as $handler)
-    {
+    foreach ($handlerInterceptorCallHandlers as $handler) {
       /** @var ExecutionContext $context */
       $context = $handler($context);
     }
 
     # Run controller Interceptors
     /** @var callable $handler */
-    foreach ($controllerInterceptorCallHandlers as $handler)
-    {
+    foreach ($controllerInterceptorCallHandlers as $handler) {
       /** @var ExecutionContext $context */
       $context = $handler($context);
     }
 
-    return $context?->switchToHttp()->getResponse() ?? Response::getInstance();
+    return match(true) {
+      $context instanceof ExecutionContext => $context->switchToHttp()->getResponse(),
+      $context instanceof Response => $context,
+      default => Response::getInstance()
+    };
   }
 
   /**
@@ -491,11 +449,9 @@ final class Router
    */
   public static function redirectTo(string $url, ?int $statusCode = null): never
   {
-    if ($statusCode)
-    {
+    if ($statusCode) {
       $code = $statusCode;
-      if (false === http_response_code($code))
-      {
+      if (false === http_response_code($code)) {
         throw new HttpException("Failed to set HTTP status code to $code");
       }
     }
@@ -518,8 +474,7 @@ HTML);
     $attributes = $reflectionController->getAttributes(Controller::class);
 
     # Find a Controller attribute
-    foreach ($attributes as $attribute)
-    {
+    foreach ($attributes as $attribute) {
       $instance = $attribute->newInstance();
       return $instance->path;
     }
@@ -539,8 +494,7 @@ HTML);
      * There is need to create a Request base class from which all HTTP verb methods inherit
      */
     $attributes = $handler->getAttributes();
-    foreach ($attributes as $attribute)
-    {
+    foreach ($attributes as $attribute) {
       return $attribute->newInstance()->path;
     }
 
@@ -556,8 +510,7 @@ HTML);
   private function getPathMatchingPattern(string $path): string
   {
     // Remove trailing slash if it exists
-    if (str_ends_with($path, '/'))
-    {
+    if (str_ends_with($path, '/')) {
       $path = rtrim($path, '/');
     }
 
@@ -591,8 +544,7 @@ HTML);
   private function parseHandlerAttributes(ReflectionMethod $activatedHandler): void
   {
     $reflectionAttributes = $activatedHandler->getAttributes();
-    foreach ($reflectionAttributes as $attribute)
-    {
+    foreach ($reflectionAttributes as $attribute) {
       $attribute->newInstance();
     }
   }
@@ -619,19 +571,14 @@ HTML);
   private function consumeControllerGuards(ReflectionClass $controllerReflection, object $controller, ExecutionContext $context): void
   {
     $useGuardsAttributes = $controllerReflection->getAttributes(UseGuards::class);
-    if ($useGuardsAttributes)
-    {
+    if ($useGuardsAttributes) {
       /** @var UseGuards $controllerUseGuardsInstance */
       $controllerUseGuardsInstance = $useGuardsAttributes[0]->newInstance();
 
-      if (! $this->guardsConsumer->canActivate(guards: $controllerUseGuardsInstance->guards, context: $context) )
-      {
-        if ($controller instanceof IOnGuard)
-        {
+      if (! $this->guardsConsumer->canActivate(guards: $controllerUseGuardsInstance->guards, context: $context) ) {
+        if ($controller instanceof IOnGuard) {
           $controller->onGuard(context: $context);
-        }
-        else
-        {
+        } else {
           throw new ForbiddenException();
         }
       }
@@ -653,8 +600,7 @@ HTML);
     $controllerInterceptorCallHandlers = [];
     $useInterceptorsAttributes = $controllerReflection->getAttributes(UseInterceptors::class);
 
-    if ($useInterceptorsAttributes)
-    {
+    if ($useInterceptorsAttributes) {
       /** @var UseInterceptors $controllerUseInterceptorsInstance */
       $controllerUseInterceptorsInstance = $useInterceptorsAttributes[0]->newInstance();
 
@@ -685,8 +631,7 @@ HTML);
 
     $params = $activatedHandler->getParameters();
 
-    foreach ($params as $param)
-    {
+    foreach ($params as $param) {
       $paramIsUnionType = $param->getType() instanceof ReflectionUnionType;
       $paramAttributeReflections = $param->getAttributes();
 
