@@ -102,12 +102,9 @@ class App implements AppInterface
     EventManager::broadcast(EventChannel::APP_INIT_START, new Event());
     set_exception_handler(function (Throwable $exception) {
       exit($exception);
-      if ($exception instanceof HttpException)
-      {
+      if ($exception instanceof HttpException) {
         echo $exception;
-      }
-      else
-      {
+      } else {
         $status = HttpStatus::fromInt(500);
         http_response_code($status->code);
 
@@ -157,13 +154,11 @@ class App implements AppInterface
    */
   public function configure(mixed $config = null): static
   {
-    if ($config instanceof  AppConfig)
-    {
+    if ($config instanceof  AppConfig) {
       $this->config = $config;
     }
 
-    if ($config instanceof IConsumer)
-    {
+    if ($config instanceof IConsumer) {
       // TODO: Complete configuration logic
     }
 
@@ -194,19 +189,30 @@ class App implements AppInterface
   public function run(): void
   {
     EventManager::broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
-    try
-    {
+    try {
       $resourcePath = Paths::getPublicPath($_SERVER['REQUEST_URI']);
 
-      if (is_file($resourcePath) && !preg_match('/index.(htm|html|php|xhtml)$/', $resourcePath))
-      {
+      if (is_file($resourcePath) && !preg_match('/index.(htm|html|php|xhtml)$/', $resourcePath)) {
         $mimeType = Paths::getMimeType($resourcePath);
 
         header("Content-Type: $mimeType");
         require_once($resourcePath);
-      }
-      else
-      {
+      } else {
+        $sessionLimiter = $this->config->get('session.limit', null);
+        if (! in_array($sessionLimiter, [null, 'public', 'private_no_expire', 'private', 'nocache'])) {
+          $sessionLimiter = null;
+        }
+
+        $sessionExpire = $this->config->get('session.expire', null);
+        if (!is_numeric($sessionExpire)) {
+          $sessionExpire = null;
+        } else {
+          $sessionExpire = (int)$sessionExpire;
+        }
+
+        session_cache_limiter($sessionLimiter);
+        session_cache_expire($sessionExpire);
+
         session_start();
         EventManager::broadcast(EventChannel::SESSION_START, new Event());
         $this->resolveModules();
@@ -215,13 +221,9 @@ class App implements AppInterface
         $this->resolveControllers();
         $this->handleRequest();
       }
-    }
-    catch(HttpException $exception)
-    {
+    } catch(HttpException $exception) {
       echo $exception;
-    }
-    catch (Exception $exception)
-    {
+    } catch (Exception $exception) {
       echo new HttpException($exception->getMessage());
     }
   }
