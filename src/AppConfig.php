@@ -13,6 +13,9 @@ use RuntimeException;
  */
 readonly class AppConfig
 {
+  /**
+   * @var array<string, mixed> The configuration.
+   */
   protected array $config;
 
   /**
@@ -44,7 +47,7 @@ readonly class AppConfig
    * @param string $path The path to the configuration value. Use dot notation e.g. 'database.host'.
    * @return mixed The configuration value.
    */
-  public function get(string $path): mixed
+  public function get(string $path, mixed $default = null): mixed
   {
     $keys = explode('.', $path);
     $value = $this->config;
@@ -59,6 +62,6 @@ readonly class AppConfig
       $value = $value[$key];
     }
 
-    return $value;
+    return $value ?? $default;
   }
 }
