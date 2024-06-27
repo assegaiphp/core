@@ -18,4 +18,24 @@ enum ContentType: string
   case WOFF = 'application/font-woff';
   case JWT = 'application/jwt';
   case FORM_URL_ENCODED = 'application/x-www-form-urlencoded';
+
+  /**
+   * Checks if the content type is multipart form.
+   *
+   * @return bool True if the content type is a form; otherwise, false.
+   */
+  public static function isMultipartForm(): bool
+  {
+    return str_starts_with($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data');
+  }
+
+  /**
+   * Checks if the content type is url encoded form.
+   *
+   * @return bool True if the content type is a url encoded form; otherwise, false.
+   */
+  public static function isURLEncodedForm(): bool
+  {
+    return str_starts_with($_SERVER['CONTENT_TYPE'] ?? '', 'application/x-www-form-urlencoded');
+  }
 }
