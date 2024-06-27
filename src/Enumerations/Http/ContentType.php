@@ -2,6 +2,11 @@
 
 namespace Assegai\Core\Enumerations\Http;
 
+/**
+ * Represents the content type of the request.
+ *
+ * @package Assegai\Core\Enumerations\Http
+ */
 enum ContentType: string
 {
   case PLAIN = 'text/plain';
