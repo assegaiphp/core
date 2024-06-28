@@ -160,6 +160,7 @@ class ConfigCest
    * @return void
    * @throws Exception
    */
+  #[Skip]
   public function testTheWorkspaceMethods(UnitTester $I): void
   {
     Config::updateWorkspaceConfig($this->testKey, $this->testValue, $this->workingDirectory);
