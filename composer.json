@@ -14,7 +14,10 @@
         "psr-4": {
             "Assegai\\Core\\": "src/"
         },
-        "files": ["src/Util/Definitions.php"]
+        "files": [
+            "src/Util/Definitions.php",
+            "src/Util/Functions.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
@@ -30,7 +33,7 @@
         }
     ],
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.3",
         "psr/log": "^3.0.0",
         "vlucas/phpdotenv": "^5.4",
         "twig/twig": "^3.0",
