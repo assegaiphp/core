@@ -23,6 +23,14 @@ interface AppInterface
   public function useGlobalPipes(IPipeTransform|array $pipes): self;
 
   /**
+   * Specifies a list of interceptors that should be used by the `App` instance.
+   *
+   * @param IAssegaiInterceptor|array $interceptors A list of interceptors to be used by the `App` instance.
+   * @return static The current `App` instance.
+   */
+  public function useGlobalInterceptor(IAssegaiInterceptor|array $interceptors): self;
+
+  /**
    * Sets a logger instance that should be user by the `App` instance.
    *
    * @param LoggerInterface $logger The logger instance to be used by the `App` instance.
