@@ -25,10 +25,10 @@ interface AppInterface
   /**
    * Specifies a list of interceptors that should be used by the `App` instance.
    *
-   * @param IAssegaiInterceptor|array $interceptors A list of interceptors to be used by the `App` instance.
+   * @param IAssegaiInterceptor|string|array $interceptors A list of interceptors to be used by the `App` instance.
    * @return static The current `App` instance.
    */
-  public function useGlobalInterceptor(IAssegaiInterceptor|array $interceptors): self;
+  public function useGlobalInterceptors(IAssegaiInterceptor|string|array $interceptors): self;
 
   /**
    * Sets a logger instance that should be user by the `App` instance.

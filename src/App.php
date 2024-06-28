@@ -187,15 +187,17 @@ class App implements AppInterface
   public function useGlobalPipes(IPipeTransform|array $pipes): self
   {
     $this->pipes = array_merge($this->pipes, (is_array($pipes) ? $pipes : [$pipes]));
+    $this->router->addGlobalPipes($this->pipes);
     return $this;
   }
 
   /**
    * @inheritDoc
    */
-  public function useGlobalInterceptor(IAssegaiInterceptor|array $interceptors): self
+  public function useGlobalInterceptors(IAssegaiInterceptor|string|array $interceptors): self
   {
     $this->interceptors = array_merge($this->interceptors, (is_array($interceptors) ? $interceptors : [$interceptors]));
+    $this->router->addGlobalInterceptors($this->interceptors);
     return $this;
   }
 
