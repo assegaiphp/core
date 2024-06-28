@@ -2,6 +2,9 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Config\ProjectConfig;
+use Assegai\Core\Config\ComposerConfig;
+use Assegai\Core\Config\AppConfig;
 use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Enumerations\EventChannel;
 use Assegai\Core\Events\Event;
@@ -18,18 +21,19 @@ use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\IConsumer;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Routing\Router;
-use Assegai\Core\Util\Paths;
 use Assegai\Core\Util\Debug\Log;
+use Assegai\Core\Util\Paths;
 use Exception;
+use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
 use Throwable;
 
 //use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerInterface;
 
 require __DIR__ . '/Util/Definitions.php';
+require __DIR__ . '/Util/Functions.php';
 
 /**
  * @since 1.0.0
@@ -51,7 +55,15 @@ class App implements AppInterface
   /**
    * @var AppConfig|null The application configuration.
    */
-  protected ?AppConfig $config = null;
+  protected ?AppConfig $appConfig = null;
+  /**
+   * @var ComposerConfig|null The composer configuration.
+   */
+  protected ?ComposerConfig $composerConfig = null;
+  /**
+   * @var ProjectConfig|null The project configuration.
+   */
+  protected ?ProjectConfig $projectConfig = null;
   /**
    * @var ArgumentsHost The arguments host.
    */
@@ -124,7 +136,9 @@ class App implements AppInterface
     });
 
     // Initialize app properties
-    $this->config = new AppConfig();
+    $this->appConfig = new AppConfig();
+    $this->composerConfig = new ComposerConfig();
+    $this->projectConfig = new ProjectConfig();
     $this->host = new ArgumentsHost();
     Log::init();
 
@@ -154,8 +168,8 @@ class App implements AppInterface
    */
   public function configure(mixed $config = null): static
   {
-    if ($config instanceof  AppConfig) {
-      $this->config = $config;
+    if ($config instanceof  ProjectConfig) {
+      $this->appConfig = $config;
     }
 
     if ($config instanceof IConsumer) {
@@ -198,12 +212,12 @@ class App implements AppInterface
         header("Content-Type: $mimeType");
         require_once($resourcePath);
       } else {
-        $sessionLimiter = $this->config->get('session.limit', null);
+        $sessionLimiter = $this->appConfig->get('session.limit', null);
         if (! in_array($sessionLimiter, [null, 'public', 'private_no_expire', 'private', 'nocache'])) {
           $sessionLimiter = null;
         }
 
-        $sessionExpire = $this->config->get('session.expire', null);
+        $sessionExpire = $this->appConfig->get('session.expire', null);
         if (!is_numeric($sessionExpire)) {
           $sessionExpire = null;
         } else {

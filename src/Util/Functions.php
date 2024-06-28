@@ -1,16 +1,29 @@
 <?php
 
-/**
- * Returns true if the JSON string is valid, false otherwise.
- *
- * @param string $input The JSON string to validate
- * @return bool Returns true if the JSON string is valid, false otherwise.
- */
-function json_is_valid(string $input): bool
-{
-  json_decode($input);
+if (!function_exists('json_is_valid') ) {
+  /**
+   * Returns true if the JSON string is valid, false otherwise.
+   *
+   * @param string $input The JSON string to validate
+   * @return bool Returns true if the JSON string is valid, false otherwise.
+   */
+  function json_is_valid(string $input): bool
+  {
+    return json_validate($input);
+  }
+}
 
-  return json_last_error() === JSON_ERROR_NONE;
+/**
+ * Print the given variables to the console or error log.
+ *
+ * @param mixed ...$variables The variables to print.
+ * @return void
+ */
+function debug(mixed ...$variables): void
+{
+  foreach ($variables as $index => $variable) {
+    error_log(sprintf("\e[0;33m%d\e[0m]\t-\t%s\n", $index, var_export($variable, true)));
+  }
 }
 
 /**
@@ -21,8 +34,6 @@ function json_is_valid(string $input): bool
  */
 function debug_and_exit(mixed ...$variables): never
 {
-  foreach ($variables as $index => $variable) {
-    printf("\e[0;33m%d\e[0m]\t-\t%s\n", $index, var_export($variable, true));
-  }
+  debug(...$variables);
   exit(1);
 }
