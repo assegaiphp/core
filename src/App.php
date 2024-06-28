@@ -11,13 +11,18 @@ use Assegai\Core\Events\Event;
 use Assegai\Core\Events\EventManager;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
+use Assegai\Core\Exceptions\Handlers\DefaultErrorHandler;
+use Assegai\Core\Exceptions\Handlers\DefaultExceptionHandler;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
+use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
+use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\AppInterface;
+use Assegai\Core\Interfaces\IAssegaiInterceptor;
 use Assegai\Core\Interfaces\IConsumer;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Routing\Router;
@@ -88,11 +93,20 @@ class App implements AppInterface
    * @var LoggerInterface|null The logger instance.
    */
   protected ?LoggerInterface $logger = null;
+  /**
+   * @var ErrorHandlerInterface $errorHandler The error handler.
+   */
+  protected ErrorHandlerInterface $errorHandler;
+  /**
+   * @var ExceptionHandlerInterface $exceptionHandler The exception handler.
+   */
+  protected ExceptionHandlerInterface $exceptionHandler;
 
   /**
-   * @var array A list of application scoped pipes
+   * @var array<IPipeTransform> A list of application scoped pipes
    */
   protected array $pipes = [];
+  protected array $interceptors = [];
 
   /**
    * Constructs an App instance.
@@ -112,27 +126,15 @@ class App implements AppInterface
   )
   {
     EventManager::broadcast(EventChannel::APP_INIT_START, new Event());
-    set_exception_handler(function (Throwable $exception) {
-      exit($exception);
-      if ($exception instanceof HttpException) {
-        echo $exception;
-      } else {
-        $status = HttpStatus::fromInt(500);
-        http_response_code($status->code);
+    $this->exceptionHandler = new DefaultExceptionHandler();
+    $this->errorHandler = new DefaultErrorHandler();
 
-        $response = match (Config::environment()) {
-          EnvironmentType::PRODUCTION => [
-            'statusCode' => $status->code,
-            'message' => $status->name,
-          ],
-          default => [
-            'statusCode' => $status->code,
-            'message' =>  $exception->getMessage(),
-            'error' => $status->name,
-          ]
-        };
-        echo json_encode($response);
-      }
+    set_exception_handler(function (Throwable $exception) {
+      $this->exceptionHandler->handle($exception);
+    });
+
+    set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+      $this->errorHandler->handle($errno, $errstr, $errfile, $errline);
     });
 
     // Initialize app properties
@@ -182,9 +184,20 @@ class App implements AppInterface
   /**
    * @inheritDoc
    */
-  public function useGlobalPipes(IPipeTransform|array $pipes): static
+  public function useGlobalPipes(IPipeTransform|array $pipes): self
   {
     $this->pipes = array_merge($this->pipes, (is_array($pipes) ? $pipes : [$pipes]));
+    $this->router->addGlobalPipes($this->pipes);
+    return $this;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function useGlobalInterceptors(IAssegaiInterceptor|string|array $interceptors): self
+  {
+    $this->interceptors = array_merge($this->interceptors, (is_array($interceptors) ? $interceptors : [$interceptors]));
+    $this->router->addGlobalInterceptors($this->interceptors);
     return $this;
   }
 
