@@ -248,10 +248,10 @@ class App implements AppInterface
         $this->resolveControllers();
         $this->handleRequest();
       }
-    } catch(HttpException $exception) {
-      echo $exception;
-    } catch (Exception $exception) {
-      echo new HttpException($exception->getMessage());
+    } catch(Exception $exception) {
+      $this->exceptionHandler->handle($exception);
+    } catch (\Error $error) {
+      $this->errorHandler->handle($error->getCode(), $error->getMessage(), $error->getFile(), $error->getLine());
     }
   }
 
