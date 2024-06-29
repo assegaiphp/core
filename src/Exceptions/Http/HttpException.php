@@ -18,7 +18,7 @@ class HttpException extends Exception
     $this->response = $message;
 
     $this->setStatus($status);
-    parent::__construct($this->getResponse());
+    parent::__construct($this->response);
   }
 
   protected final function setStatus(?HttpStatusCode $status): void
