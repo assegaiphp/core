@@ -13,16 +13,18 @@ if (!function_exists('json_is_valid') ) {
   }
 }
 
-/**
- * Print the given variables to the console or error log.
- *
- * @param mixed ...$variables The variables to print.
- * @return void
- */
-function debug(mixed ...$variables): void
-{
-  foreach ($variables as $index => $variable) {
-    error_log(sprintf("\e[0;33m%d\e[0m]\t-\t%s\n", $index, var_export($variable, true)));
+if (!function_exists('debug')) {
+  /**
+   * Print the given variables to the console or error log.
+   *
+   * @param mixed ...$variables The variables to print.
+   * @return void
+   */
+  function debug(mixed ...$variables): void
+  {
+    foreach ($variables as $index => $variable) {
+      error_log(sprintf("\e[0;33m%d\e[0m]\t-\t%s\n", $index, var_export($variable, true)));
+    }
   }
 }
 
