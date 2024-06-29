@@ -67,19 +67,16 @@ class Responder
    */
   public function respond(mixed $response, HttpStatusCode|int|null $code = null): never
   {
-    if ($code)
-    {
+    if ($code) {
       $this->setResponseCode($code);
     }
 
-    if ($response instanceof Response)
-    {
+    if ($response instanceof Response) {
       $this->setResponseCode($response->getStatus());
 
       $responseBody = $response->getBody();
 
-      if ($responseBody instanceof View)
-      {
+      if ($responseBody instanceof View) {
         $this->viewEngine->load($responseBody)->render();
       }
     }
