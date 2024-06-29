@@ -13,6 +13,7 @@ use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Handlers\DefaultErrorHandler;
 use Assegai\Core\Exceptions\Handlers\DefaultExceptionHandler;
+use Assegai\Core\Exceptions\Handlers\HttpExceptionHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
@@ -102,11 +103,17 @@ class App implements AppInterface
    * @var ExceptionHandlerInterface $exceptionHandler The exception handler.
    */
   protected ExceptionHandlerInterface $exceptionHandler;
-
+  /**
+   * @var ExceptionHandlerInterface $httpExceptionHandler The HTTP exception handler.
+   */
+  protected ExceptionHandlerInterface $httpExceptionHandler;
   /**
    * @var array<IPipeTransform> A list of application scoped pipes
    */
   protected array $pipes = [];
+  /**
+   * @var array<IAssegaiInterceptor> A list of application scoped interceptors
+   */
   protected array $interceptors = [];
 
   /**
@@ -129,6 +136,7 @@ class App implements AppInterface
     EventManager::broadcast(EventChannel::APP_INIT_START, new Event());
     $this->exceptionHandler = new WhoopsExceptionHandler();
     $this->errorHandler = new DefaultErrorHandler();
+    $this->httpExceptionHandler = new HttpExceptionHandler();
 
     set_exception_handler(function (Throwable $exception) {
       $this->exceptionHandler->handle($exception);
@@ -249,6 +257,8 @@ class App implements AppInterface
         $this->resolveControllers();
         $this->handleRequest();
       }
+    } catch (HttpException $exception) {
+      $this->httpExceptionHandler->handle($exception);
     } catch(Exception $exception) {
       $this->exceptionHandler->handle($exception);
     } catch (\Error $error) {
