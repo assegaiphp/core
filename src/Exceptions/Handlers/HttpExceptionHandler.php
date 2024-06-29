@@ -21,9 +21,10 @@ class HttpExceptionHandler implements ExceptionHandlerInterface
   public function handle(Throwable $exception): void
   {
     if ($exception instanceof HttpException) {
+      $statusCode = $exception->getStatus()->code;
       header('Content-Type: text/html');
-      http_response_code($exception->getCode());
-      $content = match ($exception->getCode()) {
+      http_response_code($statusCode);
+      $content = match ($statusCode) {
         405 => <<<CONTENT
     <h1>Error 405 - Method Not Allowed</h1>
     <p>Sorry, the method you are trying to use is not allowed on this server.</p>
@@ -34,11 +35,14 @@ CONTENT,
 CONTENT,
         default => <<<CONTENT
     <h1>404 - Page Not Found</h1>
-    <p>Sorry, the page you are looking for might have been removed or is temporarily unavailable.</p>
+    <p>{$exception->getMessage()}</p>
 CONTENT,
       };
 
       echo <<<HTML
+    <head>
+        <title>Error $statusCode - </title>
+    </head>
     <style>
         body {
             background-color: #110e1e;
