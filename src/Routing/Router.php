@@ -20,6 +20,7 @@ use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\ForbiddenException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
+use Assegai\Core\Exceptions\InterceptorException;
 use Assegai\Core\ExecutionContext;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
@@ -61,6 +62,14 @@ final class Router
    * @var ControllerManager The controller manager instance.
    */
   private ControllerManager $controllerManager;
+  /**
+   * @var array The global pipes.
+   */
+  private array $globalPipes = [];
+  /**
+   * @var array The global interceptors.
+   */
+  private array $globalInterceptors = [];
 
   private final function __construct()
   {
@@ -440,6 +449,28 @@ final class Router
   }
 
   /**
+   * Adds global pipes to the router.
+   *
+   * @param array $pipes The list of global pipes to be added.
+   * @return void
+   */
+  public function addGlobalPipes(array $pipes): void
+  {
+    $this->globalPipes = [...$this->globalPipes, ...$pipes];
+  }
+
+  /**
+   * Adds global interceptors to the router.
+   *
+   * @param array $interceptors The list of global interceptors to be added.
+   * @return void
+   */
+  public function addGlobalInterceptors(array $interceptors): void
+  {
+    $this->globalInterceptors = [...$this->globalInterceptors, ...$interceptors];
+  }
+
+  /**
    * Redirects the client to the given URL.
    *
    * @param string $url The URL to redirect the client to.
@@ -591,6 +622,8 @@ HTML);
    * @param ReflectionClass $controllerReflection The reflection instance of the controller.
    * @param ExecutionContext $context The execution context.
    * @return InterceptorsConsumer[] Returns a list of interceptor call handlers.
+   * @throws ReflectionException
+   * @throws InterceptorException
    */
   private function consumeControllerInterceptors(
     ReflectionClass $controllerReflection,
@@ -598,18 +631,29 @@ HTML);
   ): array
   {
     $controllerInterceptorCallHandlers = [];
+
+    if ($this->globalInterceptors) {
+      $useInterceptorInstance = new UseInterceptors(interceptors: $this->globalInterceptors);
+
+      $controllerInterceptorCallHandlers = $this->interceptorsConsumer->intercept(
+        interceptors: $useInterceptorInstance->interceptorsList,
+        context: $context
+      );
+    }
+
     $useInterceptorsAttributes = $controllerReflection->getAttributes(UseInterceptors::class);
 
     if ($useInterceptorsAttributes) {
       /** @var UseInterceptors $controllerUseInterceptorsInstance */
       $controllerUseInterceptorsInstance = $useInterceptorsAttributes[0]->newInstance();
 
-      $controllerInterceptorCallHandlers =
-        $this->interceptorsConsumer
+      $controllerInterceptorCallHandlers = [...$controllerInterceptorCallHandlers,
+        ...$this->interceptorsConsumer
           ->intercept(
             interceptors: $controllerUseInterceptorsInstance->interceptorsList,
             context: $context
-          );
+          )
+      ];
     }
 
     return $controllerInterceptorCallHandlers;

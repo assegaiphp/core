@@ -13,6 +13,7 @@ use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Handlers\DefaultErrorHandler;
 use Assegai\Core\Exceptions\Handlers\DefaultExceptionHandler;
+use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
@@ -126,7 +127,7 @@ class App implements AppInterface
   )
   {
     EventManager::broadcast(EventChannel::APP_INIT_START, new Event());
-    $this->exceptionHandler = new DefaultExceptionHandler();
+    $this->exceptionHandler = new WhoopsExceptionHandler();
     $this->errorHandler = new DefaultErrorHandler();
 
     set_exception_handler(function (Throwable $exception) {
@@ -248,10 +249,10 @@ class App implements AppInterface
         $this->resolveControllers();
         $this->handleRequest();
       }
-    } catch(HttpException $exception) {
-      echo $exception;
-    } catch (Exception $exception) {
-      echo new HttpException($exception->getMessage());
+    } catch(Exception $exception) {
+      $this->exceptionHandler->handle($exception);
+    } catch (\Error $error) {
+      $this->errorHandler->handle($error->getCode(), $error->getMessage(), $error->getFile(), $error->getLine());
     }
   }
 
