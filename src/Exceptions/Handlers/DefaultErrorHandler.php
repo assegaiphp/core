@@ -7,6 +7,7 @@ use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use Assegai\Core\Http\HttpStatus;
 use Error;
+use Throwable;
 
 /**
  * The default error handler for the Assegai framework.
@@ -40,7 +41,7 @@ class DefaultErrorHandler implements ErrorHandlerInterface
   /**
    * @inheritDoc
    */
-  public function handleError(Error $error): void
+  public function handleError(Throwable $error): void
   {
     $this->handle($error->getCode(), $error->getMessage(), $error->getFile(), $error->getLine());
   }

@@ -22,7 +22,10 @@ class HttpExceptionHandler implements ExceptionHandlerInterface
   {
     if ($exception instanceof HttpException) {
       $statusCode = $exception->getStatus()->code;
-      header('Content-Type: text/html');
+      if (! headers_sent() ) {
+        header('Content-Type: text/html');
+      }
+
       http_response_code($statusCode);
       $content = match ($statusCode) {
         405 => <<<CONTENT

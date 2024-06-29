@@ -36,7 +36,9 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
    */
   public function handle(Throwable $exception): void
   {
-    header('Content-Type: text/html');
+    if (! headers_sent() ) {
+      header('Content-Type: text/html');
+    }
     echo $this->whoops->handleException($exception);
   }
 }
