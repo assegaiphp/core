@@ -12,9 +12,13 @@ use Attribute;
 class Session
 {
   /**
-   * @var object
+   * @var object $value The session variables
    */
   public readonly object $value;
+
+  /**
+   * The constructor for the Session attribute.
+   */
   public function __construct()
   {
     $this->value = (object)$_SESSION;

@@ -14,7 +14,10 @@
         "psr-4": {
             "Assegai\\Core\\": "src/"
         },
-        "files": ["src/Util/Definitions.php"]
+        "files": [
+            "src/Util/Definitions.php",
+            "src/Util/Functions.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
@@ -30,14 +33,15 @@
         }
     ],
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.3",
         "psr/log": "^3.0.0",
         "vlucas/phpdotenv": "^5.4",
         "twig/twig": "^3.0",
         "ext-fileinfo": "*",
         "assegaiphp/validation": "^0.3.1",
         "assegaiphp/util": "^0.4.2",
-        "assegaiphp/forms": "^0.4.4"
+        "assegaiphp/forms": "^0.4.4",
+        "filp/whoops": "^2.15"
     },
     "scripts": {
         "test": "vendor/bin/codecept run Unit",

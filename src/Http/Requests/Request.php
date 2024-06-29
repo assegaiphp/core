@@ -15,7 +15,6 @@ use Assegai\Forms\Enumerations\HttpMethod;
 use Assegai\Forms\Exceptions\FormException;
 use Assegai\Forms\Exceptions\InvalidFormException;
 use Assegai\Forms\Form;
-use JetBrains\PhpStorm\ArrayShape;
 use stdClass;
 
 /**
@@ -105,7 +104,11 @@ class Request
     $this->path = $path;
     $this->query = new RequestQuery();
     $this->body = new stdClass();
-    $this->contentType = ContentType::tryFrom($_SERVER['CONTENT_TYPE'] ?? '') ?? ContentType::HTML;
+    $this->contentType = ContentType::tryFrom($_SERVER['CONTENT_TYPE'] ?? '') ?? match(true) {
+      ContentType::isURLEncodedForm() => ContentType::FORM_URL_ENCODED,
+      ContentType::isMultipartForm() => ContentType::FORM_DATA,
+      default => ContentType::HTML
+    };
 
     $this->requestMethod = match ($_SERVER['REQUEST_METHOD']) {
       'POST'    => RequestMethod::POST,
@@ -120,15 +123,12 @@ class Request
 
     $this->body = $this->extractRequestBody();
 
-    if (isset($this->body->path))
-    {
+    if (isset($this->body->path)) {
       unset($this->body->path);
     }
 
-    foreach ($_SERVER as $key => $value)
-    {
-      if (str_starts_with($key, 'HTTP_'))
-      {
+    foreach ($_SERVER as $key => $value) {
+      if (str_starts_with($key, 'HTTP_')) {
         $this->allHeaders[$key] = $value;
       }
     }
@@ -139,8 +139,7 @@ class Request
    */
   public static function getInstance(): Request
   {
-    if (!Request::$instance)
-    {
+    if (!Request::$instance) {
       Request::$instance = new Request;
     }
 
@@ -167,13 +166,8 @@ class Request
   /**
    * Returns an array representation of the request.
    *
-   * @return array{app: App, body: mixed, cookies: string, fresh: bool, headers: array, host_name: string, method: string, remote_ip: string, path: string, protocol: string}
+   * @return array{app: App, body: mixed, cookies: string, fresh: bool, headers: array, host_name: string, method: string, remote_ip: string, path: string, protocol: string, file: object|array}
    */
-  #[ArrayShape([
-    'app' => 'App', 'body' => 'mixed', 'cookies' => 'string', 'fresh' => 'bool',
-    'headers' => 'array', 'host_name' => 'string', 'method' => 'string',
-    'remote_ip' => 'string', 'path' => 'string', 'protocol' => 'string'
-  ])]
   public function toArray(): array
   {
     return [
@@ -185,8 +179,9 @@ class Request
       'host_name' => $this->getHostName(),
       'method'    => $this->getMethod(),
       'remote_ip' => $this->getRemoteIp(),
-      'path'       => $this->getPath(),
-      'protocol'  => $this->getProtocol()
+      'path'      => $this->getPath(),
+      'protocol'  => $this->getProtocol(),
+      'file'      => $this->getFile()
     ];
   }
 
@@ -222,13 +217,11 @@ class Request
   {
     $key = strtoupper($name);
 
-    if (isset($_SERVER["HTTP_$key"]))
-    {
+    if (isset($_SERVER["HTTP_$key"])) {
       return $_SERVER["HTTP_$key"];
     }
 
-    if (isset($_SERVER[$key]))
-    {
+    if (isset($_SERVER[$key])) {
       return $_SERVER[$key];
     }
 
@@ -303,8 +296,7 @@ class Request
    */
   public function getBody(): ?stdClass
   {
-    if (isset($this->body->scalar) && json_is_valid($this->body->scalar))
-    {
+    if (isset($this->body->scalar) && json_is_valid($this->body->scalar)) {
       $this->body = json_decode($this->body->scalar);
     }
     return $this->body;
@@ -318,8 +310,7 @@ class Request
    */
   public function setBody(?stdClass $body): void
   {
-    if (!is_null($body))
-    {
+    if (!is_null($body)) {
       $this->body = $body;
     }
   }
@@ -386,8 +377,7 @@ class Request
    */
   public function getQuery(): RequestQuery
   {
-    if (!$this->query)
-    {
+    if (!$this->query) {
       $this->query = new RequestQuery();
     }
 
@@ -407,31 +397,26 @@ class Request
   {
     $accessToken = $this->header('Authorization');
 
-    if (empty($accessToken))
-    {
+    if (empty($accessToken)) {
       return NULL;
     }
 
-    if (!str_contains($accessToken, 'BEARER'))
-    {
+    if (!str_contains($accessToken, 'BEARER')) {
       return NULL;
     }
 
     $matches = [];
-    if (!preg_match('/Bearer (.*)/', $accessToken, $matches))
-    {
+    if (!preg_match('/Bearer (.*)/', $accessToken, $matches)) {
       return false;
     }
 
-    if (count($matches) < 2)
-    {
+    if (count($matches) < 2) {
       return false;
     }
 
     $tokenString = $matches[1];
 
-    if ($deconstruct)
-    {
+    if ($deconstruct) {
       return $this->deconstructToken($tokenString);
     }
 
@@ -445,26 +430,21 @@ class Request
    */
   public function extractParams(string $path, string $pattern): void
   {
-    if (str_starts_with($path, '/'))
-    {
+    if (str_starts_with($path, '/')) {
       $path = substr($path, 1);
     }
     $pattern = str_replace('/', '\/', $pattern);
     $params = [];
-    if (preg_match("/$pattern/", $path, $matches))
-    {
-      if (count($matches) > 1)
-      {
+    if (preg_match("/$pattern/", $path, $matches)) {
+      if (count($matches) > 1) {
         $totalMatches = count($matches);
-        for ($x = 1; $x < $totalMatches; ++$x)
-        {
+        for ($x = 1; $x < $totalMatches; ++$x) {
           $params[] = $matches[$x];
         }
       }
     }
 
-    foreach ($params as $key => $param)
-    {
+    foreach ($params as $key => $param) {
       $this->params[$key] = $param;
     }
   }
@@ -475,7 +455,7 @@ class Request
    */
   public function getFile(): object|array
   {
-    return $this->file;
+    return $this->file ?? [];
   }
 
   /**
@@ -495,8 +475,7 @@ class Request
    */
   private function filterFormData(false|string $data): array
   {
-    if ($data === false)
-    {
+    if ($data === false) {
       throw new HttpException('Invalid request body.');
     }
 
@@ -514,11 +493,15 @@ class Request
   private function extractRequestBody(): object
   {
     # Check if content type is form
-    if ($this->contentType === ContentType::FORM_DATA || $this->contentType === ContentType::FORM_URL_ENCODED)
-    {
+    if ($this->contentType === ContentType::FORM_DATA || $this->contentType === ContentType::FORM_URL_ENCODED) {
       $this->form = new Form(method: HttpMethod::tryFrom($this->getMethod()->value));
+      $hasFile = !$_FILES;
+
+      if ($hasFile) {
+        $this->setFile((object)$_FILES);
+      }
+
       return (object) match(true) {
-        !empty($_FILES)             => $_FILES,
         $this->form->isSubmitted()  => $this->form->getData(),
         default                     => file_get_contents('php://input')
       };
@@ -534,10 +517,8 @@ class Request
       RequestMethod::OPTIONS  => NULL,
     };
 
-    if (is_string($body) && $this->contentType === ContentType::JSON)
-    {
-      if (!json_is_valid($body))
-      {
+    if (is_string($body) && $this->contentType === ContentType::JSON) {
+      if (!json_is_valid($body)) {
         throw new HttpException('Invalid JSON request body.');
       }
 

@@ -7,8 +7,20 @@ use Assegai\Core\Interfaces\IExecutionContext;
 use ReflectionClass;
 use ReflectionMethod;
 
+/**
+ * Represents the context in which a controller method is executed.
+ *
+ * @package Assegai\Core
+ */
 class ExecutionContext extends ArgumentsHost implements IExecutionContext
 {
+  /**
+   * ExecutionContext constructor.
+   *
+   * @param ReflectionClass|string $class The controller class.
+   * @param ReflectionMethod $handler The handler method.
+   * @param ContextType $contextType The context type.
+   */
   public function __construct(
     protected ReflectionClass|string $class,
     protected ReflectionMethod       $handler,
@@ -20,7 +32,8 @@ class ExecutionContext extends ArgumentsHost implements IExecutionContext
 
   /**
    * Returns the type of the controller class which the current handler belongs to.
-   * @return string
+   *
+   * @return string The controller class.
    */
   public function getClass(): string
   {
@@ -34,7 +47,8 @@ class ExecutionContext extends ArgumentsHost implements IExecutionContext
   /**
    * Returns a reference to the handler (method) that will be invoked next in the
    * request pipeline.
-   * @return callable|ReflectionMethod
+   *
+   * @return callable|ReflectionMethod The handler method.
    */
   public function getHandler(): callable|ReflectionMethod
   {

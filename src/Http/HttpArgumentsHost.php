@@ -6,10 +6,23 @@ use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IHttpArgumentsHost;
 
+/**
+ * Class HttpArgumentsHost. Represents the HTTP arguments host.
+ *
+ * @package Assegai\Core\Http
+ */
 class HttpArgumentsHost implements IHttpArgumentsHost
 {
+  /**
+   * The instance of the HTTP arguments host.
+   *
+   * @var HttpArgumentsHost|null $instance
+   */
   protected static ?HttpArgumentsHost $instance = null;
 
+  /**
+   * HttpArgumentsHost constructor.
+   */
   private final function __construct()
   {
   }
@@ -28,7 +41,9 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   }
 
   /**
-   * @return Request
+   * Returns the HTTP request.
+   *
+   * @return Request The HTTP request.
    */
   public function getRequest(): Request
   {
@@ -36,7 +51,9 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   }
 
   /**
-   * @return Response
+   * Returns the response.
+   *
+   * @return Response The response.
    */
   public function getResponse(): Response
   {
@@ -44,6 +61,8 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   }
 
   /**
+   * The next handler in the request pipeline.
+   *
    * @return mixed
    */
   public function getNext(): mixed
@@ -52,7 +71,9 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   }
 
   /**
-   * @return array
+   * The arguments passed to the handler. The arguments are the request, response, and next.
+   *
+   * @return array An array of arguments passed to the handler.
    */
   public function getArgs(): array
   {

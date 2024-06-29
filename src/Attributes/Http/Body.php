@@ -12,15 +12,22 @@ use stdClass;
 
 /**
  * Binds the current request body to the target parameter.
+ *
+ * @package Assegai\Core\Attributes\Http
  */
 #[Injectable]
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class Body
 {
+  /**
+   * @var string|array|stdClass|mixed|null $value
+   */
   public string|array|stdClass $value;
 
   /**
-   * @param string|null $key
+   * Body constructor.
+   *
+   * @param string|null $key The key of the body
    * @param array|IPipeTransform|string|null $pipes
    */
   public function __construct(
@@ -63,7 +70,7 @@ class Body
 
     $this->value = $value;
 
-    if (!empty($this->key) )
+    if (!empty($this->key) && isset($this->value->$key))
     {
       $this->value = $this->value->$key;
     }

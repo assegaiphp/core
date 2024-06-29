@@ -5,6 +5,7 @@ namespace Assegai\Core;
 use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Attributes\Controller;
+use Assegai\Core\Exceptions\Http\NotFoundException;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
@@ -85,7 +86,7 @@ class ControllerManager
   {
     $rootModuleClass = $this->moduleManager->getRootModuleClass();
     $rootModuleReflection = new ReflectionClass($rootModuleClass);
-    $attributes= $rootModuleReflection->getAttributes(Module::class);
+    $attributes = $rootModuleReflection->getAttributes(Module::class);
 
     if (! $attributes )
     {

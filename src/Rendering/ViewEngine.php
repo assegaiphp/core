@@ -21,9 +21,13 @@ final class ViewEngine
    * @var View|null
    */
   private ?View $view = null;
-
+  /**
+   * @var ModuleManager $moduleManager
+   */
   private readonly ModuleManager $moduleManager;
-
+  /**
+   * @var array|array[]
+   */
   private array $declarations = [
     'app-navbar' => 'Assegai\\App\\Navbar'
   ];
@@ -111,6 +115,7 @@ START;
     echo $this->view->props->generateBodyScriptImportTags();
 
     echo <<<END
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   </body>
 </html>
 END;

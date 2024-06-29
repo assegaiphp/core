@@ -2,34 +2,45 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Config\ProjectConfig;
+use Assegai\Core\Config\ComposerConfig;
+use Assegai\Core\Config\AppConfig;
 use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Enumerations\EventChannel;
 use Assegai\Core\Events\Event;
 use Assegai\Core\Events\EventManager;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
+use Assegai\Core\Exceptions\Handlers\DefaultErrorHandler;
+use Assegai\Core\Exceptions\Handlers\DefaultExceptionHandler;
+use Assegai\Core\Exceptions\Handlers\HttpExceptionHandler;
+use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
+use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
+use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\AppInterface;
+use Assegai\Core\Interfaces\IAssegaiInterceptor;
 use Assegai\Core\Interfaces\IConsumer;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Routing\Router;
-use Assegai\Core\Util\Paths;
 use Assegai\Core\Util\Debug\Log;
+use Assegai\Core\Util\Paths;
 use Exception;
+use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
 use Throwable;
 
 //use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerInterface;
 
 require __DIR__ . '/Util/Definitions.php';
+require __DIR__ . '/Util/Functions.php';
 
 /**
  * @since 1.0.0
@@ -51,7 +62,15 @@ class App implements AppInterface
   /**
    * @var AppConfig|null The application configuration.
    */
-  protected ?AppConfig $config = null;
+  protected ?AppConfig $appConfig = null;
+  /**
+   * @var ComposerConfig|null The composer configuration.
+   */
+  protected ?ComposerConfig $composerConfig = null;
+  /**
+   * @var ProjectConfig|null The project configuration.
+   */
+  protected ?ProjectConfig $projectConfig = null;
   /**
    * @var ArgumentsHost The arguments host.
    */
@@ -76,11 +95,26 @@ class App implements AppInterface
    * @var LoggerInterface|null The logger instance.
    */
   protected ?LoggerInterface $logger = null;
-
   /**
-   * @var array A list of application scoped pipes
+   * @var ErrorHandlerInterface $errorHandler The error handler.
+   */
+  protected ErrorHandlerInterface $errorHandler;
+  /**
+   * @var ExceptionHandlerInterface $exceptionHandler The exception handler.
+   */
+  protected ExceptionHandlerInterface $exceptionHandler;
+  /**
+   * @var ExceptionHandlerInterface $httpExceptionHandler The HTTP exception handler.
+   */
+  protected ExceptionHandlerInterface $httpExceptionHandler;
+  /**
+   * @var array<IPipeTransform> A list of application scoped pipes
    */
   protected array $pipes = [];
+  /**
+   * @var array<IAssegaiInterceptor> A list of application scoped interceptors
+   */
+  protected array $interceptors = [];
 
   /**
    * Constructs an App instance.
@@ -100,34 +134,22 @@ class App implements AppInterface
   )
   {
     EventManager::broadcast(EventChannel::APP_INIT_START, new Event());
-    set_exception_handler(function (Throwable $exception) {
-      exit($exception);
-      if ($exception instanceof HttpException)
-      {
-        echo $exception;
-      }
-      else
-      {
-        $status = HttpStatus::fromInt(500);
-        http_response_code($status->code);
+    $this->exceptionHandler = new WhoopsExceptionHandler();
+    $this->errorHandler = new DefaultErrorHandler();
+    $this->httpExceptionHandler = new HttpExceptionHandler();
 
-        $response = match (Config::environment()) {
-          EnvironmentType::PRODUCTION => [
-            'statusCode' => $status->code,
-            'message' => $status->name,
-          ],
-          default => [
-            'statusCode' => $status->code,
-            'message' =>  $exception->getMessage(),
-            'error' => $status->name,
-          ]
-        };
-        echo json_encode($response);
-      }
+    set_exception_handler(function (Throwable $exception) {
+      $this->exceptionHandler->handle($exception);
+    });
+
+    set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+      $this->errorHandler->handle($errno, $errstr, $errfile, $errline);
     });
 
     // Initialize app properties
-    $this->config = new AppConfig();
+    $this->appConfig = new AppConfig();
+    $this->composerConfig = new ComposerConfig();
+    $this->projectConfig = new ProjectConfig();
     $this->host = new ArgumentsHost();
     Log::init();
 
@@ -157,13 +179,11 @@ class App implements AppInterface
    */
   public function configure(mixed $config = null): static
   {
-    if ($config instanceof  AppConfig)
-    {
-      $this->config = $config;
+    if ($config instanceof  ProjectConfig) {
+      $this->appConfig = $config;
     }
 
-    if ($config instanceof IConsumer)
-    {
+    if ($config instanceof IConsumer) {
       // TODO: Complete configuration logic
     }
 
@@ -173,9 +193,20 @@ class App implements AppInterface
   /**
    * @inheritDoc
    */
-  public function useGlobalPipes(IPipeTransform|array $pipes): static
+  public function useGlobalPipes(IPipeTransform|array $pipes): self
   {
     $this->pipes = array_merge($this->pipes, (is_array($pipes) ? $pipes : [$pipes]));
+    $this->router->addGlobalPipes($this->pipes);
+    return $this;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function useGlobalInterceptors(IAssegaiInterceptor|string|array $interceptors): self
+  {
+    $this->interceptors = array_merge($this->interceptors, (is_array($interceptors) ? $interceptors : [$interceptors]));
+    $this->router->addGlobalInterceptors($this->interceptors);
     return $this;
   }
 
@@ -194,19 +225,30 @@ class App implements AppInterface
   public function run(): void
   {
     EventManager::broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
-    try
-    {
+    try {
       $resourcePath = Paths::getPublicPath($_SERVER['REQUEST_URI']);
 
-      if (is_file($resourcePath) && !preg_match('/index.(htm|html|php|xhtml)$/', $resourcePath))
-      {
+      if (is_file($resourcePath) && !preg_match('/index.(htm|html|php|xhtml)$/', $resourcePath)) {
         $mimeType = Paths::getMimeType($resourcePath);
 
         header("Content-Type: $mimeType");
         require_once($resourcePath);
-      }
-      else
-      {
+      } else {
+        $sessionLimiter = $this->appConfig->get('session.limit', null);
+        if (! in_array($sessionLimiter, [null, 'public', 'private_no_expire', 'private', 'nocache'])) {
+          $sessionLimiter = null;
+        }
+
+        $sessionExpire = $this->appConfig->get('session.expire', null);
+        if (!is_numeric($sessionExpire)) {
+          $sessionExpire = null;
+        } else {
+          $sessionExpire = (int)$sessionExpire;
+        }
+
+        session_cache_limiter($sessionLimiter);
+        session_cache_expire($sessionExpire);
+
         session_start();
         EventManager::broadcast(EventChannel::SESSION_START, new Event());
         $this->resolveModules();
@@ -215,14 +257,12 @@ class App implements AppInterface
         $this->resolveControllers();
         $this->handleRequest();
       }
-    }
-    catch(HttpException $exception)
-    {
-      echo $exception;
-    }
-    catch (Exception $exception)
-    {
-      echo new HttpException($exception->getMessage());
+    } catch (HttpException $exception) {
+      $this->httpExceptionHandler->handle($exception);
+    } catch(Exception $exception) {
+      $this->exceptionHandler->handle($exception);
+    } catch (\Error $error) {
+      $this->errorHandler->handle($error->getCode(), $error->getMessage(), $error->getFile(), $error->getLine());
     }
   }
 
