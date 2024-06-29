@@ -28,14 +28,16 @@ if (!function_exists('debug')) {
   }
 }
 
-/**
- * Dump the variables and exit.
- *
- * @param mixed ...$variables The variables to print.
- * @return never
- */
-function debug_and_exit(mixed ...$variables): never
-{
-  debug(...$variables);
-  exit(1);
+if (!function_exists('debug_and_exit')) {
+  /**
+   * Dump the variables and exit.
+   *
+   * @param mixed ...$variables The variables to print.
+   * @return never
+   */
+  function debug_and_exit(mixed ...$variables): never
+  {
+    debug(...$variables);
+    exit(1);
+  }
 }
