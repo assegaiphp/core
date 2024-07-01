@@ -36,7 +36,7 @@
         "php": ">=8.3",
         "psr/log": "^3.0.0",
         "vlucas/phpdotenv": "^5.4",
-        "twig/twig": "^3.0",
+        "twig/twig": "^3.10",
         "ext-fileinfo": "*",
         "assegaiphp/validation": "^0.3.1",
         "assegaiphp/util": "^0.4.2",
