@@ -14,6 +14,7 @@ use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Handlers\DefaultErrorHandler;
 use Assegai\Core\Exceptions\Handlers\DefaultExceptionHandler;
 use Assegai\Core\Exceptions\Handlers\HttpExceptionHandler;
+use Assegai\Core\Exceptions\Handlers\WhoopsErrorHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
@@ -40,7 +41,6 @@ use Throwable;
 //use Psr\Log\LoggerAwareInterface;
 
 require __DIR__ . '/Util/Definitions.php';
-require __DIR__ . '/Util/Functions.php';
 
 /**
  * @since 1.0.0
@@ -135,7 +135,7 @@ class App implements AppInterface
   {
     EventManager::broadcast(EventChannel::APP_INIT_START, new Event());
     $this->exceptionHandler = new WhoopsExceptionHandler();
-    $this->errorHandler = new DefaultErrorHandler();
+    $this->errorHandler = new WhoopsErrorHandler();
     $this->httpExceptionHandler = new HttpExceptionHandler();
 
     set_exception_handler(function (Throwable $exception) {
@@ -262,7 +262,7 @@ class App implements AppInterface
     } catch(Exception $exception) {
       $this->exceptionHandler->handle($exception);
     } catch (\Error $error) {
-      $this->errorHandler->handle($error->getCode(), $error->getMessage(), $error->getFile(), $error->getLine());
+      $this->exceptionHandler->handle($error);
     }
   }
 

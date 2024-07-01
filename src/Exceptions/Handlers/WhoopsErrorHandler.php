@@ -2,7 +2,8 @@
 
 namespace Assegai\Core\Exceptions\Handlers;
 
-use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
+use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
+use ErrorException;
 use Throwable;
 use Whoops\Handler\PrettyPageHandler;
 use Whoops\Run;
@@ -12,7 +13,7 @@ use Whoops\Run;
  *
  * @package Assegai\Core\Exceptions\Handlers
  */
-class WhoopsExceptionHandler implements ExceptionHandlerInterface
+class WhoopsErrorHandler implements ErrorHandlerInterface
 {
   /**
    * The Whoops error handler.
@@ -34,11 +35,19 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
   /**
    * @inheritDoc
    */
-  public function handle(Throwable $exception): void
+  public function handle(int $errno, string $errstr, string $errfile, int $errline): void
+  {
+    $this->handleError(new ErrorException($errstr, 0, $errno, $errfile, $errline));
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function handleError(Throwable $error): void
   {
     if (! headers_sent() ) {
       header('Content-Type: text/html');
     }
-    echo $this->whoops->handleException($exception);
+    echo $this->whoops->handleException($error);
   }
 }

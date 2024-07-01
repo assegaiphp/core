@@ -5,9 +5,9 @@ namespace Assegai\Core\Util;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Http\HttpStatus;
-use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Injector;
 use DateTime;
+use Exception;
 use ReflectionProperty;
 use stdClass;
 
@@ -25,62 +25,53 @@ class TypeManager
    * @return mixed The object cast to the user-defined type.
    * @throws EntryNotFoundException If the target type cannot be found.
    * @throws HttpException If the object cannot be cast to the target type.
+   * @throws \ReflectionException
    */
   public static function castObjectToUserType(stdClass $object, string $targetType): mixed
   {
-    if (str_contains($targetType, '|'))
-    {
+    if (str_contains($targetType, '|')) {
       $targetTypes = explode('|', $targetType);
-      foreach ($targetTypes as $type)
-      {
-        try
-        {
+      foreach ($targetTypes as $type) {
+        try {
           return self::castObjectToUserType($object, $type);
-        }
-        catch (EntryNotFoundException $e)
-        {
+        } catch (EntryNotFoundException $e) {
           continue;
         }
       }
       throw new EntryNotFoundException($targetType);
     }
 
-    if ($targetType === 'object')
-    {
+    if ($targetType === 'object') {
       $targetType = stdClass::class;
     }
 
     $instance = new $targetType;
     $injector = Injector::getInstance();
 
-    if (! class_exists($targetType) )
-    {
+    if (! class_exists($targetType) ) {
       throw new EntryNotFoundException($targetType);
     }
 
-    if (get_class($object) === $targetType)
-    {
+    if (get_class($object) === $targetType) {
       return $object;
     }
 
-    foreach ($object as $key => $value)
-    {
-      if (property_exists($instance, $key))
-      {
+    foreach ($object as $key => $value) {
+      if (property_exists($instance, $key)) {
         $propertyReflection = new ReflectionProperty($instance, $key);
-        if ($propertyReflection->getType()->getName() === 'DateTime')
-        {
-          try
-          {
+        if ($propertyReflection->getType()->getName() === 'DateTime') {
+          try {
             $instance->$key = new DateTime($value);
-          }
-          catch (\Exception $e)
-          {
+          } catch (Exception $e) {
             throw new HttpException($e->getMessage(), HttpStatus::BadRequest());
           }
-        }
-        else
-        {
+        } elseif (enum_exists($enum = $propertyReflection->getType()->getName())) {
+          $reflectionEnum = new \ReflectionEnum($enum);
+
+          $instance->$key = match(true) {
+            $reflectionEnum->getBackingType()->getName() === gettype($value) => $enum::tryFrom($value),
+          };
+        } else {
           $instance->$key = $value;
         }
       }
