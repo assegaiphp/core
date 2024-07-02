@@ -4,6 +4,9 @@ namespace Assegai\Core\Http\Responses\Responders;
 
 use Assegai\Core\Http\Responses\Enumerations\ResponderType;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
+use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
+use Assegai\Core\Rendering\Engines\ViewEngine;
+use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
 
 class ResponderFactory
 {
@@ -16,13 +19,19 @@ class ResponderFactory
    */
   public static function createResponder(?ResponderType $responder = null, array $data = []): ResponderInterface
   {
+    $viewEngine = $data['viewEngine'] ?? ViewEngine::getInstance();
+    /**
+     * @var TemplateEngineInterface $templateEngine The template engine.
+     */
+    $templateEngine = $data['templateEngine'] ?? new DefaultTemplateEngine();
+
     return match ($responder) {
       ResponderType::ARRAY => new ArrayResponder(),
       ResponderType::CLOSURE => new ClosureResponder(),
-      ResponderType::COMPONENT => new ComponentResponder(),
+      ResponderType::COMPONENT => new ComponentResponder($templateEngine),
       ResponderType::JSON => new JsonResponder(),
       ResponderType::OBJECT => new ObjectResponder(),
-      ResponderType::VIEW => new ViewResponder(),
+      ResponderType::VIEW => new ViewResponder($viewEngine),
       default => new DefaultResponder()
     };
   }
