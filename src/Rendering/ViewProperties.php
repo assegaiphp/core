@@ -10,49 +10,49 @@ use Assegai\Core\Enumerations\ViewType;
 class ViewProperties
 {
   /**
-   *
+   * The default view type.
    */
-  const DEFAULT_TYPE = ViewType::HTML;
+  const ViewType DEFAULT_TYPE = ViewType::HTML;
+  /**
+   * The default title.
+   */
+  const string DEFAULT_TITLE = 'AssegaiPHP';
+  /**
+   * The default styles.
+   */
+  const array DEFAULT_STYLES = [];
   /**
    *
    */
-  const DEFAULT_TITLE = 'AssegaiPHP';
+  const array DEFAULT_LINKS = ['/css/style.css'];
   /**
-   *
+   * The default head scripts.
    */
-  const DEFAULT_STYLES = [];
+  const array DEFAULT_HEAD_SCRIPTS = [];
   /**
-   *
+   * The default body scripts.
    */
-  const DEFAULT_LINKS = ['/css/style.css'];
+  const array DEFAULT_BODY_SCRIPTS = [];
   /**
-   *
+   * The default head script URLs.
    */
-  const DEFAULT_HEAD_SCRIPTS = [];
+  const array DEFAULT_HEAD_SCRIPT_URLS = ['/js/main.js'];
   /**
-   *
+   * The default body script URLs.
    */
-  const DEFAULT_BODY_SCRIPTS = [];
+  const array DEFAULT_BODY_SCRIPT_URLS = [];
   /**
-   *
+   * The default base.
    */
-  const DEFAULT_HEAD_SCRIPT_URLS = ['/js/main.js'];
+  const string DEFAULT_BASE = '/';
   /**
-   *
+   * The default language.
    */
-  const DEFAULT_BODY_SCRIPT_URLS = [];
+  const string DEFAULT_LANG = 'en';
   /**
-   *
+   * The default favicon.
    */
-  const DEFAULT_BASE = '/';
-  /**
-   *
-   */
-  const DEFAULT_LANG = 'en';
-  /**
-   *
-   */
-  private const PADDING = '  ';
+  private const string PADDING = '  ';
 
   /**
    * @var ViewMeta
@@ -60,18 +60,20 @@ class ViewProperties
   public readonly ViewMeta $meta;
 
   /**
-   * @param ViewType $type
-   * @param string $title
-   * @param array $styles
-   * @param ViewMeta|array $meta
-   * @param array $links
-   * @param array $headScripts
-   * @param array $bodyScripts
-   * @param array $headScriptUrls
-   * @param array $bodyScriptUrls
-   * @param string $base
-   * @param string $lang
-   * @param array $favicon
+   * Constructs a ViewProperties object.
+   *
+   * @param ViewType $type The view type.
+   * @param string $title The title.
+   * @param array $styles The styles.
+   * @param ViewMeta|array $meta The meta tags.
+   * @param array $links The links to stylesheets.
+   * @param array $headScripts The javascript code to be included in the head.
+   * @param array $bodyScripts The javascript code to be included in the body.
+   * @param array $headScriptUrls The URLs of the javascript files to be included in the head.
+   * @param array $bodyScriptUrls The URLs of the javascript files to be included in the body.
+   * @param string $base The base URL.
+   * @param string $lang The language.
+   * @param array $favicon The favicon URL and type.
    */
   public function __construct(
     public readonly ViewType $type = self::DEFAULT_TYPE,
@@ -134,11 +136,9 @@ class ViewProperties
   private function generateStyleTag(): string
   {
     $html = '';
-    if ($this->styles)
-    {
+    if ($this->styles) {
       $html .= $this->getIndent(2) . "<style>" . PHP_EOL;
-      foreach ($this->styles as $style)
-      {
+      foreach ($this->styles as $style) {
         $html .= $this->getIndent(3) . $style . PHP_EOL;
       }
       $html .= $this->getIndent(2) . "</style>" . PHP_EOL;
@@ -157,8 +157,7 @@ class ViewProperties
     {
       $rel = 'stylesheet';
       $href = $link;
-      if (is_array($link))
-      {
+      if (is_array($link)) {
         list($rel, $href) = match(count($link)) {
           0 => ['', ''],
           1 => ['', $link[0]],
@@ -193,13 +192,14 @@ class ViewProperties
   private function generateHeadScriptTags(): string
   {
     $html = '';
-    if ($this->headScripts)
-    {
+    if ($this->headScripts) {
+
       $html .= $this->getIndent(2) . "<script>";
-      foreach ($this->headScripts as $code)
-      {
+
+      foreach ($this->headScripts as $code) {
         $html .= $this->getIndent(3) . $code . PHP_EOL;
       }
+
       $html .= $this->getIndent(2) . "</script>" . PHP_EOL;
     }
 
@@ -212,9 +212,8 @@ class ViewProperties
   private function generateHeadScriptImportTags(): string
   {
     $html = '';
-    foreach ($this->headScriptUrls as $url)
-    {
-      $html .= $this->getIndent(2) . "<script src='$url'></script>" . PHP_EOL;
+    foreach ($this->headScriptUrls as $url) {
+      $html .= $this->getIndent(2) . "<script defer src='$url'></script>" . PHP_EOL;
     }
     return $html;
   }
@@ -233,13 +232,14 @@ class ViewProperties
   public function generateBodyScriptTags(): string
   {
     $html = '';
-    if ($this->bodyScripts)
-    {
+
+    if ($this->bodyScripts) {
       $html .= "<script>";
-      foreach ($this->bodyScripts as $code)
-      {
+
+      foreach ($this->bodyScripts as $code) {
         $html .= $code . PHP_EOL;
       }
+
       $html .= "</script>";
     }
 
@@ -252,10 +252,11 @@ class ViewProperties
   public function generateBodyScriptImportTags(): string
   {
     $html = '';
-    foreach ($this->bodyScriptUrls as $url)
-    {
-      $html .= "<script src='$url'></script>";
+
+    foreach ($this->bodyScriptUrls as $url) {
+      $html .= "<script src='$url' defer></script>";
     }
+
     return $html;
   }
 
@@ -274,12 +275,12 @@ class ViewProperties
   private function generateFaviconLinkTag(): string
   {
     [$href, $type] = $this->favicon;
-    if (!$href)
-    {
+
+    if (!$href) {
       $href = 'favicon.ico';
     }
-    if (!$type)
-    {
+
+    if (!$type) {
       $type = 'image/x-icon';
     }
 

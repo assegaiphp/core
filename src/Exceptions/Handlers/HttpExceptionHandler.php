@@ -4,6 +4,7 @@ namespace Assegai\Core\Exceptions\Handlers;
 
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
+use Assegai\Core\Http\HttpStatus;
 use Throwable;
 
 /**
@@ -25,6 +26,7 @@ class HttpExceptionHandler implements ExceptionHandlerInterface
       if (! headers_sent() ) {
         header('Content-Type: text/html');
       }
+      error_log($exception->getMessage() . ' in ' . $exception->getFile() . ' on line ' . $exception->getLine() . PHP_EOL . $exception->getTraceAsString() . PHP_EOL . PHP_EOL, 0);
 
       http_response_code($statusCode);
       $content = match ($statusCode) {
@@ -42,9 +44,10 @@ CONTENT,
 CONTENT,
       };
 
+      $statusName = HttpStatus::fromInt($statusCode)->name;
       echo <<<HTML
     <head>
-        <title>Error $statusCode - </title>
+        <title>Error $statusCode - $statusName</title>
     </head>
     <style>
         body {
