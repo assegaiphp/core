@@ -4,7 +4,7 @@ namespace Assegai\Core\Attributes;
 
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Http\Requests\Request;
-use Assegai\Core\Http\Responses\Responder;
+use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Attribute;
 use stdClass;

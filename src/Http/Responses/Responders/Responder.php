@@ -1,13 +1,16 @@
 <?php
 
-namespace Assegai\Core\Http\Responses;
+namespace Assegai\Core\Http\Responses\Responders;
 
 use Assegai\Core\Attributes\Component;
 use Assegai\Core\Enumerations\Http\ContentType;
-use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Responses\ApiResponse;
+use Assegai\Core\Http\Responses\Enumerations\ResponderType;
+use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
+use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Engines\ViewEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
@@ -22,7 +25,7 @@ use ReflectionException;
 /**
  * Contains useful methods for managing the Response object.
  */
-class Responder
+class Responder implements ResponderInterface
 {
   /**
    * @var Responder|null The Responder instance.
@@ -36,6 +39,14 @@ class Responder
    * @var TemplateEngineInterface The TemplateEngine instance.
    */
   private TemplateEngineInterface $templateEngine;
+  /**
+   * @var ResponderInterface The context.
+   */
+  protected ResponderInterface $context;
+  /**
+   * @var ResponderType The ResponderType.
+   */
+  protected ResponderType $responderType;
 
   /**
    * Constructs a Responder.
@@ -44,6 +55,7 @@ class Responder
   {
     $this->viewEngine = ViewEngine::getInstance();
     $this->templateEngine = new DefaultTemplateEngine();
+    $this->context = ResponderFactory::createResponder();
   }
 
   /**
@@ -92,13 +104,7 @@ class Responder
   }
 
   /**
-   * Send a response to the client and exit the script.
-   *
-   * @param mixed $response The response to send.
-   * @param HttpStatusCode|int|null $code The response code to send.
-   * @return never
-   * @throws ReflectionException
-   * @throws RenderingException
+   * @inheritDoc
    */
   public function respond(mixed $response, HttpStatusCode|int|null $code = null): never
   {
@@ -106,36 +112,45 @@ class Responder
       $this->setResponseCode($code);
     }
 
-    if ($response instanceof Response) {
-      $this->setResponseCode($response->getStatus());
+    $this->context = ResponderFactory::createResponder(ResponderType::fromResponse($response));
+//    if ($response instanceof Response) {
+//      $response->setContentType(ContentType::JSON);
+//      $this->setResponseCode($response->getStatus());
+//
+//      $responseBody = $response->getBody();
+//
+//      if ($responseBody instanceof View) {
+//        $response->setContentType(ContentType::HTML);
+//        $this->viewEngine->load($responseBody)->render();
+//      }
+//
+//      if ($this->isComponent($responseBody)) {
+//        $response->setContentType(ContentType::HTML);
+//      }
+//    }
 
-      $responseBody = $response->getBody();
 
-      if ($responseBody instanceof View) {
-        $this->viewEngine->load($responseBody)->render();
-      }
-    }
+//    $responseString = match(true) {
+//      is_object($response) => match(true) {
+//        $response instanceof Response &&
+//        $this->isComponent($response->getBody()) => $this->templateEngine->setRootComponent($response->getBody())->render(),
+//        is_callable($response),
+//        $response instanceof Closure => $response(),
+//        default => json_encode($response) ?: $response
+//      },
+//      is_countable($response) => (is_array($response) && isset($response[0]) && is_scalar($response[0]) ?  : new ApiResponse(data: $response) ),
+//      ($response instanceof Response) => match($response->getContentType()) {
+//        ContentType::JSON => match (true) {
+//          ($response->getBody() instanceof DeleteResult) => strval($response->getBody()->affected),
+//          ($response->getBody() instanceof InsertResult),
+//          ($response->getBody() instanceof UpdateResult) => json_encode($response->getBody()->getData()),
+//          default => new ApiResponse(data: $response->getBody())
+//        },
+//        default => $response->getBody()
+//      }
+//    };
 
-    $responseString = match(true) {
-      is_object($response) => match(true) {
-        $this->isComponent($response) => $this->templateEngine->setRootComponent($response)->render(),
-        is_callable($response),
-        $response instanceof Closure => $response(),
-        default => json_encode($response) ?: $response
-      },
-      is_countable($response) => (is_array($response) && isset($response[0]) && is_scalar($response[0]) ?  : new ApiResponse(data: $response) ),
-      ($response instanceof Response) => match($response->getContentType()) {
-        ContentType::JSON => match (true) {
-          ($response->getBody() instanceof DeleteResult) => strval($response->getBody()->affected),
-          ($response->getBody() instanceof InsertResult),
-          ($response->getBody() instanceof UpdateResult) => json_encode($response->getBody()->getData()),
-          default => new ApiResponse(data: $response->getBody())
-        },
-        default => $response->getBody()
-      }
-    };
-
-    exit($responseString);
+    $this->context->respond($response, $code);
   }
 
   /**
@@ -168,7 +183,6 @@ class Responder
    */
   private function isComponent(mixed $response): bool
   {
-
     $reflection = new ReflectionClass($response);
     $componentAttributes = $reflection->getAttributes(Component::class);
 

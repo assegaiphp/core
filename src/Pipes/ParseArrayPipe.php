@@ -3,7 +3,7 @@
 namespace Assegai\Core\Pipes;
 
 use Assegai\Core\Exceptions\Http\BadRequestException;
-use Assegai\Core\Http\Responses\Responder;
+use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Interfaces\IPipeTransform;
 use PHPUnit\Exception;
 use stdClass;
