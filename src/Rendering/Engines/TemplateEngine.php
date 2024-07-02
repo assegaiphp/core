@@ -76,8 +76,6 @@ abstract class TemplateEngine implements TemplateEngineInterface
   {
     $this->rootComponent = $rootComponent;
 
-    $componentAttribute = $this->rootComponent->getAttribute();
-
     return $this;
   }
 }
