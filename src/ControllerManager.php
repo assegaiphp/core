@@ -48,8 +48,7 @@ class ControllerManager
    */
   public static function getInstance(): ControllerManager
   {
-    if (empty(self::$instance))
-    {
+    if (empty(self::$instance)) {
       self::$instance = new ControllerManager();
     }
 
@@ -88,8 +87,7 @@ class ControllerManager
     $rootModuleReflection = new ReflectionClass($rootModuleClass);
     $attributes = $rootModuleReflection->getAttributes(Module::class);
 
-    if (! $attributes )
-    {
+    if (! $attributes ) {
       throw new RuntimeException('Root module class must be decorated with the Module attribute');
     }
 
@@ -98,23 +96,22 @@ class ControllerManager
 
     $rootControllersClasses = $moduleAttributeReflection->getArguments()['controllers'] ?? [];
 
-    if (empty($rootControllersClasses))
-    {
+    if (empty($rootControllersClasses)) {
       throw new RuntimeException('Root module class must have at least one controller');
     }
 
     $rootControllerClass = '';
 
-    foreach ($rootControllersClasses as $index => $controllersClass)
-    {
-      if ($index === 0)
-      {
+    foreach ($rootControllersClasses as $index => $controllersClass) {
+      if ($index === 0) {
         $rootControllerClass = $controllersClass;
       }
 
       // Check if the controller has a path === '/'
-      if (isset($this->controllerPathTokenIdMap[$controllersClass]) && $this->controllerPathTokenIdMap[$controllersClass] === '/')
-      {
+      if (
+        isset($this->controllerPathTokenIdMap[$controllersClass]) &&
+        $this->controllerPathTokenIdMap[$controllersClass] === '/'
+      ) {
         $rootControllerClass = $controllersClass;
         break;
       }
@@ -132,23 +129,18 @@ class ControllerManager
    */
   public function buildControllerTokensList(array $moduleTokensList): array
   {
-    foreach ($moduleTokensList as $index => $module)
-    {
+    foreach ($moduleTokensList as $index => $module) {
       /** @var ['imports' => 'array', 'exports' => 'array', 'providers' => 'array'] $args */
       $args = $module->getArguments();
 
-      foreach ($args['controllers'] as $tokenId)
-      {
-        if ($controllerReflection = $this->getControllerReflection($tokenId))
-        {
+      foreach ($args['controllers'] ?? [] as $tokenId) {
+        if ($controllerReflection = $this->getControllerReflection($tokenId)) {
           $this->controllerTokensList[$tokenId] = $controllerReflection;
 
-          if (!empty($this->lastLoadedAttributes))
-          {
+          if (!empty($this->lastLoadedAttributes)) {
             $controllerAttribute = array_pop($this->lastLoadedAttributes);
             $data = $controllerAttribute->getArguments();
-            if (! empty($data))
-            {
+            if (! empty($data)) {
               $path = array_pop($data);
               $this->controllerPathTokenIdMap[$tokenId] = $path;
             }
@@ -173,8 +165,7 @@ class ControllerManager
       $reflectionClass = new ReflectionClass($tokenId);
       $this->lastLoadedAttributes = $reflectionClass->getAttributes(Controller::class);
       return (! empty($this->lastLoadedAttributes) ) ? $reflectionClass : null;
-    } catch (ReflectionException)
-    {
+    } catch (ReflectionException) {
       throw new EntryNotFoundException($tokenId);
     }
   }
