@@ -28,10 +28,13 @@ use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\IAssegaiInterceptor;
 use Assegai\Core\Interfaces\IConsumer;
 use Assegai\Core\Interfaces\IPipeTransform;
+use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
+use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Paths;
 use Exception;
+use Error;
 use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -115,6 +118,10 @@ class App implements AppInterface
    * @var array<IAssegaiInterceptor> A list of application scoped interceptors
    */
   protected array $interceptors = [];
+  /**
+   * @var TemplateEngineInterface $templateEngine The template engine.
+   */
+  protected TemplateEngineInterface $templateEngine;
 
   /**
    * Constructs an App instance.
@@ -151,6 +158,7 @@ class App implements AppInterface
     $this->composerConfig = new ComposerConfig();
     $this->projectConfig = new ProjectConfig();
     $this->host = new ArgumentsHost();
+    $this->templateEngine = new DefaultTemplateEngine();
     Log::init();
 
     $this->request = $this->host->switchToHttp()->getRequest();
@@ -261,7 +269,7 @@ class App implements AppInterface
       $this->httpExceptionHandler->handle($exception);
     } catch(Exception $exception) {
       $this->exceptionHandler->handle($exception);
-    } catch (\Error $error) {
+    } catch (Error $error) {
       $this->exceptionHandler->handle($error);
     }
   }

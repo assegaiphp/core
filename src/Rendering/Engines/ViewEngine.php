@@ -1,10 +1,12 @@
 <?php /** @noinspection HtmlRequiredTitleElement */
 
-namespace Assegai\Core\Rendering;
+namespace Assegai\Core\Rendering\Engines;
 
 use Assegai\Core\Attributes\Component;
+use Assegai\Core\Components\AssegaiComponent;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\ModuleManager;
+use Assegai\Core\Rendering\View;
 use Assegai\Core\Util\Debug\Log;
 
 /**
@@ -64,15 +66,17 @@ final class ViewEngine
   }
 
   /**
+   * Renders the view.
+   *
    * @return never
+   * @throws RenderingException if the view or template is invalid.
    */
   public function render(): never
   {
     header("Content-Type: text/html");
 
-    if (!$this->view)
-    {
-      die(new RenderingException("Invalid view"));
+    if (!$this->view) {
+      throw new RenderingException("Invalid view");
     }
     $lang = $this->view->props->lang;
 
@@ -96,17 +100,13 @@ START;
 
     $template = file_get_contents($this->view->templateUrl);
 
-    if (!$template)
-    {
-      die(new RenderingException("Invalid template"));
+    if (!$template) {
+      throw new RenderingException("Invalid template");
     }
 
-    if ($component = $this->view->getComponent())
-    {
+    if ($component = $this->view->getComponent()) {
       echo $this->resolveTemplates(template: $template, component: $component);
-    }
-    else
-    {
+    } else {
       require $this->view->templateUrl;
     }
 
@@ -134,15 +134,13 @@ END;
     $selectionPattern = "/(" . implode('|', $declaredSelectors) . ")/";
     $inputLines = explode("\n", $html);
 
-    if (preg_match_all($selectionPattern, $html, $matches))
-    {
+    if (preg_match_all($selectionPattern, $html, $matches)) {
       foreach ($matches as $tokens)
       {
         $tokens = array_unique($tokens);
 
-        foreach ($tokens as $token)
-        {
-          $message = ViewComponent::getTemplateContentBySelector($token);
+        foreach ($tokens as $token) {
+          $message = AssegaiComponent::getTemplateContentBySelector($token);
 //          $templatePath = ViewComponent::getTemplatePathBySelector($token);
 //          $message = "include $templatePath;";
 
