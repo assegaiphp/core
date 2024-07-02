@@ -26,9 +26,17 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
    */
   public function __construct()
   {
-    $this->whoops = new Run();
-    $this->whoops->pushHandler(new PrettyPageHandler());
-    $this->whoops->register();
+    try {
+      $this->whoops = new Run();
+      $this->whoops->pushHandler(new PrettyPageHandler());
+      $this->whoops->register();
+    } catch (Throwable $throwable) {
+      if (! headers_sent() ) {
+        header('Content-Type: text/html');
+      }
+      echo $throwable->getMessage();
+      exit(1);
+    }
   }
 
   /**
