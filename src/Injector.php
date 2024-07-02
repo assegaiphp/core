@@ -4,6 +4,7 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Attributes\Component;
 use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Query;
 use Assegai\Core\Attributes\Injectable;
@@ -57,8 +58,7 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public static function getInstance(): Injector
   {
-    if (is_null(self::$instance))
-    {
+    if (is_null(self::$instance)) {
       self::$instance = new Injector();
     }
 
@@ -76,36 +76,32 @@ final class Injector implements ITokenStoreOwner, IContainer
   public function resolve(string $id, array $attributeReflections = []): mixed
   {
     # 1. Inspect the class that we are trying to get from the container
-    try
-    {
+    try {
       $reflectionClass = new ReflectionClass($id);
       $attributeReflections = $reflectionClass->getAttributes();
 
-      if($this->isNotInjectable($reflectionClass))
-      {
-        if ($this->isModule($reflectionClass))
-        {
+      if($this->isNotInjectable($reflectionClass)) {
+        if ($this->isModule($reflectionClass)) {
           return $this->resolveModule($reflectionClass);
+        }
+
+        if ($this->isComponent($reflectionClass)) {
+          return $this->resolveComponent($reflectionClass);
         }
 
         throw new ContainerException("$id is not injectable");
       }
-    }
-    catch (ReflectionException)
-    {
+    } catch (ReflectionException) {
       throw new ContainerException("$id is not a valid ID");
     }
 
-    if (! $reflectionClass->isInstantiable() )
-    {
-      if ($reflectionClass->hasMethod('getInstance'))
-      {
+    if (! $reflectionClass->isInstantiable() ) {
+      if ($reflectionClass->hasMethod('getInstance')) {
         /** @noinspection PhpUndefinedMethodInspection */
         return $this->bindHandlerAttributes($id::getInstance(), $attributeReflections);
       }
 
-      if ($reflectionClass->hasMethod('newInstance'))
-      {
+      if ($reflectionClass->hasMethod('newInstance')) {
         /** @noinspection PhpUndefinedMethodInspection */
         return $this->bindHandlerAttributes($id::newInstance(), $attributeReflections);
       }
@@ -116,16 +112,14 @@ final class Injector implements ITokenStoreOwner, IContainer
     # 2. Inspect the constructor of the class
     $constructor = $reflectionClass->getConstructor();
 
-    if (! $constructor )
-    {
+    if (! $constructor ) {
       return $this->bindHandlerAttributes(new $id, $attributeReflections);
     }
 
     # 3. Inspect the constructor parameters (dependencies)
     $parameters = $constructor->getParameters();
 
-    if (! $parameters )
-    {
+    if (! $parameters ) {
       return $this->bindHandlerAttributes(new $id, $attributeReflections);
     }
 
@@ -180,15 +174,11 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public function remove($tokenId): int|false
   {
-    try
-    {
-      if (!$this->has($tokenId))
-      {
+    try {
+      if (!$this->has($tokenId)) {
         return false;
       }
-    }
-    catch (IEntryNotFoundException $e)
-    {
+    } catch (IEntryNotFoundException $e) {
       throw new EntryNotFoundException($e->getMessage());
     }
 
@@ -236,40 +226,31 @@ final class Injector implements ITokenStoreOwner, IContainer
       $paramType = $param->getType();
       $resolveErrorPrefix = "Failed to resolve type $paramName";
 
-      if (! $paramType )
-      {
+      if (! $paramType ) {
         throw new ResolveException(id: $id, message: "$resolveErrorPrefix — Illegal type — Undefined");
       }
 
-      if ($paramType instanceof ReflectionUnionType)
-      {
+      if ($paramType instanceof ReflectionUnionType) {
         throw new ResolveException(id: $id, message: "$resolveErrorPrefix — Illegal type — Union");
       }
 
-      if ($paramType instanceof ReflectionNamedType && ! $paramType->isBuiltin())
-      {
-        if (enum_exists($paramType->getName()))
-        {
-          try
-          {
+      if ($paramType instanceof ReflectionNamedType && ! $paramType->isBuiltin()) {
+        if (enum_exists($paramType->getName())) {
+          try {
             $reflectionEnum = new ReflectionEnum($paramType->getName());
             return $reflectionEnum->getCases()[0]->getValue();
-          }
-          catch (ReflectionException)
-          {
+          } catch (ReflectionException) {
             throw new ContainerException(sprintf("Enum exception %s(%s)", __METHOD__, __LINE__));
           }
         }
 
-        if (is_array($paramType->getName()))
-        {
+        if (is_array($paramType->getName())) {
           return $param->allowsNull() ? null : [];
         }
 
         $repositoryAttributes = $param->getAttributes(InjectRepository::class);
 
-        foreach ( $repositoryAttributes as $reflectionRepoAttr )
-        {
+        foreach ( $repositoryAttributes as $reflectionRepoAttr ) {
           /** @var InjectRepository $injectRepositoryInstance */
           $injectRepositoryInstance = $reflectionRepoAttr->newInstance();
           return $injectRepositoryInstance->repository;
@@ -305,16 +286,13 @@ final class Injector implements ITokenStoreOwner, IContainer
     };
     $paramAttributes = $param->getAttributes();
 
-    foreach ($paramAttributes as $paramAttribute)
-    {
+    foreach ($paramAttributes as $paramAttribute) {
       $paramAttributeArgs = $paramAttribute->getArguments();
       $paramAttributeInstance = $paramAttribute->newInstance();
 
-      switch ($paramAttribute->getName())
-      {
+      switch ($paramAttribute->getName()) {
         case Param::class:
-          if (empty($paramAttributeArgs))
-          {
+          if (empty($paramAttributeArgs)) {
             return ($paramTypeName === 'string')
               ? json_encode($request->getParams())
               : (object)$request->getParams();
@@ -323,8 +301,7 @@ final class Injector implements ITokenStoreOwner, IContainer
             ($param->isOptional() ? $param->getDefaultValue() : null);
 
         case Query::class:;
-          if (empty($paramAttributeArgs))
-          {
+          if (empty($paramAttributeArgs)) {
             return ($paramTypeName === 'string')
               ? json_encode($request->getQuery())
               : (object)$request->getQuery();
@@ -335,14 +312,11 @@ final class Injector implements ITokenStoreOwner, IContainer
 
         case Body::class:
           $body = null;
-          if (empty($paramAttributeArgs))
-          {
+          if (empty($paramAttributeArgs)) {
             $body = ($paramTypeName === 'string')
               ? json_encode($request->getBody())
               : $request->getBody();
-          }
-          else
-          {
+          } else {
             $key = $param->getName();
             $body = $paramAttributeInstance->value ?? null;
           }
@@ -356,8 +330,7 @@ final class Injector implements ITokenStoreOwner, IContainer
           return Response::getInstance();
 
         default:
-          if (property_exists($paramAttributeInstance, 'value'))
-          {
+          if (property_exists($paramAttributeInstance, 'value')) {
             return $paramAttributeInstance->value;
           }
       }
@@ -376,14 +349,32 @@ final class Injector implements ITokenStoreOwner, IContainer
   {
     $moduleAttributes = $reflectionClass->getAttributes(Module::class);
 
-    if (empty($moduleAttributes))
-    {
+    if (empty($moduleAttributes)) {
       return null;
     }
 
     $moduleAttribute = array_pop($moduleAttributes);
 
     return $moduleAttribute->newInstance();
+  }
+
+  /**
+   * Resolves a module.
+   *
+   * @param ReflectionClass $reflectionClass The module reflection class.
+   * @return Module|null The resolved module if found, null otherwise.
+   */
+  public function resolveComponent(ReflectionClass $reflectionClass): ?Component
+  {
+    $componentAttributes = $reflectionClass->getAttributes(Component::class);
+
+    if (empty($componentAttributes)) {
+      return null;
+    }
+
+    $componentAttribute = array_pop($componentAttributes);
+
+    return $componentAttribute->newInstance();
   }
 
   /**
@@ -400,6 +391,19 @@ final class Injector implements ITokenStoreOwner, IContainer
   }
 
   /**
+   * Determines if a class is a component.
+   *
+   * @param ReflectionClass $reflectionClass The class to inspect.
+   * @return bool True if the class is a component, false otherwise.
+   */
+  public function isComponent(ReflectionClass $reflectionClass): bool
+  {
+    $componentAttributes = $reflectionClass->getAttributes(Component::class);
+
+    return !empty($componentAttributes);
+  }
+
+  /**
    * Binds handler attributes to an instance.
    *
    * @param mixed $instance The instance to bind the attributes to.
@@ -408,10 +412,8 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   private function bindHandlerAttributes(mixed $instance, array $reflectionAttributes): mixed
   {
-    foreach ($reflectionAttributes as $attribute)
-    {
-      switch ($attribute->getName())
-      {
+    foreach ($reflectionAttributes as $attribute) {
+      switch ($attribute->getName()) {
         case Body::class:
           /** @var Body $attributeInstance */
           $attributeInstance = $attribute->newInstance();
