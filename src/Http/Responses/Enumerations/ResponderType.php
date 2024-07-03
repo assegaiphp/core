@@ -47,12 +47,18 @@ enum ResponderType
         return ResponderType::VIEW;
       }
 
-      if (self::isComponent($responseBody)) {
-        return ResponderType::COMPONENT;
+      if (is_object($responseBody)) {
+        if (self::isComponent($responseBody)) {
+          return ResponderType::COMPONENT;
+        }
       }
 
       if (is_array($responseBody)) {
         return ResponderType::ARRAY;
+      }
+
+      if (is_scalar($responseBody)) {
+        return null;
       }
     }
 
@@ -62,7 +68,11 @@ enum ResponderType
       }
     }
 
-    if (is_countable($response) || $response instanceof \Closure) {
+    if (is_object($response)) {
+      return ResponderType::OBJECT;
+    }
+
+    if (is_callable($response) || $response instanceof \Closure) {
       return ResponderType::CLOSURE;
     }
 

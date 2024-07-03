@@ -26,13 +26,13 @@ class ResponderFactory
     $templateEngine = $data['templateEngine'] ?? new DefaultTemplateEngine();
 
     return match ($responder) {
-      ResponderType::ARRAY => new ArrayResponder(),
-      ResponderType::CLOSURE => new ClosureResponder(),
-      ResponderType::COMPONENT => new ComponentResponder($templateEngine),
-      ResponderType::JSON => new JsonResponder(),
-      ResponderType::OBJECT => new ObjectResponder(),
-      ResponderType::VIEW => new ViewResponder($viewEngine),
-      default => new DefaultResponder()
+      ResponderType::ARRAY,
+      ResponderType::OBJECT,
+      ResponderType::JSON       => new JsonResponder(),
+      ResponderType::CLOSURE    => new ClosureResponder(),
+      ResponderType::COMPONENT  => new ComponentResponder($templateEngine),
+      ResponderType::VIEW       => new ViewResponder($viewEngine),
+      default                   => new DefaultResponder()
     };
   }
 }

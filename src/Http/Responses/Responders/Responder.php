@@ -3,22 +3,14 @@
 namespace Assegai\Core\Http\Responses\Responders;
 
 use Assegai\Core\Attributes\Component;
-use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Requests\Request;
-use Assegai\Core\Http\Responses\ApiResponse;
 use Assegai\Core\Http\Responses\Enumerations\ResponderType;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
-use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Engines\ViewEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
-use Assegai\Core\Rendering\View;
-use Assegai\Orm\Queries\QueryBuilder\Results\DeleteResult;
-use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
-use Assegai\Orm\Queries\QueryBuilder\Results\UpdateResult;
-use Closure;
 use ReflectionClass;
 use ReflectionException;
 
@@ -55,7 +47,7 @@ class Responder implements ResponderInterface
   {
     $this->viewEngine = ViewEngine::getInstance();
     $this->templateEngine = new DefaultTemplateEngine();
-    $this->context = ResponderFactory::createResponder();
+    $this->context = ResponderFactory::createResponder(data: ['templateEngine' => $this->templateEngine]);
   }
 
   /**
@@ -112,23 +104,14 @@ class Responder implements ResponderInterface
       $this->setResponseCode($code);
     }
 
-    $this->context = ResponderFactory::createResponder(ResponderType::fromResponse($response));
-//    if ($response instanceof Response) {
-//      $response->setContentType(ContentType::JSON);
-//      $this->setResponseCode($response->getStatus());
-//
-//      $responseBody = $response->getBody();
-//
-//      if ($responseBody instanceof View) {
-//        $response->setContentType(ContentType::HTML);
-//        $this->viewEngine->load($responseBody)->render();
-//      }
-//
-//      if ($this->isComponent($responseBody)) {
-//        $response->setContentType(ContentType::HTML);
-//      }
-//    }
-
+    $this->context =
+      ResponderFactory::createResponder(
+        ResponderType::fromResponse($response),
+        [
+          'viewEngine' => $this->viewEngine,
+          'templateEngine' => $this->templateEngine
+        ]
+      );
 
 //    $responseString = match(true) {
 //      is_object($response) => match(true) {
@@ -172,24 +155,5 @@ class Responder implements ResponderInterface
     }
 
     http_response_code($codeObject->code);
-  }
-
-  /**
-   * Check if the response is a component.
-   *
-   * @param mixed $response
-   * @return bool
-   * @throws ReflectionException
-   */
-  private function isComponent(mixed $response): bool
-  {
-    $reflection = new ReflectionClass($response);
-    $componentAttributes = $reflection->getAttributes(Component::class);
-
-    if (empty($componentAttributes)) {
-      return false;
-    }
-
-    return true;
   }
 }
