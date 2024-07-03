@@ -8,20 +8,36 @@ use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use JetBrains\PhpStorm\ArrayShape;
 use stdClass;
+use Stringable;
 
 #[Injectable]
-class Response
+class Response implements Stringable
 {
+  /**
+   * @var Response|null The Response instance.
+   */
   protected static ?Response $instance = null;
+  /**
+   * @var string|array|object The response body.
+   */
   protected string|array|object $body;
+  /**
+   * @var ContentType The content type.
+   */
   protected ContentType $contentType = ContentType::JSON;
+  /**
+   * @var HttpStatusCode|int The status code.
+   */
   protected HttpStatusCode|int $status;
 
+  /**
+   * Constructs a Response.
+   */
   private final function __construct()
   {
     $this->body = new stdClass();
     $this->status = http_response_code();
-    $this->setContentType(ContentType::JSON);
+    $this->setContentType(ContentType::HTML);
   }
 
   /**
@@ -38,13 +54,16 @@ class Response
   }
 
   /**
-   * @return string
+   * @inheritDoc
    */
   public function __toString(): string
   {
     return $this->toJson();
   }
 
+  /**
+   * @return array|array[]|object[]|stdClass[]|string[]
+   */
   #[ArrayShape(['body' => "array|\stdClass|string", 'type' => "\Assegai\Core\Enumerations\Http\ContentType"])]
   public function toArray(): array
   {
@@ -131,9 +150,9 @@ class Response
    * @param ContentType $contentType
    * @return void
    */
-  private function setContentType(ContentType $contentType): void
+  public function setContentType(ContentType $contentType): void
   {
-    $this->contentType = ContentType::JSON;
+    $this->contentType = $contentType;
     header('Content-Type: ' . $this->contentType->value);
   }
 

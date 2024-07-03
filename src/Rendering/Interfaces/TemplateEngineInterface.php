@@ -5,7 +5,6 @@ namespace Assegai\Core\Rendering\Interfaces;
 use Assegai\Core\Components\Interfaces\ComponentInterface;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Exceptions\RenderingException;
-use Assegai\Core\Rendering\Engines\TemplateEngine;
 
 /**
  * Interface TemplateEngineInterface. This interface is for the template engine.
@@ -18,7 +17,7 @@ interface TemplateEngineInterface extends RendererInterface
    * Sets the template to render.
    *
    * @param string $template The template to render.
-   * @return TemplateEngineInterface
+   * @return self
    */
   public function setTemplate(string $template): self;
 
@@ -26,7 +25,7 @@ interface TemplateEngineInterface extends RendererInterface
    * Sets the data to render.
    *
    * @param array $data The data to render.
-   * @return TemplateEngineInterface
+   * @return self
    */
   public function setData(array $data): self;
 
@@ -39,9 +38,10 @@ interface TemplateEngineInterface extends RendererInterface
   public function setContentType(ContentType $contentType): self;
 
   /**
+   * Sets the root component.
+   *
    * @param ComponentInterface $rootComponent
-   * @return TemplateEngine
-   * @return static
+   * @return self
    * @throws RenderingException
    */
   public function setRootComponent(ComponentInterface $rootComponent): self;
