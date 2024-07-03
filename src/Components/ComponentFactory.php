@@ -2,7 +2,12 @@
 
 namespace Assegai\Core\Components;
 
-use Assegai\Core\Components\Interfaces\ComponentInterface;
+use Assegai\Core\Attributes\Component;
+use Assegai\Core\Exceptions\Container\ContainerException;
+use Assegai\Core\Injector;
+use InvalidArgumentException;
+use ReflectionClass;
+use ReflectionException;
 
 /**
  * Factory class for creating components. Components are classes that are used to render views.
@@ -12,25 +17,48 @@ use Assegai\Core\Components\Interfaces\ComponentInterface;
  */
 final class ComponentFactory
 {
-  public static function createComponent(string $componentClass): ComponentInterface
+  /**
+   * Creates a component instance.
+   *
+   * @param string $componentClass
+   * @return object The component instance.
+   * @throws ReflectionException If the component class does not exist.
+   * @throws ContainerException If the component constructor parameters cannot be resolved.
+   */
+  public static function createComponent(string $componentClass): object
   {
-    if (! self::isValidComponentClass($componentClass) ) {
-      throw new \InvalidArgumentException('Invalid component class');
+    $injector = Injector::getInstance();
+
+    # Create reflection
+    $componentReflection = new ReflectionClass($componentClass);
+
+    if (! self::isValidComponentClass($componentReflection) ) {
+      throw new InvalidArgumentException('Invalid component class');
     }
 
-    $component = null;
+    # Get constructor parameters
+    $dependencies = [];
+    $componentConstructorParams = $componentReflection->getConstructor()?->getParameters() ?? [];
 
-    return $component;
+    # Resolve constructor parameters
+    foreach ($componentConstructorParams as $constructorParam) {
+      $dependencies[] = $injector->resolve($constructorParam->getType()->getName());
+    }
+
+    # Create component instance
+    return $componentReflection->newInstanceArgs($dependencies) ?? throw new InvalidArgumentException('Invalid component class');
   }
 
   /**
    * Checks if the given class is a valid component class.
    *
-   * @param string $componentClass
-   * @return bool
+   * @param ReflectionClass $componentClass
+   * @return bool True if the given reflection resolves to a valid component instance, otherwise false
    */
-  private static function isValidComponentClass(string $componentClass): bool
+  private static function isValidComponentClass(ReflectionClass $componentClass): bool
   {
-    return true;
+    $componentAttributes = $componentClass->getAttributes(Component::class);
+
+    return ! empty($componentAttributes);
   }
 }

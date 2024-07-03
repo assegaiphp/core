@@ -28,6 +28,7 @@ use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
 use Assegai\Core\Util\Validator;
+use Error;
 use Exception;
 use ReflectionClass;
 use ReflectionException;
@@ -414,7 +415,7 @@ final class Router
 
     try {
       $result = $activatedHandler->invokeArgs($controller, $dependencies);
-    } catch (Exception $e) {
+    } catch (Exception|Error $e) {
       throw new HttpException(message: $e->getMessage());
     }
 

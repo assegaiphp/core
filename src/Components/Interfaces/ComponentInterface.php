@@ -4,7 +4,6 @@ namespace Assegai\Core\Components\Interfaces;
 
 use Assegai\Core\Attributes\Component;
 use Assegai\Core\Exceptions\RenderingException;
-use Assegai\Core\Rendering\Interfaces\RendererInterface;
 use Stringable;
 
 /**
@@ -12,7 +11,7 @@ use Stringable;
  *
  * @package Assegai\Core\Components\Interfaces
  */
-interface ComponentInterface extends RendererInterface, Stringable
+interface ComponentInterface extends Stringable
 {
   /**
    * Returns the component attribute.

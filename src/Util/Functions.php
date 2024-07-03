@@ -2,6 +2,7 @@
 
 use Assegai\Core\Components\ComponentFactory;
 use Assegai\Core\Components\Interfaces\ComponentInterface;
+use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Rendering\View;
 use Assegai\Core\Rendering\ViewProperties;
@@ -49,6 +50,13 @@ if (!function_exists('debug_and_exit')) {
 }
 
 if (! function_exists('render') ) {
+  /**
+   * Renders a component
+   *
+   * @param class-string<ComponentInterface> $componentClass The name of the component class
+   * @throws ReflectionException
+   * @throws ContainerException
+   */
   function render(string $componentClass): ComponentInterface
   {
     return ComponentFactory::createComponent($componentClass);

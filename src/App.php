@@ -2,17 +2,14 @@
 
 namespace Assegai\Core;
 
-use Assegai\Core\Config\ProjectConfig;
-use Assegai\Core\Config\ComposerConfig;
 use Assegai\Core\Config\AppConfig;
-use Assegai\Core\Enumerations\EnvironmentType;
+use Assegai\Core\Config\ComposerConfig;
+use Assegai\Core\Config\ProjectConfig;
 use Assegai\Core\Enumerations\EventChannel;
 use Assegai\Core\Events\Event;
 use Assegai\Core\Events\EventManager;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
-use Assegai\Core\Exceptions\Handlers\DefaultErrorHandler;
-use Assegai\Core\Exceptions\Handlers\DefaultExceptionHandler;
 use Assegai\Core\Exceptions\Handlers\HttpExceptionHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsErrorHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
@@ -20,9 +17,8 @@ use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
-use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\Requests\Request;
-use Assegai\Core\Http\Responses\Responder;
+use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\IAssegaiInterceptor;
@@ -33,8 +29,8 @@ use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Paths;
-use Exception;
 use Error;
+use Exception;
 use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -166,6 +162,7 @@ class App implements AppInterface
     $this->response = $this->host->switchToHttp()->getResponse();
 
     $this->responder = Responder::getInstance();
+    $this->responder->setTemplateEngine($this->templateEngine);
     $this->moduleManager->setRootModuleClass($this->rootModuleClass);
     EventManager::broadcast(EventChannel::APP_INIT_FINISH, new Event($this->host));
   }
@@ -266,7 +263,11 @@ class App implements AppInterface
         $this->handleRequest();
       }
     } catch (HttpException $exception) {
-      $this->httpExceptionHandler->handle($exception);
+      if (Environment::isProduction()) {
+        $this->httpExceptionHandler->handle($exception);
+      } else {
+        $this->exceptionHandler->handle($exception);
+      }
     } catch(Exception $exception) {
       $this->exceptionHandler->handle($exception);
     } catch (Error $error) {
