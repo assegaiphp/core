@@ -2,6 +2,9 @@
 
 use Assegai\Core\Components\ComponentFactory;
 use Assegai\Core\Components\Interfaces\ComponentInterface;
+use Assegai\Core\Enumerations\EventChannel;
+use Assegai\Core\Events\Event;
+use Assegai\Core\Events\EventManager;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Rendering\View;
@@ -76,4 +79,11 @@ function view(
 ): View
 {
   return new View($templateUrl, $data, $props, $component);
+}
+
+if (! function_exists('broadcast') ) {
+  function broadcast(EventChannel $channel, Event $event): void
+  {
+    EventManager::broadcast($channel, $event);
+  }
 }
