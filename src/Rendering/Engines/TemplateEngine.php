@@ -2,9 +2,9 @@
 
 namespace Assegai\Core\Rendering\Engines;
 
+use Assegai\Core\Attributes\Component;
 use Assegai\Core\Components\Interfaces\ComponentInterface;
 use Assegai\Core\Enumerations\Http\ContentType;
-use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
 
 abstract class TemplateEngine implements TemplateEngineInterface
@@ -33,6 +33,12 @@ abstract class TemplateEngine implements TemplateEngineInterface
    * @var ComponentInterface|null $rootComponent  The root component.
    */
   protected ?ComponentInterface $rootComponent = null;
+  /**
+   * The component attribute instance.
+   *
+   * @var Component|null
+   */
+  protected ?Component $rootComponentAttributeInstance = null;
 
   /**
    * Constructs a TemplateEngine.
@@ -75,6 +81,7 @@ abstract class TemplateEngine implements TemplateEngineInterface
   public function setRootComponent(ComponentInterface $rootComponent): self
   {
     $this->rootComponent = $rootComponent;
+    $this->rootComponentAttributeInstance = $rootComponent->getAttribute();
 
     return $this;
   }

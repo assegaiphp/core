@@ -48,9 +48,8 @@ class ApiResponse
   /**
    * Returns the data as an array.
    *
-   * @return array The data as an array.
+   * @return array{data: mixed, skip: int, limit: int, total: int} The data as an array.
    */
-  #[ArrayShape(['data' => 'mixed', 'skip' => 'int', 'limit' => 'int', 'total' => 'int'])]
   public function toArray(): array
   {
     $data = $this->getData();
@@ -86,9 +85,8 @@ class ApiResponse
   /**
    * Returns the data as an array.
    *
-   * @return array The data as an array.
+   * @return array{data: mixed, skip: int, limit: int, total: int} The data as an array.
    */
-  #[ArrayShape(['data' => "mixed", 'skip' => "int", 'limit' => "int", 'total' => "int"])]
   public function __serialize(): array
   {
     return $this->toArray();
@@ -111,7 +109,7 @@ class ApiResponse
       'double',
       'boolean' => strval($this->data),
       'string' => $this->data,
-      'array' => json_encode($this->data),
+      'array' => $this->getTotal() === 1 ? json_encode($this->data) :  $this->toJSON(),
       default => $this->toJSON()
     };
   }
