@@ -24,8 +24,10 @@ class ProjectConfig extends AbstractConfig
     public ContextType $type = ContextType::HTTP
   )
   {
-    $dotenv = Dotenv::createImmutable($this->getWorkingDirectory());
-    $dotenv->safeLoad();
+    if (file_exists(Path::join($this->getWorkingDirectory(), '.env'))) {
+      $dotenv = Dotenv::createImmutable($this->getWorkingDirectory());
+      $dotenv->safeLoad();
+    }
     parent::__construct();
   }
 
