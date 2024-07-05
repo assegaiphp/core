@@ -136,7 +136,7 @@ class App implements AppInterface
     protected readonly Injector $injector
   )
   {
-    EventManager::broadcast(EventChannel::APP_INIT_START, new Event());
+    broadcast(EventChannel::APP_INIT_START, new Event());
     $this->exceptionHandler = new WhoopsExceptionHandler();
     $this->errorHandler = new WhoopsErrorHandler();
     $this->httpExceptionHandler = new HttpExceptionHandler();
@@ -164,7 +164,7 @@ class App implements AppInterface
     $this->responder = Responder::getInstance();
     $this->responder->setTemplateEngine($this->templateEngine);
     $this->moduleManager->setRootModuleClass($this->rootModuleClass);
-    EventManager::broadcast(EventChannel::APP_INIT_FINISH, new Event($this->host));
+    broadcast(EventChannel::APP_INIT_FINISH, new Event($this->host));
   }
 
   /**
@@ -172,11 +172,11 @@ class App implements AppInterface
    */
   public function __destruct()
   {
-    EventManager::broadcast(EventChannel::APP_SHUTDOWN_START, new Event());
+    broadcast(EventChannel::APP_SHUTDOWN_START, new Event());
 
     // Decommission app properties
 
-    EventManager::broadcast(EventChannel::APP_SHUTDOWN_FINISH, new Event());
+    broadcast(EventChannel::APP_SHUTDOWN_FINISH, new Event());
   }
 
   /**
@@ -229,7 +229,7 @@ class App implements AppInterface
    */
   public function run(): void
   {
-    EventManager::broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
+    broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
     try {
       $resourcePath = Paths::getPublicPath($_SERVER['REQUEST_URI']);
 
@@ -255,7 +255,7 @@ class App implements AppInterface
         session_cache_expire($sessionExpire);
 
         session_start();
-        EventManager::broadcast(EventChannel::SESSION_START, new Event());
+        broadcast(EventChannel::SESSION_START, new Event());
         $this->resolveModules();
         $this->resolveProviders();
         $this->resolveDeclarations();
@@ -283,9 +283,9 @@ class App implements AppInterface
    */
   private function resolveModules(): void
   {
-    EventManager::broadcast(EventChannel::MODULE_RESOLUTION_START, new Event());
+    broadcast(EventChannel::MODULE_RESOLUTION_START, new Event());
     $this->moduleManager->buildModuleTokensList(rootToken: $this->rootModuleClass);
-    EventManager::broadcast(EventChannel::MODULE_RESOLUTION_FINISH, new Event($this->getModuleTokens()));
+    broadcast(EventChannel::MODULE_RESOLUTION_FINISH, new Event($this->getModuleTokens()));
   }
 
   /**
@@ -296,9 +296,9 @@ class App implements AppInterface
    */
   private function resolveProviders(): void
   {
-    EventManager::broadcast(EventChannel::PROVIDER_RESOLUTION_START, new Event());
+    broadcast(EventChannel::PROVIDER_RESOLUTION_START, new Event());
     $this->moduleManager->buildProviderTokensList();
-    EventManager::broadcast(EventChannel::PROVIDER_RESOLUTION_FINISH, new Event($this->getProviderTokens()));
+    broadcast(EventChannel::PROVIDER_RESOLUTION_FINISH, new Event($this->getProviderTokens()));
   }
 
   /**
@@ -308,9 +308,9 @@ class App implements AppInterface
    */
   private function resolveDeclarations(): void
   {
-    EventManager::broadcast(EventChannel::DECLARATION_RESOLUTION_START, new Event());
+    broadcast(EventChannel::DECLARATION_RESOLUTION_START, new Event());
     $this->moduleManager->buildDeclarationMap();
-    EventManager::broadcast(EventChannel::DECLARATION_RESOLUTION_FINISH, new Event());
+    broadcast(EventChannel::DECLARATION_RESOLUTION_FINISH, new Event());
   }
 
   /**
@@ -320,10 +320,10 @@ class App implements AppInterface
    */
   private function resolveControllers(): void
   {
-    EventManager::broadcast(EventChannel::CONTROLLER_RESOLUTION_START, new Event());
+    broadcast(EventChannel::CONTROLLER_RESOLUTION_START, new Event());
     $this->controllers = $this->controllerManager->buildControllerTokensList($this->getModuleTokens());
     $this->controllerMap = $this->controllerManager->getControllerPathTokenIdMap();
-    EventManager::broadcast(EventChannel::CONTROLLER_RESOLUTION_FINISH, new Event([$this->controllers, $this->controllerMap]));
+    broadcast(EventChannel::CONTROLLER_RESOLUTION_FINISH, new Event([$this->controllers, $this->controllerMap]));
   }
 
   /**
@@ -336,14 +336,14 @@ class App implements AppInterface
    */
   private function handleRequest(): void
   {
-    EventManager::broadcast(EventChannel::REQUEST_HANDLING_START, new Event());
+    broadcast(EventChannel::REQUEST_HANDLING_START, new Event());
     $this->request = $this->router->getRequest();
-    EventManager::broadcast(EventChannel::CONTROLLER_WILL_ACTIVATE, new Event());
+    broadcast(EventChannel::CONTROLLER_WILL_ACTIVATE, new Event());
     $this->activatedController =
       $this->router->getActivatedController(request: $this->request, controllerTokensList: $this->controllers);
-    EventManager::broadcast(EventChannel::CONTROLLER_DID_ACTIVATE, new Event($this->activatedController));
-    EventManager::broadcast(EventChannel::REQUEST_HANDLING_FINISH, new Event($this->request));
-    EventManager::broadcast(EventChannel::RESPONSE_START, new Event());
+    broadcast(EventChannel::CONTROLLER_DID_ACTIVATE, new Event($this->activatedController));
+    broadcast(EventChannel::REQUEST_HANDLING_FINISH, new Event($this->request));
+    broadcast(EventChannel::RESPONSE_START, new Event());
     $this->response = $this->router->handleRequest(request: $this->request, controller: $this->activatedController);
     $this->respond();
   }
@@ -358,7 +358,7 @@ class App implements AppInterface
    */
   private function respond(): void
   {
-    EventManager::broadcast(EventChannel::RESPONSE_FINISH, new Event());
+    broadcast(EventChannel::RESPONSE_FINISH, new Event());
     $this->responder->respond(response: $this->response);
   }
 

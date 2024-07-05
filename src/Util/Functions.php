@@ -2,6 +2,9 @@
 
 use Assegai\Core\Components\ComponentFactory;
 use Assegai\Core\Components\Interfaces\ComponentInterface;
+use Assegai\Core\Enumerations\EventChannel;
+use Assegai\Core\Events\Event;
+use Assegai\Core\Events\EventManager;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Rendering\View;
@@ -63,17 +66,33 @@ if (! function_exists('render') ) {
   }
 }
 
-/**
- * Renders a view.
- *
- * @throws RenderingException
- */
-function view(
-  string $templateUrl,
-  array $data = [],
-  ViewProperties|array $props = [],
-  ?string $component = null
-): View
-{
-  return new View($templateUrl, $data, $props, $component);
+if (! function_exists('view')) {
+  /**
+   * Renders a view.
+   *
+   * @throws RenderingException
+   */
+  function view(
+    string $templateUrl,
+    array $data = [],
+    ViewProperties|array $props = [],
+    ?string $component = null
+  ): View
+  {
+    return new View($templateUrl, $data, $props, $component);
+  }
+}
+
+if (! function_exists('broadcast') ) {
+  /**
+   * Broadcasts an event to the given channel.
+   *
+   * @param EventChannel $channel The channel to broadcast the event to.
+   * @param Event $event The event to broadcast.
+   * @return void
+   */
+  function broadcast(EventChannel $channel, Event $event): void
+  {
+    EventManager::broadcast($channel, $event);
+  }
 }
