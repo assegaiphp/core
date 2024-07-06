@@ -5,6 +5,7 @@ namespace Assegai\Core\Http;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IHttpArgumentsHost;
+use Assegai\Core\Session;
 
 /**
  * Class HttpArgumentsHost. Represents the HTTP arguments host.
@@ -73,10 +74,18 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   /**
    * The arguments passed to the handler. The arguments are the request, response, and next.
    *
-   * @return array An array of arguments passed to the handler.
+   * @return array{0: Request, 1: Response, 2: mixed} An array of arguments passed to the handler.
    */
   public function getArgs(): array
   {
     return [$this->getRequest(), $this->getResponse(), $this->getNext()];
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function getSession(): Session
+  {
+    return Session::getInstance();
   }
 }

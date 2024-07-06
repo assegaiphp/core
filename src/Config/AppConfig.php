@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Config;
 
+use Assegai\Core\Attributes\Injectable;
 use Assegai\Util\Path;
 
 /**
@@ -9,6 +10,7 @@ use Assegai\Util\Path;
  *
  * @package Assegai\Core\Config
  */
+#[Injectable]
 class AppConfig extends AbstractConfig
 {
   /**

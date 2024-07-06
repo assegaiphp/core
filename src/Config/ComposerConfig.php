@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Config;
 
+use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Config\AbstractConfig;
 use Assegai\Util\Path;
 
@@ -10,6 +11,7 @@ use Assegai\Util\Path;
  *
  * @package Assegai\Core\Config
  */
+#[Injectable]
 class ComposerConfig extends AbstractConfig
 {
   /**
