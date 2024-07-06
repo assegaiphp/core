@@ -2,17 +2,18 @@
 
 namespace Assegai\Core\Config;
 
+use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Enumerations\Http\ContextType;
 use Assegai\Core\Interfaces\ConfigInterface;
 use Assegai\Util\Path;
 use Dotenv\Dotenv;
-use RuntimeException;
 
 /**
  * The app configuration.
  *
  * @package Assegai\Core
  */
+#[Injectable]
 class ProjectConfig extends AbstractConfig
 {
   /**

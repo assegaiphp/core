@@ -4,6 +4,7 @@ namespace Assegai\Core\Interfaces;
 
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Session;
 
 /**
  * Specifies methods to obtain request and response objects.
@@ -35,4 +36,10 @@ interface IHttpArgumentsHost
    * @return array<int|string, mixed> The arguments passed to the controller.
    */
   public function getArgs(): array;
+
+  /**
+   * Returns the session object for the current request.
+   * @return Session The session object for the current request.
+   */
+  public function getSession(): Session;
 }

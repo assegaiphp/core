@@ -10,13 +10,35 @@ use ReflectionClass;
 use ReflectionException;
 
 /**
+ * Class View represents a view.
  *
+ * @package Assegai\Core\Rendering
  */
 class View
 {
+  /**
+   * The URL of the template.
+   *
+   * @var string
+   */
   public readonly string $templateUrl;
+  /**
+   * The component attribute.
+   *
+   * @var Component|null
+   */
   private ?Component $componentAttribute;
+  /**
+   * The view properties.
+   *
+   * @var ViewProperties
+   */
   readonly ViewProperties $props;
+  /**
+   * The data to render.
+   *
+   * @var array<string, mixed> $data
+   */
   readonly array $data;
 
   /**
@@ -34,32 +56,26 @@ class View
   )
   {
     $templatePath = Paths::join(Paths::getViewDirectory(), $templateUrl . '.php');
-    try
-    {
-      if ($this->component)
-      {
+    try {
+      if ($this->component) {
         $componentReflection = new ReflectionClass($this->component);
         $componentAttrReflections = $componentReflection->getAttributes(Component::class);
 
-        if (!$componentAttrReflections)
-        {
+        if (!$componentAttrReflections) {
           throw new RenderingException(message: "Missing Component attribute for {$this->component}");
         }
 
         /** @var ?Component $componentAttribute */
         $componentPath = Paths::getViewDirectory();
 
-        foreach ($componentAttrReflections as $componentAttrReflection)
-        {
+        foreach ($componentAttrReflections as $componentAttrReflection) {
           $this->componentAttribute = $componentAttrReflection->newInstance();
           $componentPath = dirname($componentReflection->getFileName());
           $templatePath = Paths::join($componentPath, $this->componentAttribute->templateUrl);
         }
 
         $data = get_object_vars($this->getComponent());
-      }
-      else
-      {
+      } else {
         $this->componentAttribute = null;
       }
 
@@ -67,17 +83,19 @@ class View
       $this->data = $data;
       $this->props = is_array($props) ? ViewProperties::fromArray($props) : $props;
 
-      if (! file_exists($this->templateUrl) )
-      {
+      if (! file_exists($this->templateUrl) ) {
         throw new RenderingException(message: 'Failed to open file at ' . $this->templateUrl);
       }
-    }
-    catch (ReflectionException $exception)
-    {
+    } catch (ReflectionException $exception) {
       die(new HttpException($exception->getMessage()));
     }
   }
 
+  /**
+   * Returns the component attribute.
+   *
+   * @return Component|null The component attribute.
+   */
   public function getComponent(): ?Component
   {
     return $this->componentAttribute;
