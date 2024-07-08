@@ -3,6 +3,7 @@
 namespace Assegai\Core\Routing;
 
 use Assegai\Core\Attributes\Controller;
+use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Delete;
 use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Head;
@@ -10,6 +11,10 @@ use Assegai\Core\Attributes\Http\Options;
 use Assegai\Core\Attributes\Http\Patch;
 use Assegai\Core\Attributes\Http\Post;
 use Assegai\Core\Attributes\Http\Put;
+use Assegai\Core\Attributes\Http\Query;
+use Assegai\Core\Attributes\Param;
+use Assegai\Core\Attributes\Req;
+use Assegai\Core\Attributes\Res;
 use Assegai\Core\Attributes\UseGuards;
 use Assegai\Core\Attributes\UseInterceptors;
 use Assegai\Core\Consumers\GuardsConsumer;
@@ -27,12 +32,14 @@ use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
+use Assegai\Core\Util\TypeManager;
 use Assegai\Core\Util\Validator;
 use Error;
 use Exception;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+use ReflectionParameter;
 use ReflectionUnionType;
 use stdClass;
 
@@ -687,7 +694,7 @@ HTML);
       };
       $isStandardClassType = is_subclass_of($paramTypeName, stdClass::class) || $paramTypeName === 'stdClass';
 
-      $dependencies[] = match(true) {
+      $dependency = match(true) {
         $paramIsUnionType => match(true) {
           $param->getType()->getTypes()[0]->isBuiltin(),
           $param->getType()->getTypes()[1]->isBuiltin() => $this->injector->resolveBuiltIn($param, $request, true),
@@ -696,6 +703,8 @@ HTML);
         $isStandardClassType => $this->injector->resolveBuiltIn($param, $request),
         default => $this->injector->resolve($paramTypeName, $paramAttributeReflections)
       };
+
+      $dependencies[] = $this->bindRequestHandlerAttributes($param, $dependency, $request);
     }
 
     return $dependencies;
@@ -711,5 +720,92 @@ HTML);
   private function isRootController(ReflectionClass $controllerReflection): bool
   {
     return $controllerReflection->getName() === $this->controllerManager->getRootControllerClass();
+  }
+
+  /**
+   * Binds the request handler attributes to the given parameter.
+   *
+   * @param ReflectionParameter $param
+   * @param mixed $dependency
+   * @param Request $request
+   * @return mixed
+   * @throws EntryNotFoundException
+   * @throws HttpException
+   * @throws ReflectionException
+   */
+  private function bindRequestHandlerAttributes(ReflectionParameter $param, mixed $dependency, Request $request): mixed
+  {
+    $paramAttributes = $param->getAttributes();
+    $paramTypeName = $param->getType()->getName();
+
+    foreach ($paramAttributes as $attribute) {
+      $paramAttributeArgs = $attribute->getArguments();
+      $paramAttributeInstance = $attribute->newInstance();
+
+      switch ($paramAttributeInstance::class) {
+        case Param::class:
+          if (empty($paramAttributeArgs)) {
+            return ($paramTypeName === 'string')
+              ? json_encode($request->getParams())
+              : (object)$request->getParams();
+          }
+          return $request->getParams()[$param->getPosition()] ??
+            ($param->isOptional() ? $param->getDefaultValue() : null);
+
+        case Query::class:;
+          if (empty($paramAttributeArgs)) {
+            return ($paramTypeName === 'string')
+              ? json_encode($request->getQuery())
+              : (object)$request->getQuery();
+          }
+
+          return $request->getQuery()->toArray()[$param->getName()] ??
+            ($param->isOptional() ? $param->getDefaultValue() : null);
+
+        case Body::class:
+          $body = null;
+          if (empty($paramAttributeArgs)) {
+            $body = ($paramTypeName === 'string')
+              ? json_encode($request->getBody())
+              : $request->getBody();
+          } else {
+            $key = $param->getName();
+            $body = $paramAttributeInstance->value ?? null;
+          }
+
+          return is_object($body) ? TypeManager::castObjectToUserType($body, $paramTypeName) : $body;
+
+        case Req::class:
+          return $request;
+
+        case Res::class:
+          return Response::getInstance();
+
+        default:
+          if (property_exists($paramAttributeInstance, 'value')) {
+            return $paramAttributeInstance->value;
+          }
+//        case Request::class:
+//          $dependency = $request;
+//          break;
+//        case Response::class:
+//          $dependency = Response::getInstance();
+//          break;
+//        case Body::class:
+//          $body = Request::getInstance()->getBody();
+//          if ($body->value) {
+//            $dependency = $body->value;
+//          } else {
+//            foreach ($body as $key => $value) {
+//              if (property_exists($dependency, $key)) {
+//                $dependency->$key = $value;
+//              }
+//            }
+//          }
+//          break;
+      }
+    }
+
+    return $dependency;
   }
 }

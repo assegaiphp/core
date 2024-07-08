@@ -21,7 +21,7 @@ use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
 use Assegai\Core\Util\TypeManager;
-use Assegai\Orm\Attributes\InjectRepository;
+use Codeception\Attribute\Skip;
 use ReflectionClass;
 use ReflectionEnum;
 use ReflectionException;
@@ -248,12 +248,13 @@ final class Injector implements ITokenStoreOwner, IContainer
           return $param->allowsNull() ? null : [];
         }
 
-        $repositoryAttributes = $param->getAttributes(InjectRepository::class);
+        $repositoryAttributes = $param->getAttributes('Assegai\Orm\Attributes\InjectRepository');
 
         foreach ( $repositoryAttributes as $reflectionRepoAttr ) {
-          /** @var InjectRepository $injectRepositoryInstance */
           $injectRepositoryInstance = $reflectionRepoAttr->newInstance();
-          return $injectRepositoryInstance->repository;
+          if (property_exists($injectRepositoryInstance, 'repository')) {
+            return $injectRepositoryInstance->repository;
+          }
         }
 
         # TODO: Check if param has Injectable class or attribute

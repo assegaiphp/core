@@ -3,7 +3,6 @@
     "description": "A progressive PHP framework for building efficient and scalable server-side applications.",
     "type": "library",
     "require-dev": {
-        "assegaiphp/orm": ">=0.2",
         "codeception/codeception": "^5.0",
         "codeception/module-phpbrowser": "*",
         "codeception/module-asserts": "*",
@@ -21,7 +20,6 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Assegai\\Orm\\": "../orm/src/",
             "Assegai\\Form\\": "../forms/src/",
             "Tests\\Mocks\\": "tests/Mocks/"
         }
