@@ -113,26 +113,6 @@ class Responder implements ResponderInterface
         ]
       );
 
-//    $responseString = match(true) {
-//      is_object($response) => match(true) {
-//        $response instanceof Response &&
-//        $this->isComponent($response->getBody()) => $this->templateEngine->setRootComponent($response->getBody())->render(),
-//        is_callable($response),
-//        $response instanceof Closure => $response(),
-//        default => json_encode($response) ?: $response
-//      },
-//      is_countable($response) => (is_array($response) && isset($response[0]) && is_scalar($response[0]) ?  : new ApiResponse(data: $response) ),
-//      ($response instanceof Response) => match($response->getContentType()) {
-//        ContentType::JSON => match (true) {
-//          ($response->getBody() instanceof DeleteResult) => strval($response->getBody()->affected),
-//          ($response->getBody() instanceof InsertResult),
-//          ($response->getBody() instanceof UpdateResult) => json_encode($response->getBody()->getData()),
-//          default => new ApiResponse(data: $response->getBody())
-//        },
-//        default => $response->getBody()
-//      }
-//    };
-
     $this->context->respond($response, $code);
   }
 

@@ -3,16 +3,9 @@
 namespace Assegai\Core\Http\Responses\Enumerations;
 
 use Assegai\Core\Attributes\Component;
-use Assegai\Core\Attributes\Res;
-use Assegai\Core\Enumerations\Http\ContentType;
-use Assegai\Core\Http\Responses\ApiResponse;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Rendering\View;
-use Assegai\Orm\Queries\QueryBuilder\Results\DeleteResult;
-use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
-use Assegai\Orm\Queries\QueryBuilder\Results\UpdateResult;
 use ReflectionClass;
-use ReflectionException;
 
 /**
  * Enumerates the types of responders.
@@ -38,8 +31,14 @@ enum ResponderType
   {
     if ($response instanceof Response) {
       $responseBody = $response->getBody();
+      $responseBodyClassName = get_class($responseBody);
 
-      if ($responseBody instanceof DeleteResult || $responseBody instanceof InsertResult || $responseBody instanceof UpdateResult) {
+      if (
+        str_contains($responseBodyClassName, 'DeleteResult') ||
+        str_contains($responseBodyClassName, 'FindResult') ||
+        str_contains($responseBodyClassName, 'InsertResult') ||
+        str_contains($responseBodyClassName, 'UpdateResult')
+      ) {
         return ResponderType::JSON;
       }
 
