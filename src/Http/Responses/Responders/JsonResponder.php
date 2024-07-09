@@ -7,9 +7,6 @@ use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Responses\ApiResponse;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
 use Assegai\Core\Http\Responses\Response;
-use Assegai\Orm\Queries\QueryBuilder\Results\DeleteResult;
-use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
-use Assegai\Orm\Queries\QueryBuilder\Results\UpdateResult;
 
 class JsonResponder implements ResponderInterface
 {
@@ -25,16 +22,20 @@ class JsonResponder implements ResponderInterface
 
     if ($response instanceof Response) {
       $responseBody = $response->getBody();
+      $responseBodyClassName = get_class($responseBody);
 
       if (is_object($responseBody) || is_array($responseBody)) {
+        if ( str_contains($responseBodyClassName, 'FindResult') ) {
+          exit(json_encode($responseBody->getData()));
+        }
 
-        if ($responseBody instanceof UpdateResult || $responseBody instanceof InsertResult) {
+        if ( str_contains($responseBodyClassName, 'UpdateResult') || str_contains($responseBodyClassName, 'InsertResult') ) {
           if (method_exists($responseBody, 'getData')) {
             exit(json_encode($responseBody->getData()));
           }
         }
 
-        if ($responseBody instanceof DeleteResult) {
+        if ( str_contains($responseBodyClassName, 'DeleteResult') ) {
           exit($responseBody->affected);
         }
 

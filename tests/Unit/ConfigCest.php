@@ -7,7 +7,6 @@ use Assegai\Core\Config;
 use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Exceptions\ConfigurationException;
 use Assegai\Core\Util\Paths;
-use Assegai\Orm\Enumerations\DataSourceType;
 use Codeception\Attribute\Skip;
 use Exception;
 use Tests\Support\UnitTester;
@@ -101,7 +100,7 @@ class ConfigCest
 
   public function testTheDatabaseMethod(UnitTester $I): void
   {
-    $database = Config::database(DataSourceType::MYSQL->value, $this->databaseName);
+    $database = Config::database('mysql', $this->databaseName);
     $I->assertNotEmpty($database);
 
     $invalidDatabaseType = 'fakesql';
@@ -111,7 +110,7 @@ class ConfigCest
 
   public function testTheSetMethod(UnitTester $I): void
   {
-    $databaseType = DataSourceType::POSTGRESQL->value;
+    $databaseType = 'pgsql';
     $databaseName = 'new_assegai_test_db';
     $newDatabase = [
       'host' => 'localhost',

@@ -5,6 +5,7 @@ namespace Assegai\Core;
 use Assegai\Core\Attributes\Component;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Modules\Module;
+use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Util\Debug\Log;
@@ -122,13 +123,11 @@ class ModuleManager
    */
   public function buildModuleTokensList(string $rootToken): void
   {
-    try
-    {
+    try {
       $reflectionModule = new ReflectionClass($rootToken);
       $this->lastLoadedAttributes = $this->loadModuleAttributes($reflectionModule);
 
-      if (!$this->isValidModule($this->lastLoadedAttributes))
-      {
+      if (!$this->isValidModule($this->lastLoadedAttributes)) {
         Log::error(__CLASS__, "Invalid Token ID: $rootToken");
         throw new HttpException();
       }
@@ -141,40 +140,31 @@ class ModuleManager
       $this->moduleTokens[$rootToken] = $reflectionModuleAttribute;
 
       # 2. Store config
-      if (isset($args['config']))
-      {
+      if (isset($args['config'])) {
         $this->config = array_merge($this->config, $args['config']);
       }
 
       # 3. Store declarations
-      if (isset($args['declarations']))
-      {
+      if (isset($args['declarations'])) {
         $this->declarationTokens = array_merge($this->declarationTokens, $args['declarations']);
       }
 
       # 4. For each import, build the module tokens list
-      foreach ($args['imports'] ?? [] as $import)
-      {
+      foreach ($args['imports'] ?? [] as $import) {
         $this->buildModuleTokensList($import);
       }
 
       # 5. Store exported tokens
-      foreach ($args['exports'] ?? [] as $export)
-      {
+      foreach ($args['exports'] ?? [] as $export) {
         $resolvedExport = $this->injector->resolve($export);
 
-        if ($resolvedExport instanceof Module)
-        {
+        if ($resolvedExport instanceof Module) {
           $this->buildModuleTokensList($export);
-        }
-        else
-        {
+        } else {
           $this->injector->add($export, $resolvedExport);
         }
       }
-    }
-    catch (ReflectionException $e)
-    {
+    } catch (ReflectionException $e) {
       throw new HttpException($e->getMessage());
     }
   }
@@ -247,19 +237,23 @@ class ModuleManager
    *
    * @return void
    * @throws EntryNotFoundException If the provider is not found.
+   * @throws ContainerException
+   * @throws ReflectionException
    */
   public function buildProviderTokensList(): void
   {
-    foreach ($this->moduleTokens as $module)
-    {
+    foreach ($this->moduleTokens as $module) {
       /** @var array{imports: string[], exports: string[], providers: string[]} $args */
       $args = $module->getArguments();
 
-      foreach ($args['providers'] ?? [] as $tokenId)
-      {
-        if ($provider = $this->validateProvider($tokenId))
-        {
+      foreach ($args['providers'] ?? [] as $tokenId) {
+        if ($provider = $this->validateProvider($tokenId)) {
           $this->providerTokens[$tokenId] = $provider;
+          $instance = $this->injector->resolve($tokenId);
+
+          if ($instance) {
+            $this->injector->add($tokenId, $instance);
+          }
         }
       }
     }
@@ -274,14 +268,11 @@ class ModuleManager
    */
   private function validateProvider(string $tokenId): ?ReflectionClass
   {
-    try
-    {
+    try {
       $reflectionClass = new ReflectionClass($tokenId);
       $this->lastLoadedAttributes = $reflectionClass->getAttributes(Injectable::class);
       return !empty($this->lastLoadedAttributes) ? $reflectionClass : null;
-    }
-    catch (ReflectionException)
-    {
+    } catch (ReflectionException) {
       throw new EntryNotFoundException($tokenId);
     }
   }

@@ -22,7 +22,7 @@ use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\IAssegaiInterceptor;
-use Assegai\Core\Interfaces\IConsumer;
+use Assegai\Core\Interfaces\ConsumerInterface;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
@@ -188,7 +188,7 @@ class App implements AppInterface
       $this->appConfig = $config;
     }
 
-    if ($config instanceof IConsumer) {
+    if ($config instanceof ConsumerInterface) {
       // TODO: Complete configuration logic
     }
 

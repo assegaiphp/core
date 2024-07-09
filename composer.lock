@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a45a44a23ca3572022be9994d0403cd6",
+    "content-hash": "ed55875e5e277bd43580351ca4105107",
     "packages": [
         {
             "name": "arubacao/tld-checker",
@@ -1115,55 +1115,6 @@
         }
     ],
     "packages-dev": [
-        {
-            "name": "assegaiphp/orm",
-            "version": "0.2.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/assegaiphp/orm.git",
-                "reference": "ff938f35ff8ed77c6138271f489eaeb6178105b1"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/assegaiphp/orm/zipball/ff938f35ff8ed77c6138271f489eaeb6178105b1",
-                "reference": "ff938f35ff8ed77c6138271f489eaeb6178105b1",
-                "shasum": ""
-            },
-            "require": {
-                "ext-curl": "*",
-                "ext-intl": "*",
-                "ext-pdo": "*",
-                "ext-pdo_mysql": "*",
-                "ext-pdo_pgsql": "*",
-                "ext-pdo_sqlite": "*",
-                "php": ">=8.1"
-            },
-            "require-dev": {
-                "codeception/codeception": "^4.2"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Assegai\\Orm\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Andrew Masiye",
-                    "email": "amasiye313@gmail.com"
-                }
-            ],
-            "description": "AssegaiORM is an ORM written in modern PHP. It supports both Active Record and Data Mapper patterns. AssegaiORM is highly influenced by other ORMs, such as TypeORM, Doctrine and Entity Framework.",
-            "support": {
-                "issues": "https://github.com/assegaiphp/orm/issues",
-                "source": "https://github.com/assegaiphp/orm/tree/0.2.0"
-            },
-            "time": "2022-08-17T21:09:42+00:00"
-        },
         {
             "name": "behat/gherkin",
             "version": "v4.9.0",

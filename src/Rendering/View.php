@@ -65,9 +65,6 @@ class View
           throw new RenderingException(message: "Missing Component attribute for {$this->component}");
         }
 
-        /** @var ?Component $componentAttribute */
-        $componentPath = Paths::getViewDirectory();
-
         foreach ($componentAttrReflections as $componentAttrReflection) {
           $this->componentAttribute = $componentAttrReflection->newInstance();
           $componentPath = dirname($componentReflection->getFileName());
