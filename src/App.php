@@ -35,6 +35,8 @@ use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
+use Symfony\Component\Console\Logger\ConsoleLogger;
+use Symfony\Component\Console\Output\ConsoleOutput;
 use Throwable;
 
 //use Psr\Log\LoggerAwareInterface;
@@ -137,9 +139,10 @@ class App implements AppInterface
   )
   {
     broadcast(EventChannel::APP_INIT_START, new Event());
-    $this->exceptionHandler = new WhoopsExceptionHandler();
-    $this->errorHandler = new WhoopsErrorHandler();
-    $this->httpExceptionHandler = new HttpExceptionHandler();
+    $this->setLogger(new ConsoleLogger(new ConsoleOutput()));
+    $this->exceptionHandler = new WhoopsExceptionHandler($this->logger);
+    $this->errorHandler = new WhoopsErrorHandler($this->logger);
+    $this->httpExceptionHandler = new HttpExceptionHandler($this->logger);
 
     set_exception_handler(function (Throwable $exception) {
       if (Environment::isProduction()) {
