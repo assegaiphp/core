@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Exceptions\Interfaces;
 
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -11,6 +12,13 @@ use Throwable;
  */
 interface ExceptionHandlerInterface
 {
+  /**
+   * ExceptionHandlerInterface constructor.
+   *
+   * @param LoggerInterface $logger The logger.
+   */
+  public function __construct(LoggerInterface $logger);
+
   /**
    * Handles an exception.
    *

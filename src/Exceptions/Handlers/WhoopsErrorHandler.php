@@ -4,6 +4,7 @@ namespace Assegai\Core\Exceptions\Handlers;
 
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use ErrorException;
+use Psr\Log\LoggerInterface;
 use Throwable;
 use Whoops\Handler\PrettyPageHandler;
 use Whoops\Run;
@@ -25,7 +26,7 @@ class WhoopsErrorHandler implements ErrorHandlerInterface
   /**
    * WhoopsExceptionHandler constructor.
    */
-  public function __construct()
+  public function __construct(protected LoggerInterface $logger)
   {
     try {
       $this->whoops = new Run();

@@ -7,6 +7,7 @@ use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
 use Assegai\Core\Http\HttpStatus;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -16,6 +17,13 @@ use Throwable;
  */
 class DefaultExceptionHandler implements ExceptionHandlerInterface
 {
+  /**
+   * @inheritDoc
+   */
+  public function __construct(protected LoggerInterface $logger)
+  {
+  }
+
   /**
    * @inheritDoc
    */
