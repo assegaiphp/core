@@ -203,13 +203,11 @@ class ModuleManager implements SingletonInterface
    */
   public function buildDeclarationMap(): void
   {
-    $this->logger->error("Building MODULE declaration map for $this->rootModuleClass");
     try {
       foreach ($this->declarationTokens as $declarationToken) {
         if (in_array($declarationToken, $this->builtDeclarations)) {
           continue;
         }
-        $this->logger->error("Building declaration map for $declarationToken");
         $componentClassReflection = new ReflectionClass($declarationToken);
         $componentAttributeInstance = $this->getComponentAttribute($componentClassReflection);
 
