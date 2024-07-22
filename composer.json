@@ -40,7 +40,8 @@
         "assegaiphp/util": "^0.4.2",
         "assegaiphp/forms": "^0.4.4",
         "filp/whoops": "^2.15",
-        "twig/markdown-extra": "^3.10"
+        "twig/markdown-extra": "^3.10",
+        "erusev/parsedown": "^1.7"
     },
     "scripts": {
         "test": "vendor/bin/codecept run Unit",

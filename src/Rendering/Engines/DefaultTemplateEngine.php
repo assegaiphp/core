@@ -10,11 +10,15 @@ use Assegai\Core\Routing\Router;
 use Assegai\Util\Path;
 use ReflectionClass;
 use ReflectionException;
+use RuntimeException;
 use Twig\Environment;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
 use Twig\Error\SyntaxError;
+use Twig\Extra\Markdown\DefaultMarkdown;
+use Twig\Extra\Markdown\MarkdownRuntime;
 use Twig\Loader\FilesystemLoader;
+use Twig\RuntimeLoader\RuntimeLoaderInterface;
 
 /**
  * The default template engine.
@@ -75,9 +79,19 @@ class DefaultTemplateEngine extends TemplateEngine
   ])
   {
     parent::__construct();
-    $this->templatesDirectory = Path::join(getcwd() ?: throw new \RuntimeException('No current working directory'), 'src');
+    $this->templatesDirectory = Path::join(getcwd() ?: throw new RuntimeException('No current working directory'), 'src');
     $this->loader = new FilesystemLoader($this->templatesDirectory);
     $this->twig = new Environment($this->loader);
+    $this->twig->addRuntimeLoader(new class implements RuntimeLoaderInterface {
+      public function load($class): ?MarkdownRuntime
+      {
+        if (MarkdownRuntime::class === $class) {
+          return new MarkdownRuntime(new DefaultMarkdown());
+        }
+
+        return null;
+      }
+    });
     $this->moduleManager = $this->options['module_manager'] ?? ModuleManager::getInstance();
   }
 
