@@ -32,6 +32,7 @@ class ComponentResponder implements ResponderInterface
 
   /**
    * @inheritDoc
+   * @throws InternalServerErrorException
    */
   public function respond(mixed $response, int|HttpStatusCode|null $code = null): never
   {

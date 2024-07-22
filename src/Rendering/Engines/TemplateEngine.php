@@ -41,6 +41,48 @@ abstract class TemplateEngine implements TemplateEngineInterface
   protected ?Component $rootComponentAttributeInstance = null;
 
   /**
+   * The title.
+   *
+   * @var string $title
+   */
+  protected string $title = '';
+
+  /**
+   * The style. Add your custom styles here.
+   *
+   * @var string $style
+   */
+  protected string $style = '';
+
+  /**
+   * The meta. Add your custom meta tags here.
+   *
+   * @var array $meta
+   */
+  protected array $meta = [];
+
+  /**
+   * The links. Add your custom links here.
+   *
+   * @var array $links
+   */
+  protected array $links = [];
+
+  /**
+   * The scripts. Add your custom scripts here.
+   *
+   * @var array $scripts
+   */
+  protected array $scripts = [];
+
+  /**
+   * The base URL.
+   *
+   * @var string|null $base
+   */
+  protected ?string $base = null;
+
+  /**
    * Constructs a TemplateEngine.
    */
   public function __construct()

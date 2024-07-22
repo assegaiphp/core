@@ -3,6 +3,7 @@
 namespace Assegai\Core\Exceptions\Handlers;
 
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
+use Psr\Log\LoggerInterface;
 use Throwable;
 use Whoops\Handler\PrettyPageHandler;
 use Whoops\Run;
@@ -23,8 +24,10 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
 
   /**
    * WhoopsExceptionHandler constructor.
+   *
+   * @inheritDoc
    */
-  public function __construct()
+  public function __construct(protected LoggerInterface $logger)
   {
     try {
       $this->whoops = new Run();
@@ -34,6 +37,7 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
       if (! headers_sent() ) {
         header('Content-Type: text/html');
       }
+      $this->logger->error($throwable->getMessage());
       echo $throwable->getMessage();
       exit(1);
     }
@@ -47,6 +51,7 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
     if (! headers_sent() ) {
       header('Content-Type: text/html');
     }
+    $this->logger->error($exception->getMessage());
     echo $this->whoops->handleException($exception);
   }
 }

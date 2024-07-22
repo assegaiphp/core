@@ -54,8 +54,7 @@ class ApiResponse
   {
     $data = $this->getData();
 
-    if ($this->getTotal() === 1 && is_array($data))
-    {
+    if ($this->getTotal() === 1 && is_array($data)) {
       return $data;
     }
 
@@ -74,12 +73,11 @@ class ApiResponse
    */
   public function toJSON(): string
   {
-    if ($this->getTotal() === 1 && is_array($this->getData()))
-    {
-      return json_encode($this->getData()[0]);
+    if ($this->getTotal() === 1 && is_array($this->getData())) {
+      return json_encode($this->getData()[0], JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
     }
 
-    return json_encode($this->toArray());
+    return json_encode($this->toArray(), JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
   }
 
   /**
@@ -103,7 +101,7 @@ class ApiResponse
       'object' => match(true) {
         method_exists($this->data, 'toJSON') => $this->data->toJSON(),
         $this->isResultObject => $this->toJSON(),
-        default => json_encode($this->data)
+        default => json_encode($this->data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
       },
       'integer',
       'double',

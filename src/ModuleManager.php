@@ -8,17 +8,22 @@ use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
+use Assegai\Core\Interfaces\SingletonInterface;
 use Assegai\Core\Util\Debug\Log;
+use Assegai\Util\Path;
+use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
+use Symfony\Component\Console\Logger\ConsoleLogger;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 /**
  * The ModuleManager class is responsible for managing the modules.
  *
  * @package Assegai\Core
  */
-class ModuleManager
+class ModuleManager implements SingletonInterface
 {
   protected static ?ModuleManager $instance = null;
 
@@ -31,42 +36,61 @@ class ModuleManager
   protected array $moduleTokens = [];
 
   /**
-   * @var array A list of all the controller tokens
+   * @var array<class-string> A list of all the controller tokens
    */
   protected array $controllerTokensList = [];
 
   /**
-   * @var array A list of all the imported module tokens
+   * @var array<class-string> A list of all the imported module tokens
    */
   protected array $providerTokens = [];
 
   /**
-   * @var array A list of all the declared component class names.
+   * @var array<class-string> A list of all the declared component class names.
    */
   protected array $declarationTokens = [];
 
   /**
-   * @var array A map of all the declared component attributes.
+   * @var array<string, Component> A map of all the declared component attributes.
    */
   protected array $declaredAttributes = [];
 
   /**
-   * @var array A map of all the declared component reflections.
+   * @var array<string, ReflectionClass> A map of all the declared component reflections.
    */
   protected array $declaredReflections = [];
 
   /**
-   * @var array A map of all the declared components.
+   * @var array<string, object> A map of all the declared components.
    */
   protected array $declaredClassInstances = [];
 
   /**
-   * @var array
+   * @var array<string, string> A map of all the declared styles.
+   */
+  protected array $declaredStyles = [];
+
+  /**
+   * @var array<string, mixed> The configuration.
    */
   protected array $config = [];
 
+  /**
+   * @var Injector The injector.
+   */
   protected Injector $injector;
+
+  /**
+   * @var class-string The root module class.
+   */
   protected string $rootModuleClass = '';
+
+  protected LoggerInterface $logger;
+
+  /**
+   * @var int The build iteration.
+   */
+  static int $buildIteration = 0;
 
   /**
    * Constructs a ModuleManager
@@ -74,6 +98,7 @@ class ModuleManager
   private final function __construct()
   {
     $this->injector = Injector::getInstance();
+    $this->logger = new ConsoleLogger(new ConsoleOutput());
   }
 
   /**
@@ -90,8 +115,6 @@ class ModuleManager
 
     return self::$instance;
   }
-
-  static int $buildIteration = 0;
 
   /**
    * Sets the root module class. This is the entry point of the application.
@@ -169,35 +192,55 @@ class ModuleManager
     }
   }
 
+  protected array $loadedStyles = [];
+  protected array $builtDeclarations = [];
+
   /**
    * Builds a map of all the declared components.
    *
    * @return void
+   * @throws HttpException If something went wrong while building the declaration map.
    */
   public function buildDeclarationMap(): void
   {
-    try
-    {
-      foreach ($this->declarationTokens as $declarationToken)
-      {
+    try {
+      foreach ($this->declarationTokens as $declarationToken) {
+        if (in_array($declarationToken, $this->builtDeclarations)) {
+          continue;
+        }
         $componentClassReflection = new ReflectionClass($declarationToken);
-        $componentAttribute = $this->getComponentAttribute($componentClassReflection);
+        $componentAttributeInstance = $this->getComponentAttribute($componentClassReflection);
 
-        if (!$componentAttribute)
-        {
+        if (!$componentAttributeInstance) {
           continue;
         }
 
         // TODO: Refactor declarations to allow components, directives and pipes
         // See https://angular.io/guide/feature-modules
-        $this->declaredAttributes[$componentAttribute->selector] = $componentAttribute;
-        $this->declaredReflections[$componentAttribute->selector] = $componentClassReflection;
-        $this->declaredClassInstances[$componentAttribute->selector] = $componentClassReflection->newInstance();
+        $this->declaredAttributes[$componentAttributeInstance->selector] = $componentAttributeInstance;
+        $this->declaredReflections[$componentAttributeInstance->selector] = $componentClassReflection;
+        $this->declaredClassInstances[$componentAttributeInstance->selector] = $componentClassReflection->newInstance();
+        $this->declaredStyles[$componentAttributeInstance->selector] = '';
+
+        if ($componentAttributeInstance->styleUrls) {
+          foreach ($componentAttributeInstance->styleUrls as $styleUrl) {
+            $stylesheetFilename = Path::normalize(Path::join(dirname($componentClassReflection->getFileName()), $styleUrl));
+            if (in_array($stylesheetFilename, $this->loadedStyles)) {
+              continue;
+            }
+            $this->declaredStyles[$componentAttributeInstance->selector] .= file_get_contents($stylesheetFilename) ?: throw new HttpException('Failed to read stylesheet file.');
+            $this->loadedStyles[] = $stylesheetFilename;
+          }
+        } else {
+          foreach ($componentAttributeInstance->styles as $style) {
+            $this->declaredStyles[$componentAttributeInstance->selector] .= $style;
+          }
+        }
+
+        $this->builtDeclarations[] = $declarationToken;
       }
-    }
-    catch (ReflectionException $exception)
-    {
-      die(new HttpException($exception->getMessage()));
+    } catch (ReflectionException $exception) {
+      throw new HttpException($exception->getMessage());
     }
   }
 
@@ -330,6 +373,16 @@ class ModuleManager
   }
 
   /**
+   * Returns a list of all the declared styles.
+   *
+   * @return string[] A list of all the declared styles.
+   */
+  public function getDeclaredStyles(): array
+  {
+    return $this->declaredStyles;
+  }
+
+  /**
    * Returns the component attribute for the given reflection.
    *
    * @param ReflectionClass $reflection The reflection class.
@@ -339,8 +392,7 @@ class ModuleManager
   {
     $componentAttributes = $reflection->getAttributes(Component::class);
 
-    if (!$componentAttributes)
-    {
+    if (!$componentAttributes) {
       return false;
     }
 

@@ -420,11 +420,7 @@ final class Router
     # Resolve handler parameters
     $dependencies = $this->resolveHandlerParameters($activatedHandler, $request);
 
-    try {
-      $result = $activatedHandler->invokeArgs($controller, $dependencies);
-    } catch (Exception|Error $e) {
-      throw new HttpException(message: $e->getMessage());
-    }
+    $result = $activatedHandler->invokeArgs($controller, $dependencies);
 
     if ($result instanceof Response) {
       return $result;

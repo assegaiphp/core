@@ -31,22 +31,23 @@ enum ResponderType
   {
     if ($response instanceof Response) {
       $responseBody = $response->getBody();
-      $responseBodyClassName = get_class($responseBody);
-
-      if (
-        str_contains($responseBodyClassName, 'DeleteResult') ||
-        str_contains($responseBodyClassName, 'FindResult') ||
-        str_contains($responseBodyClassName, 'InsertResult') ||
-        str_contains($responseBodyClassName, 'UpdateResult')
-      ) {
-        return ResponderType::JSON;
-      }
-
-      if ($responseBody instanceof View) {
-        return ResponderType::VIEW;
-      }
 
       if (is_object($responseBody)) {
+        $responseBodyClassName = get_class($responseBody);
+
+        if (
+          str_contains($responseBodyClassName, 'DeleteResult') ||
+          str_contains($responseBodyClassName, 'FindResult') ||
+          str_contains($responseBodyClassName, 'InsertResult') ||
+          str_contains($responseBodyClassName, 'UpdateResult')
+        ) {
+          return ResponderType::JSON;
+        }
+
+        if ($responseBody instanceof View) {
+          return ResponderType::VIEW;
+        }
+
         if (self::isComponent($responseBody)) {
           return ResponderType::COMPONENT;
         }

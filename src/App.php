@@ -35,6 +35,8 @@ use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
+use Symfony\Component\Console\Logger\ConsoleLogger;
+use Symfony\Component\Console\Output\ConsoleOutput;
 use Throwable;
 
 //use Psr\Log\LoggerAwareInterface;
@@ -137,12 +139,17 @@ class App implements AppInterface
   )
   {
     broadcast(EventChannel::APP_INIT_START, new Event());
-    $this->exceptionHandler = new WhoopsExceptionHandler();
-    $this->errorHandler = new WhoopsErrorHandler();
-    $this->httpExceptionHandler = new HttpExceptionHandler();
+    $this->setLogger(new ConsoleLogger(new ConsoleOutput()));
+    $this->exceptionHandler = new WhoopsExceptionHandler($this->logger);
+    $this->errorHandler = new WhoopsErrorHandler($this->logger);
+    $this->httpExceptionHandler = new HttpExceptionHandler($this->logger);
 
     set_exception_handler(function (Throwable $exception) {
-      $this->exceptionHandler->handle($exception);
+      if (Environment::isProduction()) {
+        $this->httpExceptionHandler->handle($exception);
+      } else {
+        $this->exceptionHandler->handle($exception);
+      }
     });
 
     set_error_handler(function ($errno, $errstr, $errfile, $errline) {
@@ -154,7 +161,13 @@ class App implements AppInterface
     $this->composerConfig = new ComposerConfig();
     $this->projectConfig = new ProjectConfig();
     $this->host = new ArgumentsHost();
-    $this->templateEngine = new DefaultTemplateEngine();
+    $this->templateEngine = new DefaultTemplateEngine([
+      'root_module_class' => $this->rootModuleClass,
+      'router' => $this->router,
+      'module_manager' => $this->moduleManager,
+      'controller_manager' => $this->controllerManager,
+      'injector' => $this->injector,
+    ]);
     Log::init();
 
     $this->request = $this->host->switchToHttp()->getRequest();
@@ -262,16 +275,12 @@ class App implements AppInterface
         $this->resolveControllers();
         $this->handleRequest();
       }
-    } catch (HttpException $exception) {
+    } catch (Throwable $exception) {
       if (Environment::isProduction()) {
         $this->httpExceptionHandler->handle($exception);
       } else {
         $this->exceptionHandler->handle($exception);
       }
-    } catch(Exception $exception) {
-      $this->exceptionHandler->handle($exception);
-    } catch (Error $error) {
-      $this->exceptionHandler->handle($error);
     }
   }
 
@@ -305,6 +314,7 @@ class App implements AppInterface
    * Determines which declarations will be available in the current execution context.
    *
    * @return void
+   * @throws HttpException
    */
   private function resolveDeclarations(): void
   {
