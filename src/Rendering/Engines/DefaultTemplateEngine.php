@@ -124,6 +124,13 @@ class DefaultTemplateEngine extends TemplateEngine
     foreach ($componentReflection->getProperties() as $reflectionProperty) {
       $data[$reflectionProperty->getName()] = $reflectionProperty->getValue($this->rootComponent);
     }
+
+    # Load data from declared components
+    foreach ($this->moduleManager->getDeclarations() ?? [] as $key => $declaration) {
+      $declarationData = get_object_vars($declaration);
+      $data = [...$declarationData, ...$data];
+    }
+
     $this->setData($data);
 
     # Unwrap view Properties

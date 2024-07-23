@@ -3,6 +3,7 @@
 namespace Assegai\Core\Components;
 
 use Assegai\Core\Attributes\Component;
+use Assegai\Core\Components\Interfaces\ComponentInterface;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Injector;
 use InvalidArgumentException;
@@ -20,12 +21,13 @@ final class ComponentFactory
   /**
    * Creates a component instance.
    *
-   * @param string $componentClass
+   * @param class-string<ComponentInterface> $componentClass The name of the component class.
+   * @param array<string, mixed> $data The data to pass to the component.
    * @return object The component instance.
-   * @throws ReflectionException If the component class does not exist.
    * @throws ContainerException If the component constructor parameters cannot be resolved.
+   * @throws ReflectionException If the component class does not exist.
    */
-  public static function createComponent(string $componentClass): object
+  public static function createComponent(string $componentClass, array $data = []): object
   {
     $injector = Injector::getInstance();
 
@@ -46,7 +48,15 @@ final class ComponentFactory
     }
 
     # Create component instance
-    return $componentReflection->newInstanceArgs($dependencies) ?? throw new InvalidArgumentException('Invalid component class');
+    $componentInstance = $componentReflection->newInstanceArgs($dependencies) ?? throw new InvalidArgumentException('Invalid component class');
+
+    foreach ($data as $key => $value) {
+      if (property_exists($componentInstance, $key)) {
+        $componentInstance->{$key} = $value;
+      }
+    }
+
+    return $componentInstance;
   }
 
   /**

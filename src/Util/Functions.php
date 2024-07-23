@@ -60,9 +60,9 @@ if (! function_exists('render') ) {
    * @throws ReflectionException
    * @throws ContainerException
    */
-  function render(string $componentClass): ComponentInterface
+  function render(string $componentClass, array $data = []): ComponentInterface
   {
-    return ComponentFactory::createComponent($componentClass);
+    return ComponentFactory::createComponent($componentClass, $data);
   }
 }
 
