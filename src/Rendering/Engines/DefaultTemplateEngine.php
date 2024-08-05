@@ -16,6 +16,7 @@ use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
 use Twig\Error\SyntaxError;
 use Twig\Extra\Markdown\DefaultMarkdown;
+use Twig\Extra\Markdown\MarkdownExtension;
 use Twig\Extra\Markdown\MarkdownRuntime;
 use Twig\Loader\FilesystemLoader;
 use Twig\RuntimeLoader\RuntimeLoaderInterface;
@@ -82,6 +83,7 @@ class DefaultTemplateEngine extends TemplateEngine
     $this->templatesDirectory = Path::join(getcwd() ?: throw new RuntimeException('No current working directory'), 'src');
     $this->loader = new FilesystemLoader($this->templatesDirectory);
     $this->twig = new Environment($this->loader);
+    $this->twig->addExtension(new MarkdownExtension());
     $this->twig->addRuntimeLoader(new class implements RuntimeLoaderInterface {
       public function load($class): ?MarkdownRuntime
       {

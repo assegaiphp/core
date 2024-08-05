@@ -32,6 +32,7 @@ use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
+use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Util\TypeManager;
 use Assegai\Core\Util\Validator;
 use Error;
@@ -42,6 +43,7 @@ use ReflectionMethod;
 use ReflectionParameter;
 use ReflectionUnionType;
 use stdClass;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 /**
  * The Router class is responsible for routing incoming requests to the appropriate controller and handler.
@@ -759,7 +761,9 @@ HTML);
             ($param->isOptional() ? $param->getDefaultValue() : null);
 
         case Body::class:
-          $body = null;
+          $output = new ConsoleOutput();
+          $output->setDecorated(true);
+
           if (empty($paramAttributeArgs)) {
             $body = ($paramTypeName === 'string')
               ? json_encode($request->getBody())
@@ -767,6 +771,14 @@ HTML);
           } else {
             $key = $param->getName();
             $body = $paramAttributeInstance->value ?? null;
+
+            if (is_array($paramAttributeInstance->pipes)) {
+              foreach ($paramAttributeInstance->pipes as $pipe) {
+                $body = $this->transformBody($pipe, $body);
+              }
+            } else {
+              $body = $this->transformBody($paramAttributeInstance->pipes, $body);
+            }
           }
 
           return is_object($body) ? TypeManager::castObjectToUserType($body, $paramTypeName) : $body;
@@ -803,5 +815,24 @@ HTML);
     }
 
     return $dependency;
+  }
+
+  /**
+   * Transforms the given body using the given pipe.
+   *
+   * @param string|IPipeTransform $pipe The pipe to be used for transformation.
+   * @param mixed $body The body to be transformed.
+   * @param array|stdClass|null $metaData The body to be transformed.
+   * @return mixed The transformed body.
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  private function transformBody(string|IPipeTransform $pipe, mixed $body, array|stdClass|null $metaData = null): mixed
+  {
+    if (is_string($pipe)) {
+      $pipe = $this->injector->resolve($pipe);
+    }
+
+    return $pipe->transform($body, $metaData);
   }
 }
