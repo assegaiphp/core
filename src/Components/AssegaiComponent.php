@@ -28,15 +28,39 @@ abstract class AssegaiComponent implements ComponentInterface
   protected ModuleManager $moduleManager;
 
   /**
-   * Constructs a ViewComponent object.
+   * Constructs an AssegaiComponent object.
+   *
    * @throws RenderingException
    */
   public final function __construct()
   {
+    if (method_exists($this, 'onInit')) {
+      $this->onInit();
+    }
+
     $this->componentAttribute = $this->getAttribute();
     $this->moduleManager = ModuleManager::getInstance();
+    # Process
+
+    if (method_exists($this, 'afterInit')) {
+      $this->afterInit();
+    }
+  }
+
+  /**
+   * Destructs a AssegaiComponent object.
+   */
+  public final function __destruct()
+  {
+    if (method_exists($this, 'onDestroy')) {
+      $this->onDestroy();
+    }
 
     # Process
+
+    if (method_exists($this, 'afterDestroy')) {
+      $this->afterDestroy();
+    }
   }
 
   /**
