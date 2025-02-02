@@ -53,14 +53,10 @@ class UseGuards
   {
     $guards = [];
 
-    foreach ($guardsList as $guard)
-    {
-      if ($guard instanceof ICanActivate)
-      {
+    foreach ($guardsList as $guard) {
+      if ($guard instanceof ICanActivate) {
         $guards[] = $guard;
-      }
-      else if (is_string($guard))
-      {
+      } else if (is_string($guard)) {
         $guards[] = $this->getGuardClassName($guard);
       }
     }
@@ -81,16 +77,14 @@ class UseGuards
   {
     $reflectionClass = new ReflectionClass($guardClass);
 
-    if (! $reflectionClass->isInstantiable() )
-    {
+    if (! $reflectionClass->isInstantiable() ) {
       throw new GuardException(message: "$guardClass is not instantiable");
     }
 
     $guardConstructorArgs = [];
     $guardConstructorParameters = $reflectionClass->getConstructor()->getParameters();
 
-    foreach ($guardConstructorParameters as $reflectionParameter)
-    {
+    foreach ($guardConstructorParameters as $reflectionParameter) {
       $guardConstructorArgs[] = $this->injector->resolve($reflectionParameter->getType()->getName());
     }
 

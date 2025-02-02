@@ -4,10 +4,11 @@
 
 namespace Assegai\Core;
 
+use Assegai\Attributes\Injectable;
 use Assegai\Core\Attributes\Component;
 use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Query;
-use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Attributes\Injectable as CoreInjectable;
 use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Attributes\Param;
 use Assegai\Core\Attributes\Req;
@@ -195,8 +196,10 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public function isInjectable(ReflectionClass $reflectionClass): bool
   {
+    $lastLoadedCoreAttributes = $reflectionClass->getAttributes(CoreInjectable::class);
     $lastLoadedAttributes = $reflectionClass->getAttributes(Injectable::class);
-    return !empty($lastLoadedAttributes);
+
+    return !empty($lastLoadedCoreAttributes) || !empty($lastLoadedAttributes);
   }
 
   /**
@@ -258,7 +261,7 @@ final class Injector implements ITokenStoreOwner, IContainer
         }
 
         # TODO: Check if param has Injectable class or attribute
-        $repositoryAttributes = $param->getAttributes(Injectable::class);
+        $repositoryAttributes = [...$param->getAttributes(CoreInjectable::class), ...$param->getAttributes(Injectable::class)];
 
         return $this->get($paramType->getName());
       }

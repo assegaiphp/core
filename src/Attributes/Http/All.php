@@ -16,8 +16,7 @@ class All
    */
   public function __construct(public readonly string $path = '')
   {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST')
-    {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       http_response_code(201);
     }
   }

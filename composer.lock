@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "aeedb77dc1e01331c7ac1716dfa62569",
+    "content-hash": "ec82d14e6835c6fc348d28dfae2da3c0",
     "packages": [
         {
             "name": "arubacao/tld-checker",
@@ -68,6 +68,50 @@
                 "source": "https://github.com/arubacao/tld-checker/tree/1.2.239"
             },
             "time": "2024-06-30T04:01:22+00:00"
+        },
+        {
+            "name": "assegaiphp/attributes",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/assegaiphp/attributes.git",
+                "reference": "efdd9bed26dafa5ebcbbc8afe0dad0c63645bfa8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/assegaiphp/attributes/zipball/efdd9bed26dafa5ebcbbc8afe0dad0c63645bfa8",
+                "reference": "efdd9bed26dafa5ebcbbc8afe0dad0c63645bfa8",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "pestphp/pest": "^3.7",
+                "phpstan/phpstan": "^2.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Assegai\\Attributes\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andrew Masiye",
+                    "email": "amasiye313@gmail.com"
+                }
+            ],
+            "description": "A small library defining the core attributes of the AssegaiPHP framework.",
+            "support": {
+                "issues": "https://github.com/assegaiphp/attributes/issues",
+                "source": "https://github.com/assegaiphp/attributes/tree/1.0.0"
+            },
+            "time": "2025-02-02T02:13:28+00:00"
         },
         {
             "name": "assegaiphp/collections",
@@ -5212,13 +5256,13 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
         "php": ">=8.3",
         "ext-fileinfo": "*"
     },
-    "platform-dev": [],
+    "platform-dev": {},
     "plugin-api-version": "2.6.0"
 }

@@ -29,6 +29,15 @@ class ProjectConfig extends AbstractConfig
       $dotenv = Dotenv::createImmutable($this->getWorkingDirectory());
       $dotenv->safeLoad();
     }
+
+    if (!isset($_ENV['ENV'])) {
+      $_ENV['ENV'] = 'prod';
+    }
+
+    if (!isset($_ENV['DEBUG_MODE'])) {
+      $_ENV['DEBUG_MODE'] = false;
+    }
+
     parent::__construct();
   }
 

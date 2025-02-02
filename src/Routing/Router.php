@@ -772,12 +772,14 @@ HTML);
             $key = $param->getName();
             $body = $paramAttributeInstance->value ?? null;
 
-            if (is_array($paramAttributeInstance->pipes)) {
-              foreach ($paramAttributeInstance->pipes as $pipe) {
-                $body = $this->transformBody($pipe, $body);
+            if ($paramAttributeInstance->pipes) {
+              if (is_array($paramAttributeInstance->pipes)) {
+                foreach ($paramAttributeInstance->pipes as $pipe) {
+                  $body = $this->transformBody($pipe, $body);
+                }
+              } else {
+                $body = $this->transformBody($paramAttributeInstance->pipes, $body);
               }
-            } else {
-              $body = $this->transformBody($paramAttributeInstance->pipes, $body);
             }
           }
 
