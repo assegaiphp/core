@@ -30,35 +30,24 @@ readonly class UseInterceptors
   {
     $interceptorsList = [];
 
-    if ($this->interceptors instanceof IAssegaiInterceptor)
-    {
+    if ($this->interceptors instanceof IAssegaiInterceptor) {
       $interceptorsList[] = $this->interceptors;
-    }
-    else if (is_string($this->interceptors))
-    {
+    } else if (is_string($this->interceptors)) {
       $reflectionClass = new ReflectionClass($this->interceptors);
 
-      if (! $reflectionClass->isInstantiable() )
-      {
+      if (! $reflectionClass->isInstantiable() ) {
         throw new InterceptorException(isRequestError: false);
       }
 
       $interceptorsList[] = $reflectionClass->newInstance();
-    }
-    else
-    {
-      foreach ($this->interceptors as $interceptor)
-      {
-        if ($interceptor instanceof IAssegaiInterceptor)
-        {
+    } else {
+      foreach ($this->interceptors as $interceptor) {
+        if ($interceptor instanceof IAssegaiInterceptor) {
           $interceptorsList[] = $interceptor;
-        }
-        else if (is_string($interceptor))
-        {
+        } else if (is_string($interceptor)) {
           $reflectionClass = new ReflectionClass($interceptor);
 
-          if (! $reflectionClass->isInstantiable() )
-          {
+          if (! $reflectionClass->isInstantiable() ) {
             throw new InterceptorException(isRequestError: false);
           }
 

@@ -228,7 +228,8 @@ class ModuleManager implements SingletonInterface
             if (in_array($stylesheetFilename, $this->loadedStyles)) {
               continue;
             }
-            $this->declaredStyles[$componentAttributeInstance->selector] .= file_get_contents($stylesheetFilename) ?: throw new HttpException('Failed to read stylesheet file.');
+            $this->declaredStyles[$componentAttributeInstance->selector] .=
+              file_get_contents($stylesheetFilename) ?: throw new HttpException("Failed to read stylesheet file $stylesheetFilename.");
             $this->loadedStyles[] = $stylesheetFilename;
           }
         } else {

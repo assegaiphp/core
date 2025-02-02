@@ -9,15 +9,15 @@ use Attribute;
  * should be processed, instantiated and used at runtime.
  */
 #[Attribute(Attribute::TARGET_CLASS)]
-class Controller
+readonly class Controller
 {
   /**
    * @param string $path
    * @param string|string[]|null $host
    */
   public function __construct(
-    public readonly string $path = '',
-    public readonly null|string|array $host = null,
+    public string            $path = '',
+    public null|string|array $host = null,
   )
   {
   }

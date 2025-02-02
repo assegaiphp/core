@@ -8,6 +8,7 @@ use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\ApiResponse;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
 use Assegai\Core\Http\Responses\Response;
+use Throwable;
 
 class JsonResponder implements ResponderInterface
 {
@@ -26,6 +27,16 @@ class JsonResponder implements ResponderInterface
       $responseBodyClassName = get_class($responseBody);
 
       if (is_object($responseBody) || is_array($responseBody)) {
+        if (method_exists($responseBody, 'isError') && $responseBody->isError()) {
+          if (method_exists($responseBody, 'getErrors')) {
+            $lastError = array_first($responseBody->getErrors());
+
+            if ($lastError instanceof Throwable) {
+              throw new InternalServerErrorException($lastError->getMessage());
+            }
+          }
+        }
+
         if ( str_contains($responseBodyClassName, 'FindResult') ) {
           exit(new ApiResponse($responseBody->getData()));
         }
