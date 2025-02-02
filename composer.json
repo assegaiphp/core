@@ -42,7 +42,8 @@
         "filp/whoops": "^2.15",
         "twig/markdown-extra": "^3.10",
         "erusev/parsedown": "^1.7",
-        "symfony/console": "^7.1"
+        "symfony/console": "^7.1",
+        "assegaiphp/attributes": "^1.0"
     },
     "scripts": {
         "test": "vendor/bin/codecept run Unit",
