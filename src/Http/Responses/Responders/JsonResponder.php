@@ -15,6 +15,7 @@ class JsonResponder implements ResponderInterface
 
   /**
    * @inheritDoc
+   * @throws Throwable
    */
   public function respond(mixed $response, int|HttpStatusCode|null $code = null): never
   {
@@ -32,13 +33,14 @@ class JsonResponder implements ResponderInterface
             $lastError = array_first($responseBody->getErrors());
 
             if ($lastError instanceof Throwable) {
-              throw new InternalServerErrorException($lastError->getMessage());
+              throw $lastError;
             }
           }
         }
 
         if ( str_contains($responseBodyClassName, 'FindResult') ) {
-          exit(new ApiResponse($responseBody->getData()));
+          $total = method_exists($responseBody, 'getTotal') ? $responseBody->getTotal() : null;
+          exit(new ApiResponse($responseBody->getData(), $total));
         }
 
         if ( str_contains($responseBodyClassName, 'UpdateResult') || str_contains($responseBodyClassName, 'InsertResult') ) {
