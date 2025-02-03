@@ -16,6 +16,9 @@ class ApiResponse
    * @var Request The request object.
    */
   protected Request $request;
+  /**
+   * @var bool Whether the data is a result object.
+   */
   protected bool $isResultObject = false;
 
   /**
@@ -119,13 +122,11 @@ class ApiResponse
    */
   private function getTotal(): int
   {
-    if ($this->isResultObject)
-    {
+    if ($this->isResultObject) {
       return $this->data->getTotal();
     }
 
-    if (!is_countable($this->data))
-    {
+    if (!is_countable($this->data)) {
       return empty($this->data) ? 0 : 1;
     }
 
