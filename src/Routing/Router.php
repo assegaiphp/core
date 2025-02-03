@@ -399,7 +399,7 @@ final class Router
       $handlerUseGuardsAttribute = $useGuardsAttributes[0]->newInstance();
 
       if (! $this->guardsConsumer->canActivate(guards: $handlerUseGuardsAttribute->guards, context: $context) ) {
-        throw new ForbiddenException();
+        throw new $handlerUseGuardsAttribute->exceptionClassName();
       }
     }
 
@@ -616,7 +616,7 @@ HTML);
         if ($controller instanceof IOnGuard) {
           $controller->onGuard(context: $context);
         } else {
-          throw new ForbiddenException();
+          throw new $controllerUseGuardsInstance->exceptionClassName();
         }
       }
     }
