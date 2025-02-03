@@ -4,6 +4,7 @@ namespace Assegai\Core\Attributes;
 
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\GuardException;
+use Assegai\Core\Exceptions\Http\ForbiddenException;
 use Assegai\Core\Injector;
 use Assegai\Core\Interfaces\ICanActivate;
 use Attribute;
@@ -25,7 +26,10 @@ class UseGuards
    * @throws ReflectionException
    * @throws ContainerException
    */
-  public function __construct(protected readonly array|ICanActivate|string $guard)
+  public function __construct(
+    protected readonly array|ICanActivate|string $guard,
+    public readonly string $exceptionClassName = ForbiddenException::class
+  )
   {
     $guardsList = [];
     $this->injector = Injector::getInstance();
@@ -82,7 +86,7 @@ class UseGuards
     }
 
     $guardConstructorArgs = [];
-    $guardConstructorParameters = $reflectionClass->getConstructor()->getParameters();
+    $guardConstructorParameters = $reflectionClass->getConstructor()?->getParameters() ?? [];
 
     foreach ($guardConstructorParameters as $reflectionParameter) {
       $guardConstructorArgs[] = $this->injector->resolve($reflectionParameter->getType()->getName());

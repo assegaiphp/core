@@ -48,10 +48,12 @@ final class GuardsConsumer
    */
   public function canActivate(array $guards, ExecutionContext $context): bool
   {
-    foreach ($guards as $guard)
-    {
-      if (! $guard->canActivate(context: $context))
-      {
+    foreach ($guards as $guard) {
+      if (is_array($guard)) {
+        if (! $this->canActivate(guards: $guard, context: $context) ) {
+          return false;
+        }
+      } else if (! $guard->canActivate(context: $context)) {
         return false;
       }
     }
