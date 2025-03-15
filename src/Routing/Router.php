@@ -35,7 +35,6 @@ use Assegai\Core\Interfaces\IOnGuard;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Util\TypeManager;
 use Assegai\Core\Util\Validator;
-use Error;
 use Exception;
 use ReflectionClass;
 use ReflectionException;
@@ -156,6 +155,10 @@ final class Router
     $path = str_starts_with($request->getPath(), '/') ? $request->getPath() : '/' . $request->getPath();
 
     $controllerClassAttributes = $reflectionController->getAttributes(Controller::class);
+
+    if (!$controllerClassAttributes) {
+      $controllerClassAttributes = $reflectionController->getAttributes(\Assegai\Attributes\Controller::class);
+    }
 
     if (empty($controllerClassAttributes)) {
       throw new HttpException("Invalid controller: " . $reflectionController->getName());
@@ -510,6 +513,10 @@ HTML);
     $reflectionController = new ReflectionClass($controller);
     $attributes = $reflectionController->getAttributes(Controller::class);
 
+    if (!$attributes) {
+      $attributes = $reflectionController->getAttributes(\Assegai\Attributes\Controller::class);
+    }
+
     # Find a Controller attribute
     foreach ($attributes as $attribute) {
       $instance = $attribute->newInstance();
@@ -673,6 +680,7 @@ HTML);
    * @return array<int|string, mixed> The resolved dependencies for the handler.
    * @throws ContainerException If there was an error during dependency injection.
    * @throws EntryNotFoundException If a dependency was not found in the DI container.
+   * @throws HttpException If there was an error processing the request.
    * @throws ReflectionException If there was an error processing a reflection.
    */
   private function resolveHandlerParameters(ReflectionMethod $activatedHandler, Request $request): array
@@ -750,11 +758,11 @@ HTML);
           return $request->getParams()[$param->getPosition()] ??
             ($param->isOptional() ? $param->getDefaultValue() : null);
 
-        case Query::class:;
+        case Query::class:
           if (empty($paramAttributeArgs)) {
             return ($paramTypeName === 'string')
               ? json_encode($request->getQuery())
-              : (object)$request->getQuery();
+              : $request->getQuery();
           }
 
           return $request->getQuery()->toArray()[$param->getName()] ??
