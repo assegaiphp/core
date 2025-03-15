@@ -129,9 +129,9 @@ class ControllerManager
    */
   public function buildControllerTokensList(array $moduleTokensList): array
   {
-    foreach ($moduleTokensList as $index => $module) {
-      /** @var ['imports' => 'array', 'exports' => 'array', 'providers' => 'array'] $args */
-      $args = $module->getArguments();
+    foreach ($moduleTokensList as $index => $moduleReflection) {
+      /** @var $args array{imports: string[], exports: string[], providers: string[], controllers: string[], declarations: string[], config: array<string, mixed>} */
+      $args = $moduleReflection->getArguments();
 
       foreach ($args['controllers'] ?? [] as $tokenId) {
         if ($controllerReflection = $this->getControllerReflection($tokenId)) {
@@ -164,6 +164,10 @@ class ControllerManager
     try {
       $reflectionClass = new ReflectionClass($tokenId);
       $this->lastLoadedAttributes = $reflectionClass->getAttributes(Controller::class);
+
+      if (!$this->lastLoadedAttributes) {
+        $this->lastLoadedAttributes = $reflectionClass->getAttributes(\Assegai\Attributes\Controller::class);
+      }
       return (! empty($this->lastLoadedAttributes) ) ? $reflectionClass : null;
     } catch (ReflectionException) {
       throw new EntryNotFoundException($tokenId);
