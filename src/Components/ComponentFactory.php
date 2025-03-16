@@ -3,6 +3,7 @@
 namespace Assegai\Core\Components;
 
 use Assegai\Core\Attributes\Component;
+use Assegai\Core\Components\Interfaces\AfterPropertiesBoundInterface;
 use Assegai\Core\Components\Interfaces\ComponentInterface;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Injector;
@@ -54,6 +55,10 @@ final class ComponentFactory
       if (property_exists($componentInstance, $key)) {
         $componentInstance->{$key} = $value;
       }
+    }
+
+    if ($componentInstance instanceof AfterPropertiesBoundInterface) {
+      $componentInstance->afterPropertiesBound();
     }
 
     return $componentInstance;
