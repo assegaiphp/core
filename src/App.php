@@ -52,6 +52,9 @@ require __DIR__ . '/Util/Definitions.php';
  */
 class App implements AppInterface
 {
+  const string LOCALE_ENV_KEY = 'APP_LOCALE';
+  const string DEFAULT_LOCALE = 'en';
+
   /**
    * @var ReflectionClass[] $providers A list of all the imported module tokens
    */
@@ -386,5 +389,37 @@ class App implements AppInterface
   private function getProviderTokens(): array
   {
     return $this->moduleManager->getProviderTokens();
+  }
+
+  /**
+   * Returns the current locale.
+   *
+   * @return string The current locale.
+   */
+  public static function getLocale(): string
+  {
+    return getenv(self::LOCALE_ENV_KEY) ?? self::DEFAULT_LOCALE;
+  }
+
+  /**
+   * Set the current locale.
+   *
+   * @param string $locale The locale to set.
+   * @return void
+   */
+  public static function setLocale(string $locale): void
+  {
+    putenv(self::LOCALE_ENV_KEY . '=' . $locale);
+  }
+
+  /**
+   * Determine if the current locale is the given locale.
+   *
+   * @param string $locale The locale to check against.
+   * @return bool True if the current locale is the given locale, false otherwise.
+   */
+  public static function isLocale(string $locale): bool
+  {
+    return self::getLocale() === $locale;
   }
 }

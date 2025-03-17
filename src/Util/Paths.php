@@ -3,26 +3,23 @@
 namespace Assegai\Core\Util;
 
 /**
+ * The Paths class. Contains utility methods for working with paths.
  *
+ * @package Assegai\Core\Util
  */
 final class Paths
 {
   /**
-   *
+   * Constructs a new Paths instance.
    */
   private final function __construct()
-  {}
-
-  /**
-   * @return string
-   */
-  public static function getWorkingDirectory(): string
   {
-    return trim(shell_exec("pwd"));
   }
 
   /**
-   * @return string
+   * Returns the directory where the configuration files are stored.
+   *
+   * @return string The directory where the configuration files are stored.
    */
   public static function getConfigDirectory(): string
   {
@@ -30,7 +27,29 @@ final class Paths
   }
 
   /**
-   * @return string
+   * Returns the current working directory.
+   *
+   * @return string The current working directory.
+   */
+  public static function getWorkingDirectory(): string
+  {
+    return getcwd() ?: '';
+  }
+
+  /**
+   * Returns the directory where the language files are stored.
+   *
+   * @return string The directory where the language files are stored.
+   */
+  public static function getLangDirectory(): string
+  {
+    return self::getWorkingDirectory() . '/lang';
+  }
+
+  /**
+   * Returns the directory where the views are stored.
+   *
+   * @return string The directory where the views are stored.
    */
   public static function getViewDirectory(): string
   {
@@ -38,26 +57,17 @@ final class Paths
   }
 
   /**
-   * @param string|null $filename
-   * @return string
+   * Joins the given paths.
+   *
+   * @param string ...$paths The paths to join.
+   * @return string The joined path.
    */
-  public static function getPublicPath(?string $filename = ''): string
-  {
-    return self::join(self::getWorkingDirectory(), 'public', $filename);
-  }
-
-  /**
-   * @param ...$paths
-   * @return string
-   */
-  public static function join(...$paths): string
+  public static function join(string ...$paths): string
   {
     $path = '';
 
-    foreach ($paths as $p)
-    {
-      if (is_string($p))
-      {
+    foreach ($paths as $p) {
+      if (is_string($p)) {
         $path .= "/$p";
       }
     }
@@ -67,26 +77,37 @@ final class Paths
   }
 
   /**
-   * @param string $filename
-   * @return string
+   * Returns the directory where the public files are stored.
+   *
+   * @param string|null $filename The filename to append to the path.
+   * @return string The directory where the public files are stored.
+   */
+  public static function getPublicPath(?string $filename = ''): string
+  {
+    return self::join(self::getWorkingDirectory(), 'public', $filename);
+  }
+
+  /**
+   * Returns the mime type of the given file.
+   *
+   * @param string $filename The filename to get the mime type of.
+   * @return string The mime type of the given file.
    */
   public static function getMimeType(string $filename): string
   {
     $mimeType = mime_content_type($filename);
-    return match(pathinfo($filename, PATHINFO_EXTENSION)) {
+    return match (pathinfo($filename, PATHINFO_EXTENSION)) {
       'js' => 'text/javascript',
       'json' => 'application/json',
       'css' => 'text/css',
       'csv' => 'text/csv',
       'doc' => 'application/msword',
       'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'htm',
-      'html' => 'text/html',
+      'htm', 'html' => 'text/html',
       'bmp' => 'image/bmp',
       'gif' => 'image/gif',
       'ico' => 'image/vnd.microsoft.icon',
-      'jpeg',
-      'jpg' => 'image/jpeg',
+      'jpeg', 'jpg' => 'image/jpeg',
       'mp3' => 'audio/mpeg',
       'mp4' => 'audio/mp4',
       'mpeg' => 'video/mpeg',
