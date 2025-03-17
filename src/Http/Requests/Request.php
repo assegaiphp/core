@@ -76,7 +76,14 @@ class Request
    * @var Form The request form.
    */
   protected Form $form;
+  /**
+   * @var ContentType The request content type.
+   */
   protected ContentType $contentType;
+  /**
+   * @var string The request language.
+   */
+  protected string $lang = 'en';
 
   /**
    * Constructs a Request object.
@@ -322,6 +329,11 @@ class Request
   public function getCookies(?string $name = null): array|string
   {
     return $_COOKIE[$name] ?? $_COOKIE;
+  }
+
+  public function getLang(): string
+  {
+    return $_GET['lang'] ?? App::getLocale();
   }
 
   /**

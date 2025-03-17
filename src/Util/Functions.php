@@ -8,6 +8,7 @@ use Assegai\Core\Events\Event;
 use Assegai\Core\Events\EventManager;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\RenderingException;
+use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Rendering\View;
 use Assegai\Core\Rendering\ViewProperties;
 use Assegai\Core\Util\Paths;
@@ -138,8 +139,9 @@ if (! function_exists('translate') ) {
   function translate(string $id, array $parameters = [], string $domain = '', ?string $locale = null): string
   {
     $default = $id;
+    $request = Request::getInstance();
 
-    $effectiveLocale = $locale ?? App::getLocale() ?? 'en';
+    $effectiveLocale = $locale ?? $request->getLang() ?? App::DEFAULT_LOCALE;
     $langFilename = Paths::join(Paths::getLangDirectory(), $domain, $effectiveLocale);
     [$dirname, $path] = str_split_by_last_needle($id);
     $dirname = Paths::join($langFilename, $dirname);
