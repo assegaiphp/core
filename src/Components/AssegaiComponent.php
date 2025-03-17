@@ -9,7 +9,10 @@ use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Util\Paths;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
+use Symfony\Component\Console\Logger\ConsoleLogger;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 /**
  * Class ViewComponent. This class is for the view component.
@@ -26,6 +29,10 @@ abstract class AssegaiComponent implements ComponentInterface
    * @var ModuleManager $moduleManager The module manager.
    */
   protected ModuleManager $moduleManager;
+  /**
+   * @var LoggerInterface $logger The logger.
+   */
+  protected LoggerInterface $logger;
 
   /**
    * Constructs an AssegaiComponent object.
@@ -45,6 +52,8 @@ abstract class AssegaiComponent implements ComponentInterface
     if (method_exists($this, 'afterInit')) {
       $this->afterInit();
     }
+
+    $this->logger = new ConsoleLogger(new ConsoleOutput());
   }
 
   /**
@@ -132,7 +141,12 @@ abstract class AssegaiComponent implements ComponentInterface
    */
   public final function __toString(): string
   {
-    return $this->render() ?? '';
+    if (method_exists($this, 'render')) {
+      return $this->render() ?? '';
+    }
+
+    $this->logger->warning('No render method found in ' . get_class($this));
+    return '';
   }
 
   /**

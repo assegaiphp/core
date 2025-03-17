@@ -4,10 +4,14 @@ namespace Assegai\Core\Rendering\Engines;
 
 use Assegai\Core\Attributes\Component;
 use Assegai\Core\Components\AssegaiComponent;
+use Assegai\Core\Exceptions\FileException;
+use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Rendering\View;
-use Assegai\Core\Util\Debug\Log;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Logger\ConsoleLogger;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 /**
  *
@@ -30,9 +34,9 @@ final class ViewEngine
   /**
    * @var array|array[]
    */
-  private array $declarations = [
-    'app-navbar' => 'Assegai\\App\\Navbar'
-  ];
+  private array $declarations = ['app-navbar' => 'Assegai\\App\\Navbar'];
+
+  private LoggerInterface $logger;
 
   /**
    * Constructs a ViewEngine object.
@@ -40,6 +44,7 @@ final class ViewEngine
   private final function __construct()
   {
     $this->moduleManager = ModuleManager::getInstance();
+    $this->logger = new ConsoleLogger(new ConsoleOutput());
   }
 
   /**
@@ -47,8 +52,7 @@ final class ViewEngine
    */
   public static function getInstance(): self
   {
-    if (! self::$instance )
-    {
+    if (!self::$instance) {
       self::$instance = new ViewEngine();
     }
 
@@ -69,6 +73,8 @@ final class ViewEngine
    * Renders the view.
    *
    * @return never
+   * @throws FileException If the view or template is invalid.
+   * @throws NotFoundException If the view or template is not found.
    * @throws RenderingException if the view or template is invalid.
    */
   public function render(): never
@@ -94,7 +100,7 @@ START;
 
     $data = $this->view->data;
     extract($data);
-    $__render = function(string $selector, array $props = []): string {
+    $__render = function (string $selector, array $props = []): string {
       return "Rendering $selector";
     };
 
@@ -115,7 +121,7 @@ START;
     echo $this->view->props->generateBodyScriptImportTags();
 
     echo <<<END
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   </body>
 </html>
 END;
@@ -126,6 +132,8 @@ END;
    * @param string $template
    * @param Component $component
    * @return string
+   * @throws FileException
+   * @throws NotFoundException
    */
   private function resolveTemplates(string $template, Component $component): string
   {
@@ -135,16 +143,13 @@ END;
     $inputLines = explode("\n", $html);
 
     if (preg_match_all($selectionPattern, $html, $matches)) {
-      foreach ($matches as $tokens)
-      {
+      foreach ($matches as $tokens) {
         $tokens = array_unique($tokens);
 
         foreach ($tokens as $token) {
           $message = AssegaiComponent::getTemplateContentBySelector($token);
-//          $templatePath = ViewComponent::getTemplatePathBySelector($token);
-//          $message = "include $templatePath;";
 
-          Log::error(__METHOD__, $message);
+          $this->logger->error($message);
           $search = "<$token></$token>";
           $html = str_replace($search, $message, $html);
         }

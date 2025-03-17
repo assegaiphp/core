@@ -143,7 +143,8 @@ class DefaultTemplateEngine extends TemplateEngine
 PROPS;
 
     # Render template
-    $props .= $this->renderStyles();
+    $props .= $this->loadStyles();
+    $props .= $this->loadScripts();
     $output = $template->render([...$this->data]);
     $charSet = $this->meta['charset'] ?? 'UTF-8';
 
@@ -167,10 +168,12 @@ START;
   }
 
   /**
+   * Load any inline or external stylesheets.
+   *
    * @return string
    * @throws RenderingException
    */
-  private function renderStyles(): string
+  private function loadStyles(): string
   {
     $styles = '';
     $componentAttributeInstance = $this->rootComponent->getAttribute();
@@ -201,6 +204,39 @@ START;
       $styles .= '</style>';
     }
     return $styles;
+  }
+
+  /**
+   * Load any inline or external scripts.
+   *
+   * @return string
+   * @throws RenderingException
+   */
+  private function loadScripts(): string
+  {
+    $scripts = '';
+    $componentAttributeInstance = $this->rootComponent->getAttribute();
+
+    // Load component script urls
+    if ($componentAttributeInstance->scriptUrls) {
+      foreach ($componentAttributeInstance->scriptUrls as $scriptUrl) {
+        $scriptFilename = Path::normalize(Path::join(dirname($this->componentFilename), $scriptUrl));
+        $scripts .= '<script>';
+        $scripts .= file_get_contents($scriptFilename) ?: throw new RenderingException('Failed to read script file.');
+        $scripts .= '</script>';
+      }
+
+      return $scripts;
+    }
+
+    // Load component scripts
+    if ($componentAttributeInstance->scripts) {
+      $scripts .= '<script>';
+      $scripts .= $componentAttributeInstance->scripts;
+      $scripts .= '</script>';
+    }
+
+    return $scripts;
   }
 
   /**

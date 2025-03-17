@@ -24,6 +24,8 @@ readonly class Component
    * @param string[]|null $styleUrls One or more relative paths or absolute URLs for files containing CSS stylesheets
    * to use in this component.
    * @param string[]|null $styles One or more inline CSS stylesheets to use in this component.
+   * @param array|null $scriptUrls One or more relative paths or absolute URLs for files containing JavaScript scripts
+   * @param array|null $scripts One or more inline JavaScript scripts
    */
   public function __construct(
     public string $selector,
@@ -33,6 +35,8 @@ readonly class Component
     public ?string $template = null,
     public ?array  $styleUrls = [],
     public ?array  $styles = [],
+    public ?array  $scriptUrls = [],
+    public ?array  $scripts = []
   )
   {
   }
