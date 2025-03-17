@@ -160,6 +160,9 @@ class App implements AppInterface
     });
 
     // Initialize app properties
+    if (!self::getLocale()) {
+      self::setLocale(self::DEFAULT_LOCALE);
+    }
     $this->appConfig = new AppConfig();
     $this->composerConfig = new ComposerConfig();
     $this->projectConfig = new ProjectConfig();
@@ -398,7 +401,13 @@ class App implements AppInterface
    */
   public static function getLocale(): string
   {
-    return getenv(self::LOCALE_ENV_KEY) ?? self::DEFAULT_LOCALE;
+    $locale = getenv(self::LOCALE_ENV_KEY);
+
+    if (!$locale) {
+      return self::DEFAULT_LOCALE;
+    }
+
+    return $locale;
   }
 
   /**
