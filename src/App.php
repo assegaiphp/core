@@ -29,6 +29,7 @@ use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Paths;
+use Dotenv\Dotenv;
 use Error;
 use Exception;
 use Psr\Log\LoggerInterface;
@@ -142,47 +143,8 @@ class App implements AppInterface
   )
   {
     broadcast(EventChannel::APP_INIT_START, new Event());
-    $this->setLogger(new ConsoleLogger(new ConsoleOutput()));
-    $this->exceptionHandler = new WhoopsExceptionHandler($this->logger);
-    $this->errorHandler = new WhoopsErrorHandler($this->logger);
-    $this->httpExceptionHandler = new HttpExceptionHandler($this->logger);
-
-    set_exception_handler(function (Throwable $exception) {
-      if (Environment::isProduction()) {
-        $this->httpExceptionHandler->handle($exception);
-      } else {
-        $this->exceptionHandler->handle($exception);
-      }
-    });
-
-    set_error_handler(function ($errno, $errstr, $errfile, $errline) {
-      $this->errorHandler->handle($errno, $errstr, $errfile, $errline);
-    });
-
-    // Initialize app properties
-    if (!self::getLocale()) {
-      self::setLocale(self::DEFAULT_LOCALE);
-    }
-    $this->appConfig = new AppConfig();
-    $this->composerConfig = new ComposerConfig();
-    $this->projectConfig = new ProjectConfig();
-    $this->host = new ArgumentsHost();
-    $this->templateEngine = new DefaultTemplateEngine([
-      'root_module_class' => $this->rootModuleClass,
-      'router' => $this->router,
-      'module_manager' => $this->moduleManager,
-      'controller_manager' => $this->controllerManager,
-      'injector' => $this->injector,
-    ]);
-    Log::init();
-
-    $this->request = $this->host->switchToHttp()->getRequest();
-    $this->request->setApp($this);
-    $this->response = $this->host->switchToHttp()->getResponse();
-
-    $this->responder = Responder::getInstance();
-    $this->responder->setTemplateEngine($this->templateEngine);
-    $this->moduleManager->setRootModuleClass($this->rootModuleClass);
+    $this->initializeErrorAndExceptionHandlers();
+    $this->initializeAppProperties();
     broadcast(EventChannel::APP_INIT_FINISH, new Event($this->host));
   }
 
@@ -430,5 +392,65 @@ class App implements AppInterface
   public static function isLocale(string $locale): bool
   {
     return self::getLocale() === $locale;
+  }
+
+  /**
+   * Initialize the error and exception handlers.
+   *
+   * @return void
+   */
+  protected function initializeErrorAndExceptionHandlers(): void
+  {
+    $this->setLogger(new ConsoleLogger(new ConsoleOutput()));
+    $this->exceptionHandler = new WhoopsExceptionHandler($this->logger);
+    $this->errorHandler = new WhoopsErrorHandler($this->logger);
+    $this->httpExceptionHandler = new HttpExceptionHandler($this->logger);
+
+    set_exception_handler(function (Throwable $exception) {
+      if (Environment::isProduction()) {
+        $this->httpExceptionHandler->handle($exception);
+      } else {
+        $this->exceptionHandler->handle($exception);
+      }
+    });
+
+    set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+      $this->errorHandler->handle($errno, $errstr, $errfile, $errline);
+    });
+  }
+
+  /**
+   * Initialize the application properties.
+   *
+   * @return void
+   */
+  public function initializeAppProperties(): void
+  {
+    $dotEnv = Dotenv::createImmutable(getcwd());
+    $dotEnv->load();
+
+    if (!self::getLocale()) {
+      self::setLocale(self::DEFAULT_LOCALE);
+    }
+    $this->appConfig = new AppConfig();
+    $this->composerConfig = new ComposerConfig();
+    $this->projectConfig = new ProjectConfig();
+    $this->host = new ArgumentsHost();
+    $this->templateEngine = new DefaultTemplateEngine([
+      'root_module_class' => $this->rootModuleClass,
+      'router' => $this->router,
+      'module_manager' => $this->moduleManager,
+      'controller_manager' => $this->controllerManager,
+      'injector' => $this->injector,
+    ]);
+    Log::init();
+
+    $this->request = $this->host->switchToHttp()->getRequest();
+    $this->request->setApp($this);
+    $this->response = $this->host->switchToHttp()->getResponse();
+
+    $this->responder = Responder::getInstance();
+    $this->responder->setTemplateEngine($this->templateEngine);
+    $this->moduleManager->setRootModuleClass($this->rootModuleClass);
   }
 }

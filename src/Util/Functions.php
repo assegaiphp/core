@@ -13,6 +13,13 @@ use Assegai\Core\Rendering\View;
 use Assegai\Core\Rendering\ViewProperties;
 use Assegai\Core\Util\Paths;
 
+if (!function_exists('env')) {
+  function env($key, $default = null): mixed
+  {
+    return $_ENV[$key] ?? $default;
+  }
+}
+
 if (!function_exists('json_is_valid') ) {
   /**
    * Returns true if the JSON string is valid, false otherwise.
