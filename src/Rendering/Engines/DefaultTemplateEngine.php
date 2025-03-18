@@ -3,6 +3,7 @@
 namespace Assegai\Core\Rendering\Engines;
 
 use Assegai\Core\ControllerManager;
+use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Injector;
 use Assegai\Core\ModuleManager;
@@ -123,12 +124,50 @@ class DefaultTemplateEngine extends TemplateEngine
 
     $template = $this->twig->load(Path::normalize($resolveTemplateUrl));
     $data = [];
+
+    $ctx = new class {
+      private array $methods = [];
+
+      public function addMethod(string $name, callable $method): void {
+        $this->methods[$name] = $method;
+      }
+
+      public function __call($name, $arguments) {
+        if (isset($this->methods[$name])) {
+          return call_user_func_array($this->methods[$name], $arguments);
+        }
+        throw new HttpException("Method $name does not exist.");
+      }
+    };
+
+    $methods = $componentReflection->getMethods(\ReflectionMethod::IS_PUBLIC);
+
+    foreach ($methods as $method) {
+      $methodName = $method->getName();
+
+      if (str_starts_with($methodName, '__')) {
+        continue;
+      }
+
+      if (in_array($methodName, ['afterPropertiesBound', 'render', 'onInit', 'afterInit', 'getTemplatePathBySelector', 'getAttribute', 'getTemplateContentBySelector'])) {
+        continue;
+      }
+
+      $ctx->addMethod($methodName, fn(...$args) => $method->invoke($this->rootComponent, ...$args));
+    }
+
+    if (!method_exists($ctx, 'translate')) {
+      $ctx->addMethod('translate', fn(string $id, array $parameters = [], string $domain = '', ?string $locale = null) => translate($id, $parameters, $domain, $locale));
+    }
+
+    $data['ctx'] = $ctx;
+
     foreach ($componentReflection->getProperties() as $reflectionProperty) {
       $data[$reflectionProperty->getName()] = $reflectionProperty->getValue($this->rootComponent);
     }
 
     # Load data from declared components
-    foreach ($this->moduleManager->getDeclarations() ?? [] as $key => $declaration) {
+    foreach ($this->moduleManager->getDeclarations() ?? [] as $declaration) {
       $declarationData = get_object_vars($declaration);
       $data = [...$declarationData, ...$data];
     }
