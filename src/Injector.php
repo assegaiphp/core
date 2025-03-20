@@ -46,6 +46,16 @@ final class Injector implements ITokenStoreOwner, IContainer
   protected static ?Injector $instance = null;
 
   /**
+   * @var ReflectionClass[] The cache of reflections.
+   */
+  protected array $reflectionClassCache = [];
+
+  /**
+   * @var ReflectionAttribute[] The cache of attributes.
+   */
+  protected array $reflectionAttributesCache = ['injectable' => [], 'module' => [], 'component' => [], 'controller' => []];
+
+  /**
    * Constructs a new Injector instance.
    */
   private final function __construct()
@@ -76,58 +86,84 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public function resolve(string $id, array $attributeReflections = []): mixed
   {
-    # 1. Inspect the class that we are trying to get from the container
     try {
-      $reflectionClass = new ReflectionClass($id);
-      $attributeReflections = $reflectionClass->getAttributes();
+      $stack = [$id]; // Stack to manage iterative processing
+      $resolvedInstances = []; // Cache for resolved instances
 
-      if($this->isNotInjectable($reflectionClass)) {
-        if ($this->isModule($reflectionClass)) {
-          return $this->resolveModule($reflectionClass);
+      while (!empty($stack)) {
+        $currentId = array_pop($stack);
+
+        // If already resolved, return from cache
+        if (isset($resolvedInstances[$currentId])) {
+          continue;
         }
 
-        if ($this->isComponent($reflectionClass)) {
-          return $this->resolveComponent($reflectionClass);
+        // Retrieve or cache ReflectionClass instance
+        if (!isset($this->reflectionClassCache[$currentId])) {
+          $this->reflectionClassCache[$currentId] = new ReflectionClass($currentId);
+        }
+        $reflectionClass = $this->reflectionClassCache[$currentId];
+
+        $attributeReflections = $reflectionClass->getAttributes();
+
+        // Check if class is injectable
+        if ($this->isNotInjectable($reflectionClass)) {
+          if ($this->isModule($reflectionClass)) {
+            $resolvedInstances[$currentId] = $this->resolveModule($reflectionClass);
+            continue;
+          }
+
+          if ($this->isComponent($reflectionClass)) {
+            $resolvedInstances[$currentId] = $this->resolveComponent($reflectionClass);
+            continue;
+          }
+
+          throw new ContainerException("$currentId is not injectable");
         }
 
-        throw new ContainerException("$id is not injectable");
+        // Handle non-instantiable classes
+        if (!$reflectionClass->isInstantiable()) {
+          if ($reflectionClass->hasMethod('getInstance')) {
+            /** @noinspection PhpUndefinedMethodInspection */
+            $resolvedInstances[$currentId] = $this->bindHandlerAttributes($currentId::getInstance(), $attributeReflections);
+            continue;
+          }
+
+          if ($reflectionClass->hasMethod('newInstance')) {
+            /** @noinspection PhpUndefinedMethodInspection */
+            $resolvedInstances[$currentId] = $this->bindHandlerAttributes($currentId::newInstance(), $attributeReflections);
+            continue;
+          }
+
+          throw new ContainerException("Class '$currentId' is not instantiable");
+        }
+
+        // Inspect constructor for dependencies
+        $constructor = $reflectionClass->getConstructor();
+
+        // No constructor -> instantiate directly
+        if (!$constructor) {
+          $resolvedInstances[$currentId] = $this->bindHandlerAttributes(new $currentId, $attributeReflections);
+          continue;
+        }
+
+        $parameters = $constructor->getParameters();
+
+        // No dependencies -> instantiate directly
+        if (empty($parameters)) {
+          $resolvedInstances[$currentId] = $this->bindHandlerAttributes(new $currentId, $attributeReflections);
+          continue;
+        }
+
+        // Resolve dependencies iteratively
+        $dependencies = $this->resolveDependencies(id: $currentId, parameters: $parameters);
+        $resolvedInstances[$currentId] = $this->bindHandlerAttributes($reflectionClass->newInstanceArgs($dependencies), $attributeReflections);
       }
+
+      return $resolvedInstances[$id] ?? null;
     } catch (ReflectionException) {
       throw new ContainerException("$id is not a valid ID");
     }
-
-    if (! $reflectionClass->isInstantiable() ) {
-      if ($reflectionClass->hasMethod('getInstance')) {
-        /** @noinspection PhpUndefinedMethodInspection */
-        return $this->bindHandlerAttributes($id::getInstance(), $attributeReflections);
-      }
-
-      if ($reflectionClass->hasMethod('newInstance')) {
-        /** @noinspection PhpUndefinedMethodInspection */
-        return $this->bindHandlerAttributes($id::newInstance(), $attributeReflections);
-      }
-
-      throw new ContainerException("Class '$id' is not instantiable");
-    }
-
-    # 2. Inspect the constructor of the class
-    $constructor = $reflectionClass->getConstructor();
-
-    if (! $constructor ) {
-      return $this->bindHandlerAttributes(new $id, $attributeReflections);
-    }
-
-    # 3. Inspect the constructor parameters (dependencies)
-    $parameters = $constructor->getParameters();
-
-    if (! $parameters ) {
-      return $this->bindHandlerAttributes(new $id, $attributeReflections);
-    }
-
-    # 4. If the constructor parameter is a class try to resolve it using the container
-    $dependencies = $this->resolveDependencies(id: $id, parameters: $parameters);
-
-    return $this->bindHandlerAttributes($reflectionClass->newInstanceArgs($dependencies), $attributeReflections);
   }
 
   /**
@@ -196,10 +232,15 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public function isInjectable(ReflectionClass $reflectionClass): bool
   {
-    $lastLoadedCoreAttributes = $reflectionClass->getAttributes(CoreInjectable::class);
-    $lastLoadedAttributes = $reflectionClass->getAttributes(Injectable::class);
+    if (!isset($this->reflectionAttributesCache['injectable'][$reflectionClass->getName()])) {
+      $this->reflectionAttributesCache['injectable'][$reflectionClass->getName()] = $reflectionClass->getAttributes(CoreInjectable::class);
 
-    return !empty($lastLoadedCoreAttributes) || !empty($lastLoadedAttributes);
+      if (empty($this->reflectionAttributesCache['injectable'][$reflectionClass->getName()])) {
+        $this->reflectionAttributesCache['injectable'][$reflectionClass->getName()] = $reflectionClass->getAttributes(Injectable::class);
+      }
+    }
+
+    return !empty($this->reflectionAttributesCache['injectable'][$reflectionClass->getName()]);
   }
 
   /**
@@ -237,36 +278,36 @@ final class Injector implements ITokenStoreOwner, IContainer
         throw new ResolveException(id: $id, message: "$resolveErrorPrefix — Illegal type — Union");
       }
 
-      if ($paramType instanceof ReflectionNamedType && ! $paramType->isBuiltin()) {
-        if (enum_exists($paramType->getName())) {
-          try {
-            $reflectionEnum = new ReflectionEnum($paramType->getName());
-            return $reflectionEnum->getCases()[0]->getValue();
-          } catch (ReflectionException) {
-            throw new ContainerException(sprintf("Enum exception %s(%s)", __METHOD__, __LINE__));
-          }
-        }
-
-        if (is_array($paramType->getName())) {
-          return $param->allowsNull() ? null : [];
-        }
-
-        $repositoryAttributes = $param->getAttributes('Assegai\Orm\Attributes\InjectRepository');
-
-        foreach ( $repositoryAttributes as $reflectionRepoAttr ) {
-          $injectRepositoryInstance = $reflectionRepoAttr->newInstance();
-          if (property_exists($injectRepositoryInstance, 'repository')) {
-            return $injectRepositoryInstance->repository;
-          }
-        }
-
-        # TODO: Check if param has Injectable class or attribute
-        $repositoryAttributes = [...$param->getAttributes(CoreInjectable::class), ...$param->getAttributes(Injectable::class)];
-
-        return $this->get($paramType->getName());
+      if (! ($paramType instanceof ReflectionNamedType) || $paramType->isBuiltin()) {
+        return null;
       }
 
-      return null;
+      if (enum_exists($paramType->getName())) {
+        try {
+          $reflectionEnum = new ReflectionEnum($paramType->getName());
+          return $reflectionEnum->getCases()[0]->getValue();
+        } catch (ReflectionException) {
+          throw new ContainerException(sprintf("Enum exception %s(%s)", __METHOD__, __LINE__));
+        }
+      }
+
+      if (is_array($paramType->getName())) {
+        return $param->allowsNull() ? null : [];
+      }
+
+      $repositoryAttributes = $param->getAttributes('Assegai\Orm\Attributes\InjectRepository');
+
+      foreach ( $repositoryAttributes as $reflectionRepoAttr ) {
+        $injectRepositoryInstance = $reflectionRepoAttr->newInstance();
+        if (property_exists($injectRepositoryInstance, 'repository')) {
+          return $injectRepositoryInstance->repository;
+        }
+      }
+
+      # TODO: Check if param has Injectable class or attribute
+      $repositoryAttributes = [...$param->getAttributes(CoreInjectable::class), ...$param->getAttributes(Injectable::class)];
+
+      return $this->get($paramType->getName());
     }, $parameters);
   }
 
@@ -351,15 +392,19 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public function resolveModule(ReflectionClass $reflectionClass): ?Module
   {
-    $moduleAttributes = $reflectionClass->getAttributes(Module::class);
+    $className = $reflectionClass->getName();
 
-    if (empty($moduleAttributes)) {
+    if (!isset($this->reflectionAttributesCache['module'][$className])) {
+      $this->reflectionAttributesCache['module'][$className] = $reflectionClass->getAttributes(Module::class);
+    }
+
+    $moduleAttributes = $this->reflectionAttributesCache['module'][$className];
+
+    if (!$moduleAttributes) {
       return null;
     }
 
-    $moduleAttribute = array_pop($moduleAttributes);
-
-    return $moduleAttribute->newInstance();
+    return $moduleAttributes[0];
   }
 
   /**
@@ -370,15 +415,19 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public function resolveComponent(ReflectionClass $reflectionClass): ?Component
   {
-    $componentAttributes = $reflectionClass->getAttributes(Component::class);
+    $className = $reflectionClass->getName();
+
+    if (!isset($this->reflectionAttributesCache['component'][$className])) {
+      $this->reflectionAttributesCache['component'][$className] = $reflectionClass->getAttributes(Component::class);
+    }
+
+    $componentAttributes = $this->reflectionAttributesCache['component'][$className];
 
     if (empty($componentAttributes)) {
       return null;
     }
 
-    $componentAttribute = array_pop($componentAttributes);
-
-    return $componentAttribute->newInstance();
+    return $componentAttributes[0];
   }
 
   /**
@@ -389,9 +438,11 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   private function isModule(ReflectionClass $reflectionClass): bool
   {
-    $moduleAttributes = $reflectionClass->getAttributes(Module::class);
+    if (!isset($this->reflectionAttributesCache['module'][$reflectionClass->getName()])) {
+      $this->reflectionAttributesCache['module'][$reflectionClass->getName()] = $reflectionClass->getAttributes(Module::class);
+    }
 
-    return !empty($moduleAttributes);
+    return !empty($this->reflectionAttributesCache['module'][$reflectionClass->getName()]);
   }
 
   /**
@@ -402,16 +453,22 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public function isComponent(ReflectionClass $reflectionClass): bool
   {
-    $componentAttributes = $reflectionClass->getAttributes(Component::class);
+    $className = $reflectionClass->getName();
 
-    return !empty($componentAttributes);
+    if (!isset($this->reflectionAttributesCache['component'][$className])) {
+      $this->reflectionAttributesCache['component'][$className] = $reflectionClass->getAttributes(Component::class);
+    }
+
+    return !empty($this->reflectionAttributesCache['component'][$className]);
   }
+
+  protected array $attributeInstances = [];
 
   /**
    * Binds handler attributes to an instance.
    *
    * @param mixed $instance The instance to bind the attributes to.
-   * @param \ReflectionAttribute[] $reflectionAttributes The reflection attributes.
+   * @param ReflectionAttribute[] $reflectionAttributes The reflection attributes.
    * @return mixed The instance with the bound attributes.
    */
   private function bindHandlerAttributes(mixed $instance, array $reflectionAttributes): mixed

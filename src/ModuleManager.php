@@ -25,72 +25,75 @@ use Symfony\Component\Console\Output\ConsoleOutput;
  */
 class ModuleManager implements SingletonInterface
 {
+  /**
+   * @var ModuleManager|null The singleton instance of the ModuleManager.
+   */
   protected static ?ModuleManager $instance = null;
-
   /** @var ReflectionAttribute[] $lastLoadedAttributes */
   protected array $lastLoadedAttributes = [];
-
   /**
    * @var ReflectionAttribute[] A list of all the imported module tokens
    */
   protected array $moduleTokens = [];
-
   /**
    * @var array<class-string> A list of all the controller tokens
    */
   protected array $controllerTokensList = [];
-
   /**
    * @var array<class-string> A list of all the imported module tokens
    */
   protected array $providerTokens = [];
-
   /**
    * @var array<class-string> A list of all the declared component class names.
    */
   protected array $declarationTokens = [];
-
   /**
    * @var array<string, Component> A map of all the declared component attributes.
    */
   protected array $declaredAttributes = [];
-
   /**
    * @var array<string, ReflectionClass> A map of all the declared component reflections.
    */
   protected array $declaredReflections = [];
-
   /**
    * @var array<string, object> A map of all the declared components.
    */
   protected array $declaredClassInstances = [];
-
   /**
    * @var array<string, string> A map of all the declared styles.
    */
   protected array $declaredStyles = [];
-
   /**
    * @var array<string, mixed> The configuration.
    */
   protected array $config = [];
-
   /**
    * @var Injector The injector.
    */
   protected Injector $injector;
-
   /**
    * @var class-string The root module class.
    */
   protected string $rootModuleClass = '';
-
+  /**
+   * @var LoggerInterface The logger.
+   */
   protected LoggerInterface $logger;
-
   /**
    * @var int The build iteration.
    */
   static int $buildIteration = 0;
+  protected array $reflectionCache = ['rootToken' => []];
+  protected array $attributesCache = [];
+  /**
+   * @var array A list of all the loaded styles.
+   */
+  protected array $loadedStyles = [];
+  /**
+   * @var array<class-string> A list of all the built declarations.
+   */
+  protected array $builtDeclarations = [];
+
 
   /**
    * Constructs a ModuleManager
@@ -147,53 +150,83 @@ class ModuleManager implements SingletonInterface
   public function buildModuleTokensList(string $rootToken): void
   {
     try {
-      $reflectionModule = new ReflectionClass($rootToken);
-      $this->lastLoadedAttributes = $this->loadModuleAttributes($reflectionModule);
+      $stack = [$rootToken]; // Stack to simulate recursion
+      $processedTokens = []; // Prevents redundant processing
 
-      if (!$this->isValidModule($this->lastLoadedAttributes)) {
-        Log::error(__CLASS__, "Invalid Token ID: $rootToken");
-        throw new HttpException();
-      }
-      $reflectionModuleAttribute = $this->lastLoadedAttributes[0];
+      while (!empty($stack)) {
+        $currentToken = array_pop($stack); // Process one module at a time
 
-      /** @var array{declarations: string[], imports: string[], exports: string[], providers: string[], controllers: string[], config: array<string, mixed>} $args */
-      $args = $reflectionModuleAttribute->getArguments();
+        if (isset($processedTokens[$currentToken])) {
+          continue; // Skip already processed modules
+        }
 
-      # 1. Add rootToken to the list
-      $this->moduleTokens[$rootToken] = $reflectionModuleAttribute;
+        // Cache ReflectionClass instances to avoid redundant reflection calls
+        if (!isset($this->reflectionCache['rootToken'][$currentToken])) {
+          $this->reflectionCache['rootToken'][$currentToken] = new ReflectionClass($currentToken);
+        }
 
-      # 2. Store config
-      if (isset($args['config'])) {
-        $this->config = array_merge($this->config, $args['config']);
-      }
-
-      # 3. Store declarations
-      if (isset($args['declarations'])) {
-        $this->declarationTokens = array_merge($this->declarationTokens, $args['declarations']);
-      }
-
-      # 4. For each import, build the module tokens list
-      foreach ($args['imports'] ?? [] as $import) {
-        $this->buildModuleTokensList($import);
-      }
-
-      # 5. Store exported tokens
-      foreach ($args['exports'] ?? [] as $export) {
-        $resolvedExport = $this->injector->resolve($export);
-
-        if ($resolvedExport instanceof Module) {
-          $this->buildModuleTokensList($export);
+        // Load attributes (with caching)
+        if (isset($this->attributesCache[$currentToken])) {
+          $this->lastLoadedAttributes = $this->attributesCache[$currentToken];
         } else {
-          $this->injector->add($export, $resolvedExport);
+          $this->lastLoadedAttributes = $this->loadModuleAttributes($this->reflectionCache['rootToken'][$currentToken]);
+          $this->attributesCache[$currentToken] = $this->lastLoadedAttributes;
+        }
+
+        if (!$this->isValidModule($this->lastLoadedAttributes)) {
+          Log::error(__CLASS__, "Invalid Token ID: $currentToken");
+          throw new HttpException();
+        }
+
+        $reflectionModuleAttribute = $this->lastLoadedAttributes[0];
+
+        /** @var array{declarations: string[], imports: string[], exports: string[], providers: string[], controllers: string[], config: array<string, mixed>} $args */
+        $args = $reflectionModuleAttribute->getArguments();
+
+        // Add module to processed list
+        $processedTokens[$currentToken] = true;
+
+        // Store module metadata
+        $this->moduleTokens[$currentToken] = $reflectionModuleAttribute;
+
+        // Merge config values
+        if (!empty($args['config'])) {
+          foreach ($args['config'] as $key => $value) {
+            $this->config[$key] = $value;
+          }
+        }
+
+        // Merge declarations
+        if (!empty($args['declarations'])) {
+          foreach ($args['declarations'] as $declaration) {
+            $this->declarationTokens[] = $declaration;
+          }
+        }
+
+        // Push imports onto the stack for later processing
+        foreach ($args['imports'] ?? [] as $import) {
+          if (!isset($processedTokens[$import])) {
+            $stack[] = $import;
+          }
+        }
+
+        // Process exports
+        foreach ($args['exports'] ?? [] as $export) {
+          if (!isset($processedTokens[$export])) {
+            $resolvedExport = $this->injector->resolve($export);
+
+            if ($resolvedExport instanceof Module) {
+              $stack[] = $export;
+            } else {
+              $this->injector->add($export, $resolvedExport);
+            }
+          }
         }
       }
     } catch (ReflectionException $e) {
       throw new HttpException($e->getMessage());
     }
   }
-
-  protected array $loadedStyles = [];
-  protected array $builtDeclarations = [];
 
   /**
    * Builds a map of all the declared components.
@@ -313,8 +346,17 @@ class ModuleManager implements SingletonInterface
   private function validateProvider(string $tokenId): ?ReflectionClass
   {
     try {
-      $reflectionClass = new ReflectionClass($tokenId);
-      $this->lastLoadedAttributes = $reflectionClass->getAttributes(Injectable::class);
+      if (!isset($this->reflectionCache[$tokenId])) {
+        $this->reflectionCache[$tokenId] = new ReflectionClass($tokenId);
+      }
+      $reflectionClass = $this->reflectionCache[$tokenId];
+      $className = $reflectionClass->getName();
+
+      if (!isset($this->attributesCache['injectable'][$className])) {
+        $this->attributesCache['injectable'][$className] = $reflectionClass->getAttributes(Injectable::class);
+      }
+
+      $this->lastLoadedAttributes = $this->attributesCache['injectable'][$className];
       return !empty($this->lastLoadedAttributes) ? $reflectionClass : null;
     } catch (ReflectionException) {
       throw new EntryNotFoundException($tokenId);
