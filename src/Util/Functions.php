@@ -192,3 +192,50 @@ if (! function_exists('str_split_by_last_needle') ) {
     ];
   }
 }
+
+if (! function_exists('time_ago')) {
+  /**
+   * Converts a time to a human-readable format.
+   *
+   * @param int|string|null $time The time to convert to a human-readable format.
+   * @return string The human-readable time.
+   */
+  function time_ago(int|string|null $time): string
+  {
+    if ($time === null) {
+      return '-';
+    }
+
+    $timestamp = $time;
+
+    if (is_string($time)) {
+      $timestamp = strtotime($time);
+    }
+
+    $timestamp = time() - $timestamp;
+
+    $timestamp = ($timestamp < 1) ? 1 : $timestamp;
+
+    $tokens = array (
+      31536000 => 'year',
+      2592000 => 'month',
+      604800 => 'week',
+      86400 => 'day',
+      3600 => 'hour',
+      60 => 'minute',
+      1 => 'second'
+    );
+
+    foreach ($tokens as $unit => $text) {
+      if ($timestamp < $unit) {
+        continue;
+      }
+
+      $numberOfUnits = floor($timestamp / $unit);
+
+      return $numberOfUnits.' '.$text.(($numberOfUnits>1)?'s':'').' ago';
+    }
+
+    return '';
+  }
+}
