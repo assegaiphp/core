@@ -160,6 +160,10 @@ class DefaultTemplateEngine extends TemplateEngine
       $ctx->addMethod('translate', fn(string $id, array $parameters = [], string $domain = '', ?string $locale = null) => translate($id, $parameters, $domain, $locale));
     }
 
+    if (!method_exists($ctx, 'timeAgo')) {
+      $ctx->addMethod('timeAgo', fn(int|string|null $timestamp) => time_ago($timestamp));
+    }
+
     $data['ctx'] = $ctx;
 
     foreach ($componentReflection->getProperties() as $reflectionProperty) {
