@@ -86,12 +86,12 @@ class Session implements SingletonInterface, ConfigInterface
 
   public function update(): void
   {
-    // TODO: Implement update() method.
+    // Do nothing
   }
 
   public function load(): void
   {
-    // TODO: Implement load() method.
+    // Do nothing
   }
 
   /**
@@ -107,7 +107,20 @@ class Session implements SingletonInterface, ConfigInterface
    */
   public function remove(string $path): void
   {
-    // TODO: Implement remove() method.
+    if ($this->has($path)) {
+      $keys = explode('.', $path);
+      $session = &$_SESSION;
+
+      foreach ($keys as $key) {
+        if (! array_key_exists($key, $session)) {
+          return;
+        }
+
+        $session = &$session[$key];
+      }
+
+      unset($session);
+    }
   }
 
   /**

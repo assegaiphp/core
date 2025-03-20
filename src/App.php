@@ -124,6 +124,23 @@ class App implements AppInterface
    * @var TemplateEngineInterface $templateEngine The template engine.
    */
   protected TemplateEngineInterface $templateEngine;
+  /**
+   * @var float $startupTime The time the app started.
+   */
+  protected float $startupTime = 0;
+  /**
+   * @var bool $isDebug Determines if the app is in debug mode.
+   */
+  protected bool $isDebug = false;
+  /**
+   * @var bool $withProfiling Determines if the app is profiling.
+   */
+  protected bool $withProfiling = false;
+  /**
+   * @var array $profileResults The results of the profiling.
+   */
+  protected array $profileResults = [];
+  protected int $profilePrecision = 4;
 
   /**
    * Constructs an App instance.
@@ -145,6 +162,9 @@ class App implements AppInterface
     broadcast(EventChannel::APP_INIT_START, new Event());
     $this->initializeErrorAndExceptionHandlers();
     $this->initializeAppProperties();
+    if ($this->withProfiling) {
+      $this->startupTime = microtime(true);
+    }
     broadcast(EventChannel::APP_INIT_FINISH, new Event($this->host));
   }
 
@@ -237,10 +257,32 @@ class App implements AppInterface
 
         session_start();
         broadcast(EventChannel::SESSION_START, new Event());
+
+        $this->profileResults = [];
+        if ($this->withProfiling) {
+          $time = $this->startupTime;
+          $this->profileResults['Startup'] = microtime(true) - $time;
+        }
         $this->resolveModules();
+        if ($this->withProfiling) {
+          $this->profileResults['Module Resolution'] = microtime(true) - $time;
+          $time = microtime(true);
+        }
         $this->resolveProviders();
+        if ($this->withProfiling) {
+          $this->profileResults['Provider Resolution'] = microtime(true) - $time;
+          $time = microtime(true);
+        }
         $this->resolveDeclarations();
+        if ($this->withProfiling) {
+          $this->profileResults['Declaration Resolution'] = microtime(true) - $time;
+          $time = microtime(true);
+        }
         $this->resolveControllers();
+        if ($this->withProfiling) {
+          $this->profileResults['Constroller Resolution'] = microtime(true) - $time;
+          $time = microtime(true);
+        }
         $this->handleRequest();
       }
     } catch (Throwable $exception) {
@@ -337,6 +379,10 @@ class App implements AppInterface
   private function respond(): void
   {
     broadcast(EventChannel::RESPONSE_FINISH, new Event());
+    if ($this->withProfiling) {
+      $this->profileResults['Total Time'] = microtime(true) - $this->startupTime;
+      $this->tabulate('Profile Results', ['Stage', 'Duration (in seconds)'], $this->profileResults);
+    }
     $this->responder->respond(response: $this->response);
   }
 
@@ -424,7 +470,7 @@ class App implements AppInterface
    *
    * @return void
    */
-  public function initializeAppProperties(): void
+  protected function initializeAppProperties(): void
   {
     $dotEnv = Dotenv::createImmutable(getcwd());
     $dotEnv->load();
@@ -452,5 +498,31 @@ class App implements AppInterface
     $this->responder = Responder::getInstance();
     $this->responder->setTemplateEngine($this->templateEngine);
     $this->moduleManager->setRootModuleClass($this->rootModuleClass);
+
+    $this->isDebug = env('DEBUG_MODE', false);
+    $this->withProfiling = env('PROFILING', false);
+  }
+
+  /**
+   *
+   * @param string $title
+   * @param array $headings
+   * @param array $data
+   * @return void
+   */
+  protected function tabulate(string $title, array $headings, array $data): void
+  {
+    $columnLength = 31;
+    $this->logger?->alert('+---------------------------------+---------------------------------+');
+    $this->logger?->alert('| ' . str_pad($headings[0], $columnLength, ' ', STR_PAD_RIGHT) . ' | ' . str_pad($headings[1], $columnLength, ' ', STR_PAD_RIGHT) . ' |');
+    $this->logger?->alert('+---------------------------------+---------------------------------+');
+
+    foreach ($data as $key => $value) {
+      if ($key === 'Total Time') {
+        $this->logger?->alert('+---------------------------------+---------------------------------+');
+      }
+      $this->logger?->alert('| ' . str_pad($key, $columnLength, ' ', STR_PAD_RIGHT) . ' | ' . str_pad(round($value, $this->profilePrecision), $columnLength, ' ', STR_PAD_RIGHT) . ' |');
+    }
+    $this->logger?->alert('+---------------------------------+---------------------------------+');
   }
 }
