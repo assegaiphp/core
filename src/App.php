@@ -125,9 +125,9 @@ class App implements AppInterface
    */
   protected TemplateEngineInterface $templateEngine;
   /**
-   * @var int $startupTime The time the app started.
+   * @var float $startupTime The time the app started.
    */
-  protected int $startupTime = 0;
+  protected float $startupTime = 0;
   /**
    * @var bool $isDebug Determines if the app is in debug mode.
    */
