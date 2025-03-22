@@ -333,7 +333,7 @@ class Request
 
   public function getLang(): string
   {
-    return $_GET['lang'] ?? App::getLocale();
+    return $_GET['lang'] ?? $_SESSION[App::LOCALE_ENV_KEY] ?? env(App::LOCALE_ENV_KEY) ?? App::getLocale();
   }
 
   /**
