@@ -2,9 +2,11 @@
 
 namespace Assegai\Core\Rendering\Engines;
 
+use Assegai\Core\App;
 use Assegai\Core\ControllerManager;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\RenderingException;
+use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Injector;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Routing\Router;
@@ -156,12 +158,24 @@ class DefaultTemplateEngine extends TemplateEngine
       $ctx->addMethod($methodName, fn(...$args) => $method->invoke($this->rootComponent, ...$args));
     }
 
+    if (!method_exists($ctx, 'config')) {
+      $ctx->addMethod('config', fn(string $path, mixed $default = null, ?string $dirname = null) => config($path, $default, $dirname));
+    }
+
     if (!method_exists($ctx, 'translate')) {
       $ctx->addMethod('translate', fn(string $id, array $parameters = [], string $domain = '', ?string $locale = null) => translate($id, $parameters, $domain, $locale));
     }
 
     if (!method_exists($ctx, 'timeAgo')) {
       $ctx->addMethod('timeAgo', fn(int|string|null $timestamp) => time_ago($timestamp));
+    }
+
+    if (!method_exists($ctx, 'env')) {
+      $ctx->addMethod('env', fn(string $key, mixed $default = null) => env($key, $default));
+    }
+
+    if (!method_exists($ctx, 'getLang')) {
+      $ctx->addMethod('getLang', fn() => Request::getInstance()->getLang());
     }
 
     $data['ctx'] = $ctx;
