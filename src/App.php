@@ -222,6 +222,7 @@ class App implements AppInterface
   public function setLogger(LoggerInterface $logger): static
   {
     $this->logger = $logger;
+    register_dependency(LoggerInterface::class, $logger);
     return $this;
   }
 
