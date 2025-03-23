@@ -9,6 +9,7 @@ use Assegai\Core\Events\EventManager;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Injector;
 use Assegai\Core\Rendering\View;
 use Assegai\Core\Rendering\ViewProperties;
 use Assegai\Core\Util\Paths;
@@ -20,7 +21,7 @@ if (!function_exists('env')) {
   }
 }
 
-if (!function_exists('json_is_valid') ) {
+if (!function_exists('json_is_valid')) {
   /**
    * Returns true if the JSON string is valid, false otherwise.
    *
@@ -62,7 +63,7 @@ if (!function_exists('debug_and_exit')) {
   }
 }
 
-if (! function_exists('render') ) {
+if (!function_exists('render')) {
   /**
    * Renders a component
    *
@@ -76,24 +77,19 @@ if (! function_exists('render') ) {
   }
 }
 
-if (! function_exists('view')) {
+if (!function_exists('view')) {
   /**
    * Renders a view.
    *
    * @throws RenderingException
    */
-  function view(
-    string $templateUrl,
-    array $data = [],
-    ViewProperties|array $props = [],
-    ?string $component = null
-  ): View
+  function view(string $templateUrl, array $data = [], ViewProperties|array $props = [], ?string $component = null): View
   {
     return new View($templateUrl, $data, $props, $component);
   }
 }
 
-if (! function_exists('config') ) {
+if (!function_exists('config')) {
   function config(string $path, mixed $default = null, ?string $dirname = null): mixed
   {
     $configDirname = $dirname ?? Paths::getConfigDirectory();
@@ -107,7 +103,7 @@ if (! function_exists('config') ) {
 
     $filepath = Paths::join($configDirname, $directory, ($pathParts[0] ?? '') . '.php');
 
-    if (! file_exists($filepath) ) {
+    if (!file_exists($filepath)) {
       return $default;
     }
 
@@ -117,7 +113,7 @@ if (! function_exists('config') ) {
     $pathParts = explode('.', $trueVariablePath);
 
     foreach ($pathParts as $key) {
-      if (! key_exists($key, $config)) {
+      if (!key_exists($key, $config)) {
         return $default;
       }
 
@@ -128,7 +124,7 @@ if (! function_exists('config') ) {
   }
 }
 
-if (! function_exists('broadcast') ) {
+if (!function_exists('broadcast')) {
   /**
    * Broadcasts an event to the given channel.
    *
@@ -142,7 +138,7 @@ if (! function_exists('broadcast') ) {
   }
 }
 
-if (! function_exists('translate') ) {
+if (!function_exists('translate')) {
   function translate(string $id, array $parameters = [], string $domain = '', ?string $locale = null): string
   {
     $default = $id;
@@ -172,28 +168,26 @@ if (! function_exists('translate') ) {
   }
 }
 
-if (! function_exists('str_split_by_last_needle') ) {
+if (!function_exists('str_split_by_last_needle')) {
   /**
    * Splits a string by the last occurrence of a needle.
    *
    * @param string $input The string to split.
    * @return array The string split into two parts.
    */
-  function str_split_by_last_needle(string $input, string $needle = '/'): array {
+  function str_split_by_last_needle(string $input, string $needle = '/'): array
+  {
     $lastSlashPos = strrpos($input, $needle);
 
     if ($lastSlashPos === false) {
       return ['', $input]; // No slash found, return empty prefix
     }
 
-    return [
-      substr($input, 0, $lastSlashPos),
-      substr($input, $lastSlashPos + 1)
-    ];
+    return [substr($input, 0, $lastSlashPos), substr($input, $lastSlashPos + 1)];
   }
 }
 
-if (! function_exists('time_ago')) {
+if (!function_exists('time_ago')) {
   /**
    * Converts a time to a human-readable format.
    *
@@ -216,15 +210,7 @@ if (! function_exists('time_ago')) {
 
     $timestamp = ($timestamp < 1) ? 1 : $timestamp;
 
-    $tokens = array (
-      31536000 => 'year',
-      2592000 => 'month',
-      604800 => 'week',
-      86400 => 'day',
-      3600 => 'hour',
-      60 => 'minute',
-      1 => 'second'
-    );
+    $tokens = array(31536000 => 'year', 2592000 => 'month', 604800 => 'week', 86400 => 'day', 3600 => 'hour', 60 => 'minute', 1 => 'second');
 
     foreach ($tokens as $unit => $text) {
       if ($timestamp < $unit) {
@@ -233,9 +219,36 @@ if (! function_exists('time_ago')) {
 
       $numberOfUnits = floor($timestamp / $unit);
 
-      return $numberOfUnits.' '.$text.(($numberOfUnits>1)?'s':'').' ago';
+      return $numberOfUnits . ' ' . $text . (($numberOfUnits > 1) ? 's' : '') . ' ago';
     }
 
     return '';
+  }
+}
+
+if (!function_exists('register_dependency')) {
+  /**
+   * Adds a dependency to the container.
+   *
+   * @param string $entryId The id of the dependency to add.
+   * @param mixed $token The dependency to add.
+   * @return int The number of dependencies in the container.
+   */
+  function register_dependency(string $entryId, mixed $token): int
+  {
+    return Injector::getInstance()->add($entryId, $token);
+  }
+}
+
+if (!function_exists('inject')) {
+  /**
+   * Retrieves a dependency from the container.
+   *
+   * @param string $entryId The id of the dependency to retrieve.
+   * @return mixed The dependency if it exists, null otherwise.
+   */
+  function inject(string $entryId): mixed
+  {
+    return Injector::getInstance()->get($entryId);
   }
 }
