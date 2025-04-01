@@ -94,7 +94,7 @@ class Request
    */
   private final function __construct()
   {
-    $this->uri = $_SERVER['REQUEST_URI'];
+    $this->uri = $_SERVER['REQUEST_URI'] ?? '';
     $parsedUrl = parse_url($this->uri);
 
     $scheme = null;
@@ -117,7 +117,7 @@ class Request
       default => ContentType::HTML
     };
 
-    $this->requestMethod = match ($_SERVER['REQUEST_METHOD']) {
+    $this->requestMethod = match ($_SERVER['REQUEST_METHOD'] ?? '') {
       'POST'    => RequestMethod::POST,
       'PUT'     => RequestMethod::PUT,
       'PATCH'   => RequestMethod::PATCH,
