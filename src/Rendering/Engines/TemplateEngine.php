@@ -7,78 +7,67 @@ use Assegai\Core\Components\Interfaces\ComponentInterface;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
 
+/**
+ * The base class for all template engines. This class provides a common interface for all template engines.
+ *
+ * @package Assegai\Core\Rendering\Engines
+ */
 abstract class TemplateEngine implements TemplateEngineInterface
 {
   /**
-   * The template to render.
-   *
-   * @var string
+   * @var string The template to render.
    */
   protected string $template = '';
   /**
-   * The data to render.
-   *
-   * @var array
+   * @var array The data to render.
    */
   protected array $data = [];
   /**
-   * The content type.
-   *
-   * @var ContentType
+   * @var ContentType The content type.
    */
   protected ContentType $contentType;
   /**
-   * The root component.
-   *
    * @var ComponentInterface|null $rootComponent  The root component.
    */
   protected ?ComponentInterface $rootComponent = null;
   /**
-   * The component attribute instance.
-   *
-   * @var Component|null
+   * @var Component|null The component attribute instance.
    */
   protected ?Component $rootComponentAttributeInstance = null;
-
   /**
-   * The title.
-   *
-   * @var string $title
+   * @var string $title The document title.
    */
   protected string $title = '';
-
   /**
-   * The style. Add your custom styles here.
-   *
-   * @var string $style
+   * @var string $description The document description.
+   */
+  protected string $description = '';
+  /**
+   * @var string $keywords The document keywords.
+   */
+  protected string $keywords = '';
+  /**
+   * @var string $author The document author.
+   */
+  protected string $author = '';
+  /**
+   * @var string $style The style. Add your custom styles here.
    */
   protected string $style = '';
-
   /**
-   * The meta. Add your custom meta tags here.
-   *
-   * @var array $meta
+   * @var array $meta The meta. Add your custom meta tags here.
    */
   protected array $meta = [];
-
   /**
-   * The links. Add your custom links here.
-   *
-   * @var array $links
+   * @var array $links The links. Add your custom links here.
    */
   protected array $links = [];
-
   /**
-   * The scripts. Add your custom scripts here.
-   *
-   * @var array $scripts
+   * @var array $scripts The scripts. Add your custom scripts here.
    */
   protected array $scripts = [];
-
   /**
-   * The base URL.
-   *
-   * @var string|null $base
+   * @var string|null $base The base URL.
    */
   protected ?string $base = null;
 
