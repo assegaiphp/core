@@ -201,6 +201,18 @@ class DefaultTemplateEngine extends TemplateEngine
       $this->title = $title ?? $_ENV['DOCUMENT_TITLE'] ?? config('app.title', 'AssegaiPHP');
     }
 
+    if (!$this->description) {
+      $this->description = $description ?? $_ENV['DOCUMENT_DESCRIPTION'] ?? config('app.description', 'AssegaiPHP Application');
+    }
+
+    if (!$this->keywords) {
+      $this->keywords = $keywords ?? $_ENV['DOCUMENT_KEYWORDS'] ?? config('app.keywords', 'AssegaiPHP, PHP, Framework');
+    }
+
+    if (!$this->author) {
+      $this->author = $charset ?? $_ENV['DOCUMENT_AUTHOR'] ?? config('app.author', '');
+    }
+
     # Unwrap view Properties
     $lang ??= Request::getInstance()->getLang();
     $props ??= <<<PROPS
@@ -220,7 +232,6 @@ PROPS;
   <head>
     <title>$this->title</title>
     <meta charset="$charSet">
-    <meta name="viewport">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {$props}
