@@ -26,17 +26,19 @@ readonly class Component
    * @param string[]|null $styles One or more inline CSS stylesheets to use in this component.
    * @param array|null $scriptUrls One or more relative paths or absolute URLs for files containing JavaScript scripts
    * @param array|null $scripts One or more inline JavaScript scripts
+   * @param array|null $meta An object containing metadata for the component. This can include any additional header properties.
    */
   public function __construct(
-    public string $selector,
-    public ?array  $providers = [],
-    public ?string $moduleId = null,
-    public ?string $templateUrl = null,
-    public ?string $template = null,
-    public ?array  $styleUrls = [],
-    public ?array  $styles = [],
-    public ?array  $scriptUrls = [],
-    public ?array  $scripts = []
+    public string   $selector,
+    public ?array   $providers = [],
+    public ?string  $moduleId = null,
+    public ?string  $templateUrl = null,
+    public ?string  $template = null,
+    public ?array   $styleUrls = [],
+    public ?array   $styles = [],
+    public ?array   $scriptUrls = [],
+    public ?array   $scripts = [],
+    public ?array   $meta = []
   )
   {
   }

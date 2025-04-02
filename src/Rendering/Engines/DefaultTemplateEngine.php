@@ -2,7 +2,6 @@
 
 namespace Assegai\Core\Rendering\Engines;
 
-use Assegai\Core\App;
 use Assegai\Core\ControllerManager;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\RenderingException;
@@ -13,6 +12,7 @@ use Assegai\Core\Routing\Router;
 use Assegai\Util\Path;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionMethod;
 use RuntimeException;
 use Twig\Environment;
 use Twig\Error\LoaderError;
@@ -118,6 +118,7 @@ class DefaultTemplateEngine extends TemplateEngine
     $pathRelativeFromRoot = Path::relative($this->templatesDirectory, $this->componentFilename);
     $resolveTemplateUrl = Path::join(dirname($pathRelativeFromRoot) ?: '', $componentAttributeInstance->templateUrl);
     $this->setTemplate($componentAttributeInstance->template ?? '');
+    $this->meta = [...$this->meta, ...$componentAttributeInstance->meta];
 
     # Load template
     if (!$componentAttributeInstance->templateUrl) {
@@ -142,7 +143,7 @@ class DefaultTemplateEngine extends TemplateEngine
       }
     };
 
-    $methods = $componentReflection->getMethods(\ReflectionMethod::IS_PUBLIC);
+    $methods = $componentReflection->getMethods(ReflectionMethod::IS_PUBLIC);
 
     foreach ($methods as $method) {
       $methodName = $method->getName();
@@ -192,8 +193,16 @@ class DefaultTemplateEngine extends TemplateEngine
 
     $this->setData($data);
 
+    if ($this->meta) {
+      extract($this->meta);
+    }
+
+    if (!$this->title) {
+      $this->title = $title ?? $_ENV['DOCUMENT_TITLE'] ?? config('app.title', 'AssegaiPHP');
+    }
+
     # Unwrap view Properties
-    $lang ??= 'en';
+    $lang ??= Request::getInstance()->getLang();
     $props ??= <<<PROPS
 <link href="/css/style.css" rel="stylesheet" />
 <script src="/js/main.js"></script>
