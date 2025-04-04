@@ -25,9 +25,14 @@ class JsonResponder implements ResponderInterface
 
     if ($response instanceof Response) {
       $responseBody = $response->getBody();
-      $responseBodyClassName = get_class($responseBody);
 
-      if (is_object($responseBody) || is_array($responseBody)) {
+      if (is_array($responseBody)) {
+        exit(new ApiResponse($responseBody));
+      }
+
+      if (is_object($responseBody)) {
+        $responseBodyClassName = get_class($responseBody);
+
         if (method_exists($responseBody, 'isError') && $responseBody->isError()) {
           if (method_exists($responseBody, 'getErrors')) {
             $lastError = array_first($responseBody->getErrors());
@@ -37,6 +42,7 @@ class JsonResponder implements ResponderInterface
             }
           }
         }
+
 
         if ( str_contains($responseBodyClassName, 'FindResult') ) {
           $total = method_exists($responseBody, 'getTotal') ? $responseBody->getTotal() : null;
