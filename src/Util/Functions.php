@@ -196,33 +196,46 @@ if (!function_exists('time_ago')) {
    */
   function time_ago(int|string|null $time): string
   {
-    if ($time === null) {
+    if ($time === null || (is_string($time) && trim($time) === '')) {
       return '-';
     }
 
-    $timestamp = $time;
-
-    if (is_string($time)) {
+    // Convert to UNIX timestamp
+    if (is_numeric($time)) {
+      $timestamp = (int) $time;
+    } elseif (is_string($time)) {
       $timestamp = strtotime($time);
-    }
-
-    $timestamp = time() - $timestamp;
-
-    $timestamp = ($timestamp < 1) ? 1 : $timestamp;
-
-    $tokens = array(31536000 => 'year', 2592000 => 'month', 604800 => 'week', 86400 => 'day', 3600 => 'hour', 60 => 'minute', 1 => 'second');
-
-    foreach ($tokens as $unit => $text) {
-      if ($timestamp < $unit) {
-        continue;
+      if ($timestamp === false) {
+        return '-'; // invalid date string
       }
-
-      $numberOfUnits = floor($timestamp / $unit);
-
-      return $numberOfUnits . ' ' . $text . (($numberOfUnits > 1) ? 's' : '') . ' ago';
+    } else {
+      return '-'; // unsupported type
     }
 
-    return '';
+    $diff = time() - $timestamp;
+
+    if ($diff < 1) {
+      return 'just now';
+    }
+
+    $units = [
+      31536000 => 'year',
+      2592000  => 'month',
+      604800   => 'week',
+      86400    => 'day',
+      3600     => 'hour',
+      60       => 'minute',
+      1        => 'second',
+    ];
+
+    foreach ($units as $seconds => $label) {
+      if ($diff >= $seconds) {
+        $count = (int) floor($diff / $seconds);
+        return "$count $label" . ($count > 1 ? 's' : '') . ' ago';
+      }
+    }
+
+    return 'just now'; // fallback
   }
 }
 
