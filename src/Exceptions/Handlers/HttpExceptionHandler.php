@@ -30,13 +30,15 @@ class HttpExceptionHandler implements ExceptionHandlerInterface
   public function handle(Throwable $exception): void
   {
     $statusCode = http_response_code();
+
     if ($exception instanceof HttpException) {
       $statusCode = $exception->getStatus()->code;
+
       if (!headers_sent()) {
         header('Content-Type: text/html');
       }
-      error_log($exception->getMessage() . ' in ' . $exception->getFile() . ' on line ' . $exception->getLine() . PHP_EOL . $exception->getTraceAsString() . PHP_EOL . PHP_EOL, 0);
 
+      error_log($exception->getMessage() . ' in ' . $exception->getFile() . ' on line ' . $exception->getLine() . PHP_EOL . $exception->getTraceAsString() . PHP_EOL . PHP_EOL, 0);
       http_response_code($statusCode);
     }
 

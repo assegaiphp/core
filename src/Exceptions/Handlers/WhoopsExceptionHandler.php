@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Exceptions\Handlers;
 
+use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -50,6 +51,9 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
   {
     if (! headers_sent() ) {
       header('Content-Type: text/html');
+    }
+    if ($exception instanceof HttpException) {
+      $this->whoops->sendHttpCode($exception->getCode());
     }
     $this->logger->error($exception->getMessage());
     echo $this->whoops->handleException($exception);

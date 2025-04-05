@@ -30,6 +30,7 @@ class DefaultExceptionHandler implements ExceptionHandlerInterface
   public function handle(Throwable $exception): void
   {
     if ($exception instanceof HttpException) {
+      http_response_code($exception->getStatus()->code);
       echo $exception;
     } else {
       $status = HttpStatus::fromInt(500);
