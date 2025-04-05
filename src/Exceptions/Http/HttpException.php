@@ -8,6 +8,9 @@ use Assegai\Core\Http\Responses\Responders\Responder;
 use Exception;
 use stdClass;
 
+/**
+ * Class HttpException
+ */
 class HttpException extends Exception
 {
   protected readonly string|stdClass|array $response;
@@ -21,18 +24,6 @@ class HttpException extends Exception
     parent::__construct($this->response);
   }
 
-  protected final function setStatus(?HttpStatusCode $status): void
-  {
-    $this->status = $status;
-
-    if (!$this->status)
-    {
-      $this->status = HttpStatus::InternalServerError();
-    }
-
-    Responder::getInstance()->setResponseCode($this->status);
-  }
-
   public final function __toString(): string
   {
     return $this->getResponse();
@@ -40,15 +31,22 @@ class HttpException extends Exception
 
   public final function getResponse(): string
   {
-    return json_encode((! is_string($this->response)) ? $this->response : [
-      'statusCode' => $this->status->code,
-      'message' => $this->response ?? $this->status->name,
-      'error' => $this->status->name
-    ]);
+    return json_encode((!is_string($this->response)) ? $this->response : ['statusCode' => $this->status->code, 'message' => $this->response ?? $this->status->name, 'error' => $this->status->name]);
   }
 
   public final function getStatus(): HttpStatusCode
   {
     return $this->status;
+  }
+
+  protected final function setStatus(?HttpStatusCode $status): void
+  {
+    $this->status = $status;
+
+    if (!$this->status) {
+      $this->status = HttpStatus::InternalServerError();
+    }
+
+    Responder::getInstance()->setResponseCode($this->status);
   }
 }
