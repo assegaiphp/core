@@ -26,6 +26,7 @@ use Assegai\Core\Exceptions\Http\ForbiddenException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\InterceptorException;
+use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\ExecutionContext;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
@@ -79,6 +80,10 @@ final class Router
    * @var array The global interceptors.
    */
   private array $globalInterceptors = [];
+  /**
+   * @var array<class-string|ExceptionFilterInterface> The global filters.
+   */
+  private array $globalFilters = [];
 
   private final function __construct()
   {
@@ -477,6 +482,11 @@ final class Router
   public function addGlobalInterceptors(array $interceptors): void
   {
     $this->globalInterceptors = [...$this->globalInterceptors, ...$interceptors];
+  }
+
+  public function addGlobalFilters(array $filters): void
+  {
+    $this->globalFilters = [...$this->globalFilters, ...$filters];
   }
 
   /**
