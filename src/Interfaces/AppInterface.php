@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Interfaces;
 
+use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Psr\Log\LoggerInterface;
 
 interface AppInterface
@@ -29,6 +30,12 @@ interface AppInterface
    * @return static The current `App` instance.
    */
   public function useGlobalInterceptors(IAssegaiInterceptor|string|array $interceptors): self;
+
+  /**
+   * @param ExceptionFilterInterface|class-string|array<class-string|ExceptionFilterInterface> $filters
+   * @return self
+   */
+  public function useGlobalFilters(ExceptionFilterInterface|string|array $filters): self;
 
   /**
    * Sets a logger instance that should be user by the `App` instance.

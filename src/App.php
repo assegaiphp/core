@@ -16,6 +16,7 @@ use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
+use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Responders\Responder;
@@ -121,6 +122,10 @@ class App implements AppInterface
    */
   protected array $interceptors = [];
   /**
+   * @var array<ExceptionFilterInterface> A list of application scoped exception filters
+   */
+  protected array $exceptionFilters = [];
+  /**
    * @var TemplateEngineInterface $templateEngine The template engine.
    */
   protected TemplateEngineInterface $templateEngine;
@@ -213,6 +218,16 @@ class App implements AppInterface
   {
     $this->interceptors = array_merge($this->interceptors, (is_array($interceptors) ? $interceptors : [$interceptors]));
     $this->router->addGlobalInterceptors($this->interceptors);
+    return $this;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function useGlobalFilters(ExceptionFilterInterface|string|array $filters): self
+  {
+    $this->exceptionFilters = array_merge($this->exceptionFilters, (is_array($filters) ? $filters : [$filters]));
+    $this->router->addGlobalFilters($this->exceptionFilters);
     return $this;
   }
 
@@ -454,6 +469,12 @@ class App implements AppInterface
     $this->httpExceptionHandler = new HttpExceptionHandler($this->logger);
 
     set_exception_handler(function (Throwable $exception) {
+      foreach ($this->exceptionFilters as $type => $filter) {
+        if (is_a($exception, $type) ) {
+          $filter->catch($exception);
+        }
+      }
+
       if (Environment::isProduction()) {
         $this->httpExceptionHandler->handle($exception);
       } else {
