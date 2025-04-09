@@ -23,12 +23,15 @@ use Assegai\Core\Interfaces\IEntryNotFoundException;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
 use Assegai\Core\Util\TypeManager;
 use Codeception\Attribute\Skip;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionEnum;
 use ReflectionException;
 use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionUnionType;
+use Symfony\Component\Console\Logger\ConsoleLogger;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 /**
  * Class Injector. The injector is responsible for resolving dependencies.
@@ -54,12 +57,17 @@ final class Injector implements ITokenStoreOwner, IContainer
    * @var ReflectionAttribute[] The cache of attributes.
    */
   protected array $reflectionAttributesCache = ['injectable' => [], 'module' => [], 'component' => [], 'controller' => []];
+  /**
+   * @var LoggerInterface The logger instance.
+   */
+  protected LoggerInterface $logger;
 
   /**
    * Constructs a new Injector instance.
    */
   private final function __construct()
   {
+    $this->logger = new ConsoleLogger(new ConsoleOutput());
   }
 
   /**
