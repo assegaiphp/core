@@ -224,9 +224,20 @@ class App implements AppInterface
   /**
    * @inheritDoc
    */
-  public function useGlobalFilters(ExceptionFilterInterface|string|array $filters): self
+  public function useGlobalFilters(ExceptionFilterInterface|string|array $filters, string|array $type = Exception::class): self
   {
-    $this->exceptionFilters = array_merge($this->exceptionFilters, (is_array($filters) ? $filters : [$filters]));
+    $types = is_string($type) ? [$type] : $type;
+
+    if (!$this->exceptionFilters) {
+      foreach ($types as $filterType) {
+        $this->exceptionFilters[$filterType] = [];
+      }
+
+      $previousFilters = $this->exceptionFilters[$filterType];
+      $currentFilters = is_array($filters) ? $filters : [$filters];
+      $this->exceptionFilters[$filterType] = [...$previousFilters, ...$currentFilters];
+    }
+
     $this->router->addGlobalFilters($this->exceptionFilters);
     return $this;
   }
@@ -302,6 +313,13 @@ class App implements AppInterface
         $this->handleRequest();
       }
     } catch (Throwable $exception) {
+      foreach ($this->exceptionFilters as $type => $exceptionFilter) {
+        if (is_a($exception, $type)) {
+          foreach ($exceptionFilter as $filter) {
+            $filter->catch($exception, $this->host);
+          }
+        }
+      }
       if (Environment::isProduction()) {
         $this->httpExceptionHandler->handle($exception);
       } else {

@@ -192,9 +192,12 @@ if (!function_exists('time_ago')) {
    * Converts a time to a human-readable format.
    *
    * @param int|string|null $time The time to convert to a human-readable format.
+   * @param string|null $timezone
    * @return string The human-readable time.
+   * @throws DateInvalidTimeZoneException
+   * @throws DateMalformedStringException
    */
-  function time_ago(int|string|null $time): string
+  function time_ago(int|string|null $time, ?string $timezone = null): string
   {
     if ($time === null || (is_string($time) && trim($time) === '')) {
       return '-';
@@ -204,10 +207,8 @@ if (!function_exists('time_ago')) {
     if (is_numeric($time)) {
       $timestamp = (int) $time;
     } elseif (is_string($time)) {
-      $timestamp = strtotime($time);
-      if ($timestamp === false) {
-        return '-'; // invalid date string
-      }
+      $tz = $timezone ?? date_default_timezone_get();
+      $timestamp = (new DateTimeImmutable($time, (new DateTimeZone($tz))))->getTimestamp();;
     } else {
       return '-'; // unsupported type
     }
@@ -215,7 +216,7 @@ if (!function_exists('time_ago')) {
     $diff = time() - $timestamp;
 
     if ($diff < 1) {
-      return 'just now';
+      return 'Moments ago';
     }
 
     $units = [
@@ -235,7 +236,7 @@ if (!function_exists('time_ago')) {
       }
     }
 
-    return 'just now'; // fallback
+    return 'Moments ago'; // fallback
   }
 }
 
