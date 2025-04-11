@@ -10,6 +10,8 @@ use Assegai\Core\Injector;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Routing\Router;
 use Assegai\Util\Path;
+use DateInvalidTimeZoneException;
+use DateMalformedStringException;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
@@ -103,11 +105,14 @@ class DefaultTemplateEngine extends TemplateEngine
   /**
    * @inheritDoc
    *
+   * @return string
    * @throws LoaderError
+   * @throws ReflectionException
    * @throws RenderingException
    * @throws RuntimeError
    * @throws SyntaxError
-   * @throws ReflectionException
+   * @throws DateInvalidTimeZoneException
+   * @throws DateMalformedStringException
    */
   public function render(): string
   {
@@ -168,7 +173,7 @@ class DefaultTemplateEngine extends TemplateEngine
     }
 
     if (!method_exists($ctx, 'timeAgo')) {
-      $ctx->addMethod('timeAgo', fn(int|string|null $timestamp) => time_ago($timestamp));
+      $ctx->addMethod('timeAgo', fn(int|string|null $timestamp, ?string $timezone = null) => time_ago($timestamp, $timezone));
     }
 
     if (!method_exists($ctx, 'env')) {
