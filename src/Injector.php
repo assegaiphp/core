@@ -21,6 +21,7 @@ use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
+use Assegai\Core\Queues\Attributes\InjectQueue;
 use Assegai\Core\Util\TypeManager;
 use Codeception\Attribute\Skip;
 use Psr\Log\LoggerInterface;
@@ -303,6 +304,7 @@ final class Injector implements ITokenStoreOwner, IContainer
         return $param->allowsNull() ? null : [];
       }
 
+      # Resolve repository injection
       $repositoryAttributes = $param->getAttributes('Assegai\Orm\Attributes\InjectRepository');
 
       foreach ( $repositoryAttributes as $reflectionRepoAttr ) {
@@ -314,6 +316,16 @@ final class Injector implements ITokenStoreOwner, IContainer
 
       # TODO: Check if param has Injectable class or attribute
       $repositoryAttributes = [...$param->getAttributes(CoreInjectable::class), ...$param->getAttributes(Injectable::class)];
+
+      # Resolve queue injection
+      $queueAttributes = $param->getAttributes(InjectQueue::class);
+
+      foreach ( $queueAttributes as $queueAttribute ) {
+        $queueInstance = $queueAttribute->newInstance();
+        if (property_exists($queueInstance, 'queue')) {
+          return $queueInstance->queue;
+        }
+      }
 
       return $this->get($paramType->getName());
     }, $parameters);
