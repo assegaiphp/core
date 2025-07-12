@@ -2,7 +2,6 @@
 
 namespace Assegai\Core\Queues;
 
-use AMQPConnection;
 use Assegai\Core\Queues\Exceptions\QueueException;
 use Assegai\Core\Queues\Interfaces\QueueInterface;
 use Assegai\Core\Queues\Interfaces\QueueProcessResultInterface;
