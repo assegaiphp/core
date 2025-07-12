@@ -6,6 +6,7 @@ use Assegai\Core\Interfaces\SingletonInterface;
 use Assegai\Core\Queues\Exceptions\QueueException;
 use Assegai\Core\Queues\Interfaces\QueueInterface;
 use InvalidArgumentException;
+use Pheanstalk\Values\Timeout;
 
 class QueueFactory implements SingletonInterface
 {
@@ -48,12 +49,20 @@ class QueueFactory implements SingletonInterface
         );
       // Add other drivers here as needed.
       case 'beanstalk':
+        $connectionTimeout = $config['connection_timeout'] ?? null;
+        $receiveTimeout = $config['receive_timeout'] ?? null;
+        if ($connectionTimeout) {
+          $connectionTimeout = new Timeout($connectionTimeout);
+        }
+        if ($receiveTimeout) {
+          $receiveTimeout = new Timeout($receiveTimeout);
+        }
         return new BeanstalkQueue(
           $name,
           $config['host'] ?? null,
           $config['port'] ?? BeanstalkQueue::DEFAULT_PORT,
-          $config['connection_timeout'] ?? null,
-          $config['receive_timeout'] ?? null
+          $connectionTimeout,
+          $receiveTimeout
         );
       default:
         throw new InvalidArgumentException("Unsupported queue driver: $driver");
