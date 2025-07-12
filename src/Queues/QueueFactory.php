@@ -47,6 +47,14 @@ class QueueFactory implements SingletonInterface
           $config['auto_delete'] ?? false
         );
       // Add other drivers here as needed.
+      case 'beanstalk':
+        return new BeanstalkQueue(
+          $name,
+          $config['host'] ?? null,
+          $config['port'] ?? BeanstalkQueue::DEFAULT_PORT,
+          $config['connection_timeout'] ?? null,
+          $config['receive_timeout'] ?? null
+        );
       default:
         throw new InvalidArgumentException("Unsupported queue driver: $driver");
     }
