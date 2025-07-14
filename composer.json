@@ -50,6 +50,6 @@
     },
     "scripts": {
         "test": "vendor/bin/codecept run Unit",
-        "analyze": "vendor/bin/phpstan analyse src tests/Unit --level 8"
+        "analyze": "vendor/bin/phpstan analyse src --level 8"
     }
 }
