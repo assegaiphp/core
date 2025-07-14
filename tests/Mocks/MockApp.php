@@ -6,6 +6,7 @@ use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\IAssegaiInterceptor;
 use Assegai\Core\Interfaces\IPipeTransform;
+use Exception;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -53,9 +54,11 @@ class MockApp implements AppInterface
   }
 
   /**
+   * @param array|string|ExceptionFilterInterface $filters
+   * @param string|array $type
    * @inheritDoc
    */
-  public function useGlobalFilters(ExceptionFilterInterface|array|string $filters): AppInterface
+  public function useGlobalFilters(ExceptionFilterInterface|array|string $filters, string|array $type = Exception::class): AppInterface
   {
     $this->filters = array_merge($this->filters, (is_array($filters) ? $filters : [$filters]));
     return $this;
