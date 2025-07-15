@@ -161,16 +161,16 @@
         },
         {
             "name": "assegaiphp/common",
-            "version": "0.4.4",
+            "version": "0.4.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/assegaiphp/common.git",
-                "reference": "7be815762acd11b0e1f9ddc22e70bd6195995ebe"
+                "reference": "ec4b0ad66f093c9811dd8261971844d8bb5aaa32"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/assegaiphp/common/zipball/7be815762acd11b0e1f9ddc22e70bd6195995ebe",
-                "reference": "7be815762acd11b0e1f9ddc22e70bd6195995ebe",
+                "url": "https://api.github.com/repos/assegaiphp/common/zipball/ec4b0ad66f093c9811dd8261971844d8bb5aaa32",
+                "reference": "ec4b0ad66f093c9811dd8261971844d8bb5aaa32",
                 "shasum": ""
             },
             "require": {
@@ -202,9 +202,9 @@
             "description": "The assegai/common package is a collection of commonly used utility classes and functions for AssegaiPHP projects. This package provides a set of tools that are designed to make it easier for developers to perform common tasks such as working with arrays, strings, and paths. The package also includes classes for handling errors and logging, as well as a simple yet powerful configuration management system. The package is designed to be lightweight, with minimal dependencies, and is fully compatible with any AssegaiPHP based project. Whether you're building a small web application or a large enterprise system, assegai/common provides the essential building blocks you need to get started quickly and easily.",
             "support": {
                 "issues": "https://github.com/assegaiphp/common/issues",
-                "source": "https://github.com/assegaiphp/common/tree/0.4.4"
+                "source": "https://github.com/assegaiphp/common/tree/0.4.5"
             },
-            "time": "2025-07-15T21:01:27+00:00"
+            "time": "2025-07-15T22:46:20+00:00"
         },
         {
             "name": "assegaiphp/forms",
