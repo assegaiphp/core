@@ -32,6 +32,10 @@ readonly class InjectQueue
       throw new InvalidArgumentException("Invalid queue path '$path'. Expected format: 'driver.name'.");
     }
 
+    if (!isset($queueConfig['name'])) {
+      $queueConfig['name'] = $name;
+    }
+
     $driverClass = config("queues.drivers.$driver");
 
     if (!$driverClass || !class_exists($driverClass)) {
