@@ -12,6 +12,7 @@ use Assegai\Core\Attributes\Http\Patch;
 use Assegai\Core\Attributes\Http\Post;
 use Assegai\Core\Attributes\Http\Put;
 use Assegai\Core\Attributes\Http\Query;
+use Assegai\Core\Attributes\Http\Sse;
 use Assegai\Core\Attributes\Param;
 use Assegai\Core\Attributes\Req;
 use Assegai\Core\Attributes\Res;
@@ -328,7 +329,7 @@ final class Router
             break;
 
           case RequestMethod::GET:
-            if ($attribute->getName() === Get::class) {
+            if ($attribute->getName() === Get::class || $attribute->getName() === Sse::class) {
               $requestMapperClassFound = true;
             }
             break;
