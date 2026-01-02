@@ -94,7 +94,7 @@ class Request
    */
   private final function __construct()
   {
-    $this->uri = $_SERVER['REQUEST_URI'] ?? '';
+    $this->uri = $_GET['path'] ?? '';
     $parsedUrl = parse_url($this->uri);
 
     $scheme = null;
