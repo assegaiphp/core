@@ -9,6 +9,7 @@ use Assegai\Core\Attributes\Http\Options;
 use Assegai\Core\Attributes\Http\Patch;
 use Assegai\Core\Attributes\Http\Post;
 use Assegai\Core\Attributes\Http\Put;
+use Assegai\Core\Attributes\Http\Sse;
 use ReflectionAttribute;
 
 class Validator
@@ -26,6 +27,7 @@ class Validator
       Patch::class,
       Post::class,
       Put::class,
+      Sse::class,
     ];
 
     return in_array($attribute->getName(), $requestMapperClasses);
