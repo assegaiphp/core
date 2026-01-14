@@ -29,8 +29,7 @@ class RequestQuery extends stdClass
     $this->props = [];
     parse_str($this->raw, $this->props);
 
-    foreach ($this->props as $key => $value)
-    {
+    foreach ($this->props as $key => $value) {
       $this->$key = $value;
     }
   }
@@ -55,8 +54,7 @@ class RequestQuery extends stdClass
    */
   public function get(?string $key = null, mixed $default = ''): array|string
   {
-    if (!$key)
-    {
+    if (!$key) {
       return $this->props;
     }
 

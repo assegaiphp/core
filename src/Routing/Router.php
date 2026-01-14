@@ -776,7 +776,7 @@ HTML);
               : $request->getQuery();
           }
 
-          return $request->getQuery()->get($param->getName()) ??
+          return $request->getQuery()->get($paramAttributeInstance->key) ??
             ($param->isOptional() ? $param->getDefaultValue() : null);
 
         case Body::class:
