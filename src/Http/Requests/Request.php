@@ -222,6 +222,13 @@ class Request
    */
   public function header(string $name): string
   {
+    if (function_exists('apache_request_headers')) {
+      $headers = apache_request_headers();
+      if (isset($headers[$name])) {
+        return $headers[$name];
+      }
+    }
+
     $key = strtoupper($name);
 
     if (isset($_SERVER["HTTP_$key"])) {
