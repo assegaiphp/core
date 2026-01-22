@@ -41,9 +41,7 @@ use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Throwable;
 
-//use Psr\Log\LoggerAwareInterface;
-
-require __DIR__ . '/Util/Definitions.php';
+require_once __DIR__ . '/Util/Definitions.php';
 
 /**
  * @since 1.0.0
@@ -191,7 +189,15 @@ class App implements AppInterface
   public function configure(mixed $config = null): static
   {
     if ($config instanceof  ProjectConfig) {
+      $this->projectConfig = $config;
+    }
+
+    if ($config instanceof AppConfig) {
       $this->appConfig = $config;
+    }
+
+    if ($config instanceof ComposerConfig) {
+      $this->composerConfig = $config;
     }
 
     if ($config instanceof ConsumerInterface) {
@@ -489,7 +495,7 @@ class App implements AppInterface
     set_exception_handler(function (Throwable $exception) {
       foreach ($this->exceptionFilters as $type => $filter) {
         if (is_a($exception, $type) ) {
-          $filter->catch($exception);
+          $filter->catch($exception, $this->host);
         }
       }
 
