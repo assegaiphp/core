@@ -253,8 +253,6 @@ class ModuleManager implements SingletonInterface
           continue;
         }
 
-        // TODO: Refactor declarations to allow components, directives and pipes
-        // See https://angular.io/guide/feature-modules
         $this->declaredAttributes[$componentAttributeInstance->selector] = $componentAttributeInstance;
         $this->declaredReflections[$componentAttributeInstance->selector] = $componentClassReflection;
         $this->declaredClassInstances[$componentAttributeInstance->selector] = $componentClassReflection->newInstance();

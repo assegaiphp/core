@@ -161,6 +161,12 @@ abstract class AssegaiComponent implements ComponentInterface
       throw new RenderingException("Invalid ViewComponent - Component Attribute not found");
     }
 
-    return $componentAttributes[0]->newInstance();
+    $component = $componentAttributes[0]->newInstance();
+
+    if (!$component instanceof Component) {
+      throw new RenderingException("Invalid ViewComponent - Component Attribute is not an instance of Component");
+    }
+
+    return $component;
   }
 }
