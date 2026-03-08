@@ -11,70 +11,70 @@ use Closure;
  */
 class EventManager implements IEventBroadcaster
 {
-  /**
-   * @var array|array[]
-   */
-  private static array $eventQueues = [
-    'APP_INIT_START' => [],
-    'APP_INIT_FINISH' => [],
-    'APP_LISTENING_START' => [],
-    'APP_LISTENING_FINISH' => [],
-    'APP_SHUTDOWN_START' => [],
-    'APP_SHUTDOWN_FINISH' => [],
-    'MODULE_RESOLUTION_START' => [],
-    'MODULE_RESOLUTION_FINISH' => [],
-    'PROVIDER_RESOLUTION_START' => [],
-    'PROVIDER_RESOLUTION_FINISH' => [],
-    'DECLARATION_RESOLUTION_START' => [],
-    'DECLARATION_RESOLUTION_FINISH' => [],
-    'CONTROLLER_RESOLUTION_START' => [],
-    'CONTROLLER_RESOLUTION_FINISH' => [],
-    'CONTROLLER_WILL_ACTIVATE' => [],
-    'CONTROLLER_DID_ACTIVATE' => [],
-    'HANDLER_WILL_ACTIVATE' => [],
-    'HANDLER_DID_ACTIVATE' => [],
-    'REQUEST_HANDLING_START' => [],
-    'REQUEST_HANDLING_FINISH' => [],
-    'RESPONSE_START' => [],
-    'RESPONSE_FINISH' => [],
-    'SESSION_START' => []
-  ];
+    /**
+     * @var array|array[]
+     */
+    private static array $eventQueues = [
+        'APP_INIT_START' => [],
+        'APP_INIT_FINISH' => [],
+        'APP_LISTENING_START' => [],
+        'APP_LISTENING_FINISH' => [],
+        'APP_SHUTDOWN_START' => [],
+        'APP_SHUTDOWN_FINISH' => [],
+        'MODULE_RESOLUTION_START' => [],
+        'MODULE_RESOLUTION_FINISH' => [],
+        'PROVIDER_RESOLUTION_START' => [],
+        'PROVIDER_RESOLUTION_FINISH' => [],
+        'DECLARATION_RESOLUTION_START' => [],
+        'DECLARATION_RESOLUTION_FINISH' => [],
+        'CONTROLLER_RESOLUTION_START' => [],
+        'CONTROLLER_RESOLUTION_FINISH' => [],
+        'CONTROLLER_WILL_ACTIVATE' => [],
+        'CONTROLLER_DID_ACTIVATE' => [],
+        'HANDLER_WILL_ACTIVATE' => [],
+        'HANDLER_DID_ACTIVATE' => [],
+        'REQUEST_HANDLING_START' => [],
+        'REQUEST_HANDLING_FINISH' => [],
+        'RESPONSE_START' => [],
+        'RESPONSE_FINISH' => [],
+        'SESSION_START' => []
+    ];
 
-  /**
-   * Constructs an EventManager instance.
-   */
-  private final function __construct()
-  {}
-
-  /**
-   * @param EventChannel $channel
-   * @param Event $event
-   * @return void
-   */
-  public static function broadcast(EventChannel $channel, Event $event): void
-  {
-    foreach (self::$eventQueues[$channel->value] as $handler)
+    /**
+     * Constructs an EventManager instance.
+     */
+    private final function __construct()
     {
-      $handler($event);
     }
-  }
 
-  /**
-   * @param EventChannel $channel
-   * @param Closure $handler
-   * @return void
-   */
-  public static function subscribe(EventChannel $channel, Closure $handler): void
-  {
-    self::$eventQueues[$channel->value][] = $handler;
-  }
+    /**
+     * @param EventChannel $channel
+     * @param Event $event
+     * @return void
+     */
+    public static function broadcast(EventChannel $channel, Event $event): void
+    {
+        foreach (self::$eventQueues[$channel->value] as $handler) {
+            $handler($event);
+        }
+    }
 
-  /**
-   * @param EventChannel $channel
-   * @return void
-   */
-  public static function clearChannel(EventChannel $channel): void
-  {
-    self::$eventQueues[$channel->value] = [];
-  }
+    /**
+     * @param EventChannel $channel
+     * @param Closure $handler
+     * @return void
+     */
+    public static function subscribe(EventChannel $channel, Closure $handler): void
+    {
+        self::$eventQueues[$channel->value][] = $handler;
+    }
+
+    /**
+     * @param EventChannel $channel
+     * @return void
+     */
+    public static function clearChannel(EventChannel $channel): void
+    {
+        self::$eventQueues[$channel->value] = [];
+    }
 }
