@@ -54,6 +54,20 @@ use Symfony\Component\Console\Output\ConsoleOutput;
  */
 final class Router
 {
+  private const array ROUTE_CONSTRAINT_PATTERNS = [
+    'int' => '/^-?\d+$/',
+    'slug' => '/^[A-Za-z][A-Za-z0-9_-]*$/',
+    'uuid' => '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/',
+    'alpha' => '/^[A-Za-z]+$/',
+    'alnum' => '/^[A-Za-z0-9]+$/',
+    'hex' => '/^[A-Fa-f0-9]+$/',
+    'ulid' => '/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i',
+  ];
+  private const int STATIC_ROUTE_PRIORITY = 300;
+  private const int CONSTRAINED_DYNAMIC_ROUTE_PRIORITY = 200;
+  private const int DYNAMIC_ROUTE_PRIORITY = 100;
+  private const int WILDCARD_ROUTE_PRIORITY = 0;
+
   /**
    * @var Router|null The Router instance.
    */
@@ -235,12 +249,30 @@ final class Router
    */
   public function getActivatedHandler(array $handlers, object $controller, Request $request): ?ReflectionMethod
   {
+    $bestHandler = null;
+    $bestMatch = null;
+
     foreach ($handlers as $handler) {
-      if ($this->canActivateHandler(handler: $handler, controller: $controller, request: $request)) {
-        $this->parseHandlerAttributes($handler);
-        return $handler;
+      $matchData = $this->getHandlerMatchData(handler: $handler, controller: $controller, request: $request);
+
+      if (is_null($matchData)) {
+        continue;
+      }
+
+      if (is_null($bestMatch) || $this->isBetterRouteMatch($matchData, $bestMatch)) {
+        $bestHandler = $handler;
+        $bestMatch = $matchData;
       }
     }
+
+    if ($bestHandler && $bestMatch) {
+      $request->setParams($bestMatch['params']);
+      $this->validateMatchedRouteConstraints($bestHandler, $bestMatch['constraints']);
+      $this->parseHandlerAttributes($bestHandler);
+      return $bestHandler;
+    }
+
+    $request->clearParams();
 
     return null;
   }
@@ -271,85 +303,7 @@ final class Router
    */
   public function canActivateHandler(ReflectionMethod $handler, object $controller, Request $request): bool
   {
-    $path = $this->normalizePath($request->getPath());
-    $controllerPrefix = $this->getControllerPrefix(controller: $controller);
-    $handlerPath = $this->getHandlerPath(handler: $handler);
-    $controllerParams = $this->matchRoutePath(route: $controllerPrefix, path: $path, allowPartial: true);
-    $remainingPath = $this->getRemainingPath(path: $path, prefix: $controllerPrefix);
-    $pattern = $this->getPathMatchingPattern(path: $handlerPath);
-    $handlerParams = $this->matchRoutePath(route: $handlerPath, path: $remainingPath);
-
-    $attributes = $handler->getAttributes();
-
-    if (empty($attributes)) {
-      $request->clearParams();
-      return false;
-    }
-
-    $requestMapperClassFound = false;
-    $foundPathMatch = false;
-
-    foreach ($attributes as $attribute) {
-      $foundPathMatch = !is_null($controllerParams) && !is_null($handlerParams);
-
-      if ($foundPathMatch === false && $handler->getShortName() === trim($remainingPath, '/')) {
-        $foundPathMatch = true;
-      }
-
-      if ($foundPathMatch) {
-        switch($request->getMethod()) {
-          case RequestMethod::OPTIONS:
-            if ($attribute->getName() === Options::class) {
-              $requestMapperClassFound = true;
-            }
-            break;
-
-          case RequestMethod::GET:
-            if ($attribute->getName() === Get::class || $attribute->getName() === Sse::class) {
-              $requestMapperClassFound = true;
-            }
-            break;
-
-          case RequestMethod::POST:
-            if ($attribute->getName() === Post::class) {
-              $requestMapperClassFound = true;
-            }
-            break;
-
-          case RequestMethod::PUT:
-            if ($attribute->getName() === Put::class) {
-              $requestMapperClassFound = true;
-            }
-            break;
-
-          case RequestMethod::PATCH:
-            if ($attribute->getName() === Patch::class) {
-              $requestMapperClassFound = true;
-            }
-            break;
-
-          case RequestMethod::DELETE:
-            if ($attribute->getName() === Delete::class) {
-              $requestMapperClassFound = true;
-            }
-            break;
-
-          case RequestMethod::HEAD:
-            if ($attribute->getName() === Head::class) {
-              $requestMapperClassFound = true;
-            }
-        }
-      }
-    }
-
-    if ($foundPathMatch && $requestMapperClassFound) {
-      $request->setParams(array_merge($controllerParams ?? [], $handlerParams ?? []));
-      return true;
-    }
-
-    $request->clearParams();
-
-    return false;
+    return !is_null($this->getHandlerMatchData(handler: $handler, controller: $controller, request: $request));
   }
 
   /**
@@ -564,6 +518,107 @@ HTML);
   }
 
   /**
+   * Returns route match metadata for a handler candidate when it matches the incoming request.
+   *
+   * @param ReflectionMethod $handler
+   * @param object $controller
+   * @param Request $request
+   * @return array{constraints: array<string, string>, matched_segments: int, params: array<int|string, string>, route_length: int, specificity: int}|null
+   * @throws HttpException
+   * @throws ReflectionException
+   */
+  private function getHandlerMatchData(ReflectionMethod $handler, object $controller, Request $request): ?array
+  {
+    $path = $this->normalizePath($request->getPath());
+    $controllerPrefix = $this->getControllerPrefix(controller: $controller);
+    $handlerPath = $this->getHandlerPath(handler: $handler);
+    $controllerParams = $this->matchRoutePath(route: $controllerPrefix, path: $path, allowPartial: true);
+    $remainingPath = $this->getRemainingPath(path: $path, prefix: $controllerPrefix);
+    $handlerParams = $this->matchRoutePath(route: $handlerPath, path: $remainingPath);
+    $attributes = $handler->getAttributes();
+
+    if (empty($attributes)) {
+      return null;
+    }
+
+    $foundPathMatch = !is_null($controllerParams) && !is_null($handlerParams);
+
+    if ($foundPathMatch === false && $handler->getShortName() === trim($remainingPath, '/')) {
+      $foundPathMatch = true;
+      $handlerParams = [];
+    }
+
+    if (!$foundPathMatch) {
+      return null;
+    }
+
+    $requestMapperClassFound = false;
+
+    foreach ($attributes as $attribute) {
+      switch($request->getMethod()) {
+        case RequestMethod::OPTIONS:
+          if ($attribute->getName() === Options::class) {
+            $requestMapperClassFound = true;
+          }
+          break;
+
+        case RequestMethod::GET:
+          if ($attribute->getName() === Get::class || $attribute->getName() === Sse::class) {
+            $requestMapperClassFound = true;
+          }
+          break;
+
+        case RequestMethod::POST:
+          if ($attribute->getName() === Post::class) {
+            $requestMapperClassFound = true;
+          }
+          break;
+
+        case RequestMethod::PUT:
+          if ($attribute->getName() === Put::class) {
+            $requestMapperClassFound = true;
+          }
+          break;
+
+        case RequestMethod::PATCH:
+          if ($attribute->getName() === Patch::class) {
+            $requestMapperClassFound = true;
+          }
+          break;
+
+        case RequestMethod::DELETE:
+          if ($attribute->getName() === Delete::class) {
+            $requestMapperClassFound = true;
+          }
+          break;
+
+        case RequestMethod::HEAD:
+          if ($attribute->getName() === Head::class) {
+            $requestMapperClassFound = true;
+          }
+          break;
+      }
+    }
+
+    if (!$requestMapperClassFound) {
+      return null;
+    }
+
+    $handlerRoute = $this->combinePaths($controllerPrefix, $handlerPath);
+
+    return [
+      'constraints' => array_merge(
+        $this->getRouteConstraintDefinitions($controllerPrefix),
+        $this->getRouteConstraintDefinitions($handlerPath),
+      ),
+      'matched_segments' => count($this->getPathSegments($handlerRoute)),
+      'params' => array_merge($controllerParams ?? [], $handlerParams ?? []),
+      'route_length' => strlen($handlerRoute),
+      'specificity' => $this->getRouteSpecificityScore($handlerRoute),
+    ];
+  }
+
+  /**
    * Matches a route template against a request path and returns extracted params on success.
    *
    * @param string $route
@@ -584,7 +639,9 @@ HTML);
     $paramIndex = 0;
 
     foreach ($routeSegments as $index => $routeSegment) {
-      if ($routeSegment === '*') {
+      $segmentMeta = $this->parseRouteSegment($routeSegment);
+
+      if ($segmentMeta['type'] === 'wildcard') {
         return $params;
       }
 
@@ -594,14 +651,21 @@ HTML);
 
       $pathSegment = $pathSegments[$index];
 
-      if (str_starts_with($routeSegment, ':')) {
-        $key = ltrim($routeSegment, ':');
+      if ($segmentMeta['type'] === 'dynamic') {
+        if (
+          !empty($segmentMeta['constraint']) &&
+          !$this->matchesRouteConstraint($segmentMeta['constraint'], $pathSegment)
+        ) {
+          return null;
+        }
+
+        $key = $segmentMeta['name'];
         $params[$paramIndex++] = $pathSegment;
         $params[$key] = $pathSegment;
         continue;
       }
 
-      if ($routeSegment !== $pathSegment) {
+      if ($segmentMeta['value'] !== $pathSegment) {
         return null;
       }
     }
@@ -611,6 +675,104 @@ HTML);
     }
 
     return $params;
+  }
+
+  /**
+   * Parses a route segment and returns its matching metadata.
+   *
+   * Supported constrained dynamic syntax uses angle brackets, for example `:id<int>` or `:slug<uuid>`.
+   *
+   * @param string $segment
+   * @return array{constraint: string|null, name: string|null, type: string, value: string}
+   * @throws HttpException
+   */
+  private function parseRouteSegment(string $segment): array
+  {
+    if ($segment === '*') {
+      return ['constraint' => null, 'name' => null, 'type' => 'wildcard', 'value' => $segment];
+    }
+
+    if (!str_starts_with($segment, ':')) {
+      return ['constraint' => null, 'name' => null, 'type' => 'static', 'value' => $segment];
+    }
+
+    if (!preg_match('/^:(?<name>[A-Za-z_][A-Za-z0-9_]*)(?:<(?<constraint>[A-Za-z][A-Za-z0-9_]*)>)?$/', $segment, $matches)) {
+      throw new HttpException(
+        "Invalid constrained route segment '$segment'. Use ':name' or ':name<constraint>'."
+      );
+    }
+
+    $constraint = $matches['constraint'] ?? null;
+
+    if ($constraint && !array_key_exists($constraint, self::ROUTE_CONSTRAINT_PATTERNS)) {
+      throw new HttpException("Unknown route constraint '$constraint' in segment '$segment'.");
+    }
+
+    return [
+      'constraint' => $constraint ?: null,
+      'name' => $matches['name'],
+      'type' => 'dynamic',
+      'value' => $segment,
+    ];
+  }
+
+  /**
+   * Determines if a path segment satisfies the named built-in route constraint.
+   *
+   * @param string $constraint
+   * @param string $value
+   * @return bool
+   */
+  private function matchesRouteConstraint(string $constraint, string $value): bool
+  {
+    return preg_match(self::ROUTE_CONSTRAINT_PATTERNS[$constraint], $value) === 1;
+  }
+
+  /**
+   * Returns the constrained params declared within a route template.
+   *
+   * @param string $route
+   * @return array<string, string>
+   * @throws HttpException
+   */
+  private function getRouteConstraintDefinitions(string $route): array
+  {
+    $definitions = [];
+
+    foreach ($this->getPathSegments($route) as $segment) {
+      $segmentMeta = $this->parseRouteSegment($segment);
+
+      if ($segmentMeta['type'] === 'dynamic' && !empty($segmentMeta['constraint'])) {
+        $definitions[$segmentMeta['name']] = $segmentMeta['constraint'];
+      }
+    }
+
+    return $definitions;
+  }
+
+  /**
+   * Calculates a specificity score where static segments outrank constrained params, which outrank unconstrained params.
+   *
+   * @param string $route
+   * @return int
+   * @throws HttpException
+   */
+  private function getRouteSpecificityScore(string $route): int
+  {
+    $score = 0;
+
+    foreach ($this->getPathSegments($route) as $segment) {
+      $segmentMeta = $this->parseRouteSegment($segment);
+
+      $score += match (true) {
+        $segmentMeta['type'] === 'wildcard' => self::WILDCARD_ROUTE_PRIORITY,
+        $segmentMeta['type'] === 'static' => self::STATIC_ROUTE_PRIORITY,
+        !empty($segmentMeta['constraint']) => self::CONSTRAINED_DYNAMIC_ROUTE_PRIORITY,
+        default => self::DYNAMIC_ROUTE_PRIORITY,
+      };
+    }
+
+    return $score;
   }
 
   /**
@@ -629,6 +791,34 @@ HTML);
     $remainingSegments = array_slice($pathSegments, $consumedSegments);
 
     return empty($remainingSegments) ? '/' : '/' . implode('/', $remainingSegments);
+  }
+
+  /**
+   * Determines whether a candidate route match is more specific than the current best match.
+   *
+   * @param array{matched_segments: int, route_length: int, specificity: int} $candidate
+   * @param array{matched_segments: int, route_length: int, specificity: int} $currentBest
+   * @return bool
+   */
+  private function isBetterRouteMatch(array $candidate, array $currentBest): bool
+  {
+    if ($candidate['matched_segments'] > $currentBest['matched_segments']) {
+      return true;
+    }
+
+    if ($candidate['matched_segments'] < $currentBest['matched_segments']) {
+      return false;
+    }
+
+    if ($candidate['specificity'] > $currentBest['specificity']) {
+      return true;
+    }
+
+    if ($candidate['specificity'] < $currentBest['specificity']) {
+      return false;
+    }
+
+    return $candidate['route_length'] > $currentBest['route_length'];
   }
 
   /**
@@ -696,17 +886,20 @@ HTML);
       return $candidate;
     }
 
-    $candidateScore = $this->getControllerMatchScore($candidate, $request);
-    $currentBestScore = $this->getControllerMatchScore($currentBest, $request);
+    $candidateRoute = $this->getControllerPrefix($candidate);
+    $currentBestRoute = $this->getControllerPrefix($currentBest);
+    $candidateMatch = [
+      'matched_segments' => $this->getControllerMatchScore($candidate, $request),
+      'route_length' => strlen($candidateRoute),
+      'specificity' => $this->getRouteSpecificityScore($candidateRoute),
+    ];
+    $currentBestMatch = [
+      'matched_segments' => $this->getControllerMatchScore($currentBest, $request),
+      'route_length' => strlen($currentBestRoute),
+      'specificity' => $this->getRouteSpecificityScore($currentBestRoute),
+    ];
 
-    if ($candidateScore > $currentBestScore) {
-      return $candidate;
-    }
-
-    if (
-      $candidateScore === $currentBestScore &&
-      strlen($this->getControllerPrefix($candidate)) > strlen($this->getControllerPrefix($currentBest))
-    ) {
+    if ($this->isBetterRouteMatch($candidateMatch, $currentBestMatch)) {
       return $candidate;
     }
 
@@ -722,28 +915,14 @@ HTML);
    */
   private function getControllerMatchScore(ReflectionClass $reflectionController, Request $request): int
   {
-    $controllerSegments = $this->getPathSegments($this->getControllerPrefix($reflectionController));
-    $requestSegments = $this->getPathSegments($request->getPath());
+    $controllerPrefix = $this->getControllerPrefix($reflectionController);
+    $match = $this->matchRoutePath(route: $controllerPrefix, path: $request->getPath(), allowPartial: true);
 
-    if (empty($controllerSegments)) {
-      return 0;
+    if (is_null($match)) {
+      return -1;
     }
 
-    foreach ($controllerSegments as $index => $segment) {
-      if (!isset($requestSegments[$index])) {
-        return -1;
-      }
-
-      if ($segment === '*' || str_starts_with($segment, ':')) {
-        continue;
-      }
-
-      if ($requestSegments[$index] !== $segment) {
-        return -1;
-      }
-    }
-
-    return count($controllerSegments);
+    return count($this->getPathSegments($controllerPrefix));
   }
 
   /**
@@ -755,28 +934,13 @@ HTML);
    */
   private function requestMatchesModuleBranch(Request $request, string $moduleClass): bool
   {
-    $branchSegments = $this->getPathSegments($this->controllerManager->getModuleBranchPrefix($moduleClass));
-    $requestSegments = $this->getPathSegments($request->getPath());
-
-    if (empty($branchSegments)) {
-      return true;
-    }
-
-    foreach ($branchSegments as $index => $segment) {
-      if (!isset($requestSegments[$index])) {
-        return false;
-      }
-
-      if ($segment === '*' || str_starts_with($segment, ':')) {
-        continue;
-      }
-
-      if ($requestSegments[$index] !== $segment) {
-        return false;
-      }
-    }
-
-    return true;
+    return !is_null(
+      $this->matchRoutePath(
+        route: $this->controllerManager->getModuleBranchPrefix($moduleClass),
+        path: $request->getPath(),
+        allowPartial: true,
+      )
+    );
   }
 
   /**
@@ -1190,6 +1354,104 @@ HTML);
     }
 
     return $unionType->getTypes()[0]->getName();
+  }
+
+  /**
+   * Validates that constrained route params are compatible with the selected handler's parameter declarations.
+   *
+   * @param ReflectionMethod $handler
+   * @param array<string, string> $constraints
+   * @return void
+   * @throws HttpException
+   */
+  private function validateMatchedRouteConstraints(ReflectionMethod $handler, array $constraints): void
+  {
+    if (empty($constraints)) {
+      return;
+    }
+
+    foreach ($handler->getParameters() as $parameter) {
+      $routeParamName = $this->getHandlerRouteParameterName($parameter, $constraints);
+
+      if (is_null($routeParamName)) {
+        continue;
+      }
+
+      $constraint = $constraints[$routeParamName];
+
+      if ($this->isConstraintTypeCompatible($constraint, $parameter)) {
+        continue;
+      }
+
+      $parameterType = $parameter->getType();
+      $typeName = match (true) {
+        $parameterType instanceof ReflectionUnionType =>
+          implode('|', array_map(static fn($type) => $type->getName(), $parameterType->getTypes())),
+        is_null($parameterType) => 'mixed',
+        default => $parameterType->getName(),
+      };
+
+      throw new HttpException(
+        "Route constraint '$constraint' for parameter '$routeParamName' on {$handler->class}::{$handler->getName()} " .
+        "conflicts with declared PHP type '$typeName'."
+      );
+    }
+  }
+
+  /**
+   * Resolves the route parameter name associated with a handler parameter.
+   *
+   * @param ReflectionParameter $parameter
+   * @param array<string, string> $constraints
+   * @return string|null
+   * @throws ReflectionException
+   */
+  private function getHandlerRouteParameterName(ReflectionParameter $parameter, array $constraints): ?string
+  {
+    foreach ($parameter->getAttributes(Param::class) as $attribute) {
+      $attributeArgs = $attribute->getArguments();
+      $key = $attributeArgs['key'] ?? $attributeArgs[0] ?? null;
+
+      if ($key && array_key_exists($key, $constraints)) {
+        return $key;
+      }
+    }
+
+    return array_key_exists($parameter->getName(), $constraints) ? $parameter->getName() : null;
+  }
+
+  /**
+   * Determines whether a constrained route parameter is compatible with the handler's PHP parameter type.
+   *
+   * @param string $constraint
+   * @param ReflectionParameter $parameter
+   * @return bool
+   */
+  private function isConstraintTypeCompatible(string $constraint, ReflectionParameter $parameter): bool
+  {
+    $parameterType = $parameter->getType();
+
+    if (is_null($parameterType)) {
+      return true;
+    }
+
+    $expectedTypeNames = match ($constraint) {
+      'int' => ['int'],
+      'slug', 'uuid', 'alpha', 'alnum', 'hex', 'ulid' => ['string'],
+      default => ['string'],
+    };
+
+    if ($parameterType instanceof ReflectionUnionType) {
+      foreach ($parameterType->getTypes() as $type) {
+        if (in_array($type->getName(), $expectedTypeNames, true)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    return in_array($parameterType->getName(), $expectedTypeNames, true);
   }
 
   /**

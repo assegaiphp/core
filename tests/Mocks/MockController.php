@@ -8,6 +8,7 @@ use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Patch;
 use Assegai\Core\Attributes\Http\Post;
 use Assegai\Core\Attributes\Modules\Module;
+use Assegai\Core\Attributes\Param;
 
 #[Controller('test')]
 class MockController
@@ -110,5 +111,181 @@ class NestedApiModule
   imports: [NestedApiModule::class],
 )]
 class NestedAppModule
+{
+}
+
+#[Controller('users')]
+class ConstrainedUsersController
+{
+  #[Get('me')]
+  public function me(): string
+  {
+    return 'me';
+  }
+
+  #[Get(':id<int>')]
+  public function findById(#[Param('id')] int $id): string
+  {
+    return "id-$id";
+  }
+
+  #[Get(':username<slug>')]
+  public function findByUsername(#[Param('username')] string $username): string
+  {
+    return "username-$username";
+  }
+
+  #[Get(':token<uuid>')]
+  public function findByToken(#[Param('token')] string $token): string
+  {
+    return "uuid-$token";
+  }
+
+  #[Get(':legacy')]
+  public function legacy(#[Param('legacy')] string $legacy): string
+  {
+    return "legacy-$legacy";
+  }
+}
+
+#[Controller('tokens')]
+class UuidOnlyController
+{
+  #[Get(':token<uuid>')]
+  public function findOne(#[Param('token')] string $token): string
+  {
+    return "token-$token";
+  }
+}
+
+#[Controller('constraints')]
+class BuiltinConstraintController
+{
+  #[Get('alpha/:value<alpha>')]
+  public function alpha(#[Param('value')] string $value): string
+  {
+    return "alpha-$value";
+  }
+
+  #[Get('alnum/:value<alnum>')]
+  public function alnum(#[Param('value')] string $value): string
+  {
+    return "alnum-$value";
+  }
+
+  #[Get('hex/:value<hex>')]
+  public function hex(#[Param('value')] string $value): string
+  {
+    return "hex-$value";
+  }
+
+  #[Get('ulid/:value<ulid>')]
+  public function ulid(#[Param('value')] string $value): string
+  {
+    return "ulid-$value";
+  }
+}
+
+#[Controller('broken')]
+class InvalidConstraintController
+{
+  #[Get(':id<int')]
+  public function broken(#[Param('id')] string $id): string
+  {
+    return $id;
+  }
+}
+
+#[Controller('unknown-constraint')]
+class UnknownConstraintController
+{
+  #[Get(':id<money>')]
+  public function broken(#[Param('id')] string $id): string
+  {
+    return $id;
+  }
+}
+
+#[Controller('strict')]
+class MismatchedConstraintController
+{
+  #[Get(':id<int>')]
+  public function broken(#[Param('id')] string $id): string
+  {
+    return $id;
+  }
+}
+
+#[Module(
+  controllers: [ConstrainedUsersController::class, UuidOnlyController::class],
+)]
+class ConstrainedUsersModule
+{
+}
+
+#[Module(
+  controllers: [BuiltinConstraintController::class],
+)]
+class AdditionalBuiltinConstraintsModule
+{
+}
+
+#[Module(
+  controllers: [InvalidConstraintController::class],
+)]
+class InvalidConstraintModule
+{
+}
+
+#[Module(
+  controllers: [UnknownConstraintController::class],
+)]
+class UnknownConstraintModule
+{
+}
+
+#[Module(
+  controllers: [MismatchedConstraintController::class],
+)]
+class MismatchedConstraintModule
+{
+}
+
+#[Module(
+  controllers: [MockController::class],
+)]
+class LegacyAppModule
+{
+}
+
+#[Module(
+  controllers: [NestedRootController::class],
+  imports: [ConstrainedUsersModule::class, AdditionalBuiltinConstraintsModule::class],
+)]
+class ConstrainedRoutingAppModule
+{
+}
+
+#[Module(
+  controllers: [NestedRootController::class],
+  imports: [InvalidConstraintModule::class],
+)]
+class InvalidConstraintAppModule
+{
+}
+
+#[Module(
+  controllers: [NestedRootController::class],
+  imports: [UnknownConstraintModule::class],
+)]
+class UnknownConstraintAppModule
+{
+}
+
+#[Module(
+  controllers: [NestedRootController::class],
+  imports: [MismatchedConstraintModule::class],
+)]
+class MismatchedConstraintAppModule
 {
 }
