@@ -69,6 +69,20 @@ Start the dev server
 $ php -S localhost:5000 -t <path-to-project>
 ```
 
+### Constrained Route Params
+
+Assegai routes support constrained dynamic params using angle-bracket syntax:
+
+```php
+#[Get(':id<int>')]
+public function findById(#[Param('id')] int $id): object
+{
+  // ...
+}
+```
+
+Built-in constraints currently include `int`, `slug`, `uuid`, `alpha`, `alnum`, `hex`, and `ulid`.
+
 * To check out the [guide](https://assegaiphp.com/guide), visit [assegaiphp.com](https://assegaiphp.com). :books:
 
 ## Questions
