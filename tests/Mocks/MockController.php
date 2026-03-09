@@ -44,6 +44,42 @@ class MockController
   }
 }
 
+#[Controller('handler-wildcards')]
+class WildcardHandlerController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'exact-handler';
+  }
+
+  #[Get('*')]
+  public function catchAll(): string
+  {
+    return 'wildcard-handler';
+  }
+}
+
+#[Controller('controller-wildcards')]
+class ExactWildcardController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'exact-controller';
+  }
+}
+
+#[Controller('controller-wildcards/*')]
+class CatchAllWildcardController
+{
+  #[Get('*')]
+  public function index(): string
+  {
+    return 'wildcard-controller';
+  }
+}
+
 #[Controller('/')]
 class NestedRootController
 {
@@ -186,6 +222,22 @@ class BuiltinConstraintController
   }
 }
 
+#[Controller('constraints/flexible')]
+class FlexibleConstraintController
+{
+  #[Get('int/:value<int>')]
+  public function intValue(#[Param('value')] mixed $value): string
+  {
+    return get_debug_type($value) . "-$value";
+  }
+
+  #[Get('slug/:value<slug>')]
+  public function slugValue(#[Param('value')] mixed $value): string
+  {
+    return get_debug_type($value) . "-$value";
+  }
+}
+
 #[Controller('broken')]
 class InvalidConstraintController
 {
@@ -224,7 +276,7 @@ class ConstrainedUsersModule
 }
 
 #[Module(
-  controllers: [BuiltinConstraintController::class],
+  controllers: [BuiltinConstraintController::class, FlexibleConstraintController::class],
 )]
 class AdditionalBuiltinConstraintsModule
 {
@@ -255,6 +307,20 @@ class MismatchedConstraintModule
   controllers: [MockController::class],
 )]
 class LegacyAppModule
+{
+}
+
+#[Module(
+  controllers: [WildcardHandlerController::class],
+)]
+class WildcardHandlerAppModule
+{
+}
+
+#[Module(
+  controllers: [ExactWildcardController::class, CatchAllWildcardController::class],
+)]
+class WildcardControllerAppModule
 {
 }
 

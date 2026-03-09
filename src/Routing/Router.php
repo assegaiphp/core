@@ -66,7 +66,7 @@ final class Router
   private const int STATIC_ROUTE_PRIORITY = 300;
   private const int CONSTRAINED_DYNAMIC_ROUTE_PRIORITY = 200;
   private const int DYNAMIC_ROUTE_PRIORITY = 100;
-  private const int WILDCARD_ROUTE_PRIORITY = 0;
+  private const int WILDCARD_ROUTE_PRIORITY = -1;
 
   /**
    * @var Router|null The Router instance.
@@ -169,14 +169,13 @@ final class Router
     return $this->activateController($activatedController);
   }
 
-  /**
-   * Determines if the given controller can be activated.
-   *
-   * @param ReflectionClass $reflectionController The reflection instance of the controller to be activated.
-   * @return bool True if the controller can be activated, false otherwise.
-   * @throws HttpException If the controller is invalid.
-   * @throws ReflectionException If there was an error processing a reflection.
-   */
+    /**
+     * Determines if the given controller can be activated.
+     *
+     * @param ReflectionClass $reflectionController The reflection instance of the controller to be activated.
+     * @param Request $request
+     * @return bool True if the controller can be activated, false otherwise.
+     */
   private function canActivateController(ReflectionClass $reflectionController, Request $request): bool
   {
     return $this->getControllerMatchScore($reflectionController, $request) >= 0;
@@ -802,19 +801,19 @@ HTML);
    */
   private function isBetterRouteMatch(array $candidate, array $currentBest): bool
   {
-    if ($candidate['matched_segments'] > $currentBest['matched_segments']) {
-      return true;
-    }
-
-    if ($candidate['matched_segments'] < $currentBest['matched_segments']) {
-      return false;
-    }
-
     if ($candidate['specificity'] > $currentBest['specificity']) {
       return true;
     }
 
     if ($candidate['specificity'] < $currentBest['specificity']) {
+      return false;
+    }
+
+    if ($candidate['matched_segments'] > $currentBest['matched_segments']) {
+      return true;
+    }
+
+    if ($candidate['matched_segments'] < $currentBest['matched_segments']) {
       return false;
     }
 
@@ -1443,7 +1442,7 @@ HTML);
 
     if ($parameterType instanceof ReflectionUnionType) {
       foreach ($parameterType->getTypes() as $type) {
-        if (in_array($type->getName(), $expectedTypeNames, true)) {
+        if ($type->getName() === 'mixed' || in_array($type->getName(), $expectedTypeNames, true)) {
           return true;
         }
       }
@@ -1451,7 +1450,7 @@ HTML);
       return false;
     }
 
-    return in_array($parameterType->getName(), $expectedTypeNames, true);
+    return $parameterType->getName() === 'mixed' || in_array($parameterType->getName(), $expectedTypeNames, true);
   }
 
   /**
