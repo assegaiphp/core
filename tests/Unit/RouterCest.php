@@ -19,11 +19,14 @@ use Mocks\ConstrainedUsersController;
 use Mocks\InvalidConstraintAppModule;
 use Mocks\LegacyAppModule;
 use Mocks\MismatchedConstraintAppModule;
+use Mocks\ExactWildcardController;
 use Mocks\NestedApiController;
 use Mocks\NestedAppModule;
 use Mocks\NestedFeaturesController;
 use Mocks\NestedRootController;
 use Mocks\UnknownConstraintAppModule;
+use Mocks\WildcardControllerAppModule;
+use Mocks\WildcardHandlerAppModule;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
@@ -285,6 +288,22 @@ class RouterCest
 
   /**
    * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testMixedParametersRemainCompatibleWithConstrainedRoutes(UnitTester $I): void
+  {
+    $numericResult = $this->dispatch('/constraints/flexible/int/42', ConstrainedRoutingAppModule::class);
+    $slugResult = $this->dispatch('/constraints/flexible/slug/andrew-doe', ConstrainedRoutingAppModule::class);
+
+    $I->assertSame('string-42', $numericResult['response']->getBody());
+    $I->assertSame('string-andrew-doe', $slugResult['response']->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
    * @throws HttpException
    * @throws ContainerException
    * @throws EntryNotFoundException
@@ -336,6 +355,37 @@ class RouterCest
     $result = $this->dispatch('/users/me', ConstrainedRoutingAppModule::class);
 
     $I->assertSame('me', $result['response']->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testExactHandlersBeatWildcardHandlersAtTheBasePath(UnitTester $I): void
+  {
+    $baseResult = $this->dispatch('/handler-wildcards', WildcardHandlerAppModule::class);
+    $nestedResult = $this->dispatch('/handler-wildcards/anything/here', WildcardHandlerAppModule::class);
+
+    $I->assertSame('exact-handler', $baseResult['response']->getBody());
+    $I->assertSame('wildcard-handler', $nestedResult['response']->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testExactControllersBeatWildcardControllersAtTheBasePath(UnitTester $I): void
+  {
+    $baseResult = $this->dispatch('/controller-wildcards', WildcardControllerAppModule::class);
+
+    $I->assertInstanceOf(ExactWildcardController::class, $baseResult['controller']);
+    $I->assertSame('exact-controller', $baseResult['response']->getBody());
   }
 
   /**
