@@ -41,6 +41,14 @@ class ModuleManager implements SingletonInterface
    */
   protected array $moduleTokens = [];
   /**
+   * @var array<class-string, class-string[]> A map of module imports keyed by parent module class.
+   */
+  protected array $moduleImportsMap = [];
+  /**
+   * @var array<class-string, class-string|null> A map of module parents keyed by child module class.
+   */
+  protected array $moduleParentMap = [];
+  /**
    * @var array<class-string> A list of all the controller tokens
    */
   protected array $controllerTokensList = [];
@@ -155,6 +163,11 @@ class ModuleManager implements SingletonInterface
   public function buildModuleTokensList(string $rootToken): void
   {
     try {
+      $this->moduleTokens = [];
+      $this->moduleImportsMap = [];
+      $this->moduleParentMap = [$rootToken => null];
+      $this->config = [];
+      $this->declarationTokens = [];
       $stack = [$rootToken]; // Stack to simulate recursion
       $processedTokens = []; // Prevents redundant processing
 
@@ -187,12 +200,14 @@ class ModuleManager implements SingletonInterface
 
         /** @var array{declarations: string[], imports: string[], exports: string[], providers: string[], controllers: string[], config: array<string, mixed>} $args */
         $args = $reflectionModuleAttribute->getArguments();
+        $imports = $args['imports'] ?? [];
 
         // Add module to processed list
         $processedTokens[$currentToken] = true;
 
         // Store module metadata
         $this->moduleTokens[$currentToken] = $reflectionModuleAttribute;
+        $this->moduleImportsMap[$currentToken] = $imports;
 
         // Merge config values
         if (!empty($args['config'])) {
@@ -209,7 +224,11 @@ class ModuleManager implements SingletonInterface
         }
 
         // Push imports onto the stack for later processing
-        foreach ($args['imports'] ?? [] as $import) {
+        foreach ($imports as $import) {
+          if (!array_key_exists($import, $this->moduleParentMap)) {
+            $this->moduleParentMap[$import] = $currentToken;
+          }
+
           if (!isset($processedTokens[$import])) {
             $stack[] = $import;
           }
@@ -289,6 +308,28 @@ class ModuleManager implements SingletonInterface
   public function getModuleTokens(): array
   {
     return $this->moduleTokens;
+  }
+
+  /**
+   * Returns the imported child modules for the given module class.
+   *
+   * @param string $moduleClass
+   * @return class-string[]
+   */
+  public function getImportedModules(string $moduleClass): array
+  {
+    return $this->moduleImportsMap[$moduleClass] ?? [];
+  }
+
+  /**
+   * Returns the parent module for the given module class.
+   *
+   * @param string $moduleClass
+   * @return class-string|null
+   */
+  public function getParentModule(string $moduleClass): ?string
+  {
+    return $this->moduleParentMap[$moduleClass] ?? null;
   }
 
   /**
