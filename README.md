@@ -20,6 +20,55 @@ Assegai is a framework for building efficient, scalable <a href="https://php.net
 $ composer require assegaiphp/core
 ```
 
+```php
+<?php
+// <path-to-project>/index.php
+
+...
+
+/*
+ * Set the path to the request URI.
+ */
+$_GET['path'] = trim($_SERVER['REQUEST_URI'], '/');
+
+/*
+ * This is the entry point of the application.
+ */
+
+require_once './bootstrap.php';
+```
+
+Bootstrap the app
+
+```php
+<?php
+// <path-to-project>/bootstrap.php
+
+use Assegai\Core\AssegaiFactory;
+use Liferaftinc\RudderDashboard\AppModule;
+
+require './vendor/autoload.php';
+
+/**
+ * Bootstraps the application.
+ *
+ * @return void
+ */
+function bootstrap(): void
+{
+  $app = AssegaiFactory::create(AppModule::class);
+  $app->run();
+}
+
+bootstrap();
+```
+
+Start the dev server
+
+```bash
+$ php -S localhost:5000 -t <path-to-project>
+```
+
 * To check out the [guide](https://assegaiphp.com/guide), visit [assegaiphp.com](https://assegaiphp.com). :books:
 
 ## Questions
