@@ -32,6 +32,18 @@ class ControllerManager
 
   /** @var array $controllerPathTokenIdMap */
   protected array $controllerPathTokenIdMap = [];
+  /**
+   * @var array<class-string, ReflectionClass[]> A map of controller reflections keyed by module class.
+   */
+  protected array $moduleControllerTokensMap = [];
+  /**
+   * @var array<class-string, string> A map of fully resolved module branch prefixes keyed by module class.
+   */
+  protected array $moduleBranchPrefixMap = [];
+  /**
+   * @var array<class-string, array{module: class-string, local_path: string, resolved_path: string}>
+   */
+  protected array $controllerRouteMetadata = [];
 
   /**
    * ControllerManager constructor.
@@ -73,6 +85,39 @@ class ControllerManager
   public function getControllerPathTokenIdMap(): array
   {
     return $this->controllerPathTokenIdMap;
+  }
+
+  /**
+   * Returns the controller reflections declared within the given module.
+   *
+   * @param string $moduleClass
+   * @return array<string, ReflectionClass>
+   */
+  public function getModuleControllerTokens(string $moduleClass): array
+  {
+    return $this->moduleControllerTokensMap[$moduleClass] ?? [];
+  }
+
+  /**
+   * Returns the resolved branch prefix for the given module.
+   *
+   * @param string $moduleClass
+   * @return string
+   */
+  public function getModuleBranchPrefix(string $moduleClass): string
+  {
+    return $this->moduleBranchPrefixMap[$moduleClass] ?? '/';
+  }
+
+  /**
+   * Returns the resolved route prefix for the given controller.
+   *
+   * @param string $controllerClass
+   * @return string|null
+   */
+  public function getResolvedControllerPath(string $controllerClass): ?string
+  {
+    return $this->controllerRouteMetadata[$controllerClass]['resolved_path'] ?? null;
   }
 
   /**
@@ -129,25 +174,22 @@ class ControllerManager
    */
   public function buildControllerTokensList(array $moduleTokensList): array
   {
-    foreach ($moduleTokensList as $index => $moduleReflection) {
-      /** @var $args array{imports: string[], exports: string[], providers: string[], controllers: string[], declarations: string[], config: array<string, mixed>} */
-      $args = $moduleReflection->getArguments();
+    $this->controllerTokensList = [];
+    $this->controllerPathTokenIdMap = [];
+    $this->moduleControllerTokensMap = [];
+    $this->moduleBranchPrefixMap = [];
+    $this->controllerRouteMetadata = [];
 
-      foreach ($args['controllers'] ?? [] as $tokenId) {
-        if ($controllerReflection = $this->getControllerReflection($tokenId)) {
-          $this->controllerTokensList[$tokenId] = $controllerReflection;
-
-          if (!empty($this->lastLoadedAttributes)) {
-            $controllerAttribute = array_pop($this->lastLoadedAttributes);
-            $data = $controllerAttribute->getArguments();
-            if (! empty($data)) {
-              $path = array_pop($data);
-              $this->controllerPathTokenIdMap[$tokenId] = $path;
-            }
-          }
-        }
-      }
+    if (empty($moduleTokensList)) {
+      return $this->getControllerTokenList();
     }
+
+    $visitedModules = [];
+    $this->buildModuleControllerTokens(
+      moduleClass: $this->moduleManager->getRootModuleClass(),
+      inheritedPrefix: '/',
+      visitedModules: $visitedModules,
+    );
 
     return $this->getControllerTokenList();
   }
@@ -172,5 +214,135 @@ class ControllerManager
     } catch (ReflectionException) {
       throw new EntryNotFoundException($tokenId);
     }
+  }
+
+  /**
+   * Builds the controller token metadata for the given module and its imported descendants.
+   *
+   * @param string $moduleClass
+   * @param string $inheritedPrefix
+   * @param array<string, bool> $visitedModules
+   * @return void
+   * @throws EntryNotFoundException
+   */
+  private function buildModuleControllerTokens(string $moduleClass, string $inheritedPrefix, array &$visitedModules): void
+  {
+    if (!isset($this->moduleManager->getModuleTokens()[$moduleClass]) || isset($visitedModules[$moduleClass])) {
+      return;
+    }
+
+    $visitedModules[$moduleClass] = true;
+    $moduleReflection = $this->moduleManager->getModuleTokens()[$moduleClass];
+
+    /** @var array{controllers: string[]} $args */
+    $args = $moduleReflection->getArguments();
+    $controllers = $args['controllers'] ?? [];
+    $moduleControllers = [];
+    $moduleBranchPrefix = $this->normalizePath($inheritedPrefix);
+    $isFirstController = true;
+
+    foreach ($controllers as $tokenId) {
+      if (!$controllerReflection = $this->getControllerReflection($tokenId)) {
+        continue;
+      }
+
+      $localPath = $this->getControllerPath($controllerReflection);
+      $resolvedPath = $this->combinePaths($inheritedPrefix, $localPath);
+
+      $this->controllerTokensList[$tokenId] = $controllerReflection;
+      $this->controllerPathTokenIdMap[$tokenId] = $resolvedPath;
+      $this->controllerRouteMetadata[$tokenId] = [
+        'module' => $moduleClass,
+        'local_path' => $localPath,
+        'resolved_path' => $resolvedPath,
+      ];
+
+      $moduleControllers[$tokenId] = $controllerReflection;
+
+      if ($isFirstController) {
+        $moduleBranchPrefix = $resolvedPath;
+        $isFirstController = false;
+      }
+    }
+
+    $this->moduleControllerTokensMap[$moduleClass] = $moduleControllers;
+    $this->moduleBranchPrefixMap[$moduleClass] = $moduleBranchPrefix;
+
+    foreach ($this->moduleManager->getImportedModules($moduleClass) as $importedModuleClass) {
+      $this->buildModuleControllerTokens(
+        moduleClass: $importedModuleClass,
+        inheritedPrefix: $moduleBranchPrefix,
+        visitedModules: $visitedModules,
+      );
+    }
+  }
+
+  /**
+   * Extracts the local controller path from the controller attribute.
+   *
+   * @param ReflectionClass $reflectionClass
+   * @return string
+   */
+  private function getControllerPath(ReflectionClass $reflectionClass): string
+  {
+    $attributes = $reflectionClass->getAttributes(Controller::class);
+
+    if (!$attributes) {
+      $attributes = $reflectionClass->getAttributes(\Assegai\Attributes\Controller::class);
+    }
+
+    if (empty($attributes)) {
+      return '/';
+    }
+
+    $instance = $attributes[0]->newInstance();
+
+    return $this->normalizePath($instance->path ?? '/');
+  }
+
+  /**
+   * Joins path fragments into a normalized absolute route path.
+   *
+   * @param string ...$paths
+   * @return string
+   */
+  private function combinePaths(string ...$paths): string
+  {
+    $segments = [];
+
+    foreach ($paths as $path) {
+      $normalized = trim($path);
+
+      if ($normalized === '' || $normalized === '/') {
+        continue;
+      }
+
+      foreach (explode('/', trim($normalized, '/')) as $segment) {
+        if ($segment === '') {
+          continue;
+        }
+
+        $segments[] = $segment;
+      }
+    }
+
+    return empty($segments) ? '/' : '/' . implode('/', $segments);
+  }
+
+  /**
+   * Normalizes a route path to a leading-slash form.
+   *
+   * @param string $path
+   * @return string
+   */
+  private function normalizePath(string $path): string
+  {
+    $trimmedPath = trim($path);
+
+    if ($trimmedPath === '' || $trimmedPath === '/') {
+      return '/';
+    }
+
+    return '/' . trim($trimmedPath, '/');
   }
 }

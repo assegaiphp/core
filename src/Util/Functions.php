@@ -13,6 +13,7 @@ use Assegai\Core\Injector;
 use Assegai\Core\Rendering\View;
 use Assegai\Core\Rendering\ViewProperties;
 use Assegai\Core\Util\Paths;
+use Westsworld\TimeAgo;
 
 if (!function_exists('env')) {
   function env($key, $default = null): mixed
@@ -188,55 +189,19 @@ if (!function_exists('str_split_by_last_needle')) {
 }
 
 if (!function_exists('time_ago')) {
-  /**
-   * Converts a time to a human-readable format.
-   *
-   * @param int|string|null $time The time to convert to a human-readable format.
-   * @param string|null $timezone
-   * @return string The human-readable time.
-   * @throws DateInvalidTimeZoneException
-   * @throws DateMalformedStringException
-   */
+    /**
+     * Converts a time to a human-readable format.
+     *
+     * @param int|string|null $time The time to convert to a human-readable format.
+     * @param string|null $timezone
+     * @return string The human-readable time.
+     * @throws DateMalformedStringException
+     */
   function time_ago(int|string|null $time, ?string $timezone = null): string
   {
-    if ($time === null || (is_string($time) && trim($time) === '')) {
-      return '-';
-    }
+      $timeAgo = new TimeAgo();
 
-    // Convert to UNIX timestamp
-    if (is_numeric($time)) {
-      $timestamp = (int) $time;
-    } elseif (is_string($time)) {
-      $tz = $timezone ?? date_default_timezone_get();
-      $timestamp = (new DateTimeImmutable($time, (new DateTimeZone($tz))))->getTimestamp();;
-    } else {
-      return '-'; // unsupported type
-    }
-
-    $diff = time() - $timestamp;
-
-    if ($diff < 1) {
-      return 'Moments ago';
-    }
-
-    $units = [
-      31536000 => 'year',
-      2592000  => 'month',
-      604800   => 'week',
-      86400    => 'day',
-      3600     => 'hour',
-      60       => 'minute',
-      1        => 'second',
-    ];
-
-    foreach ($units as $seconds => $label) {
-      if ($diff >= $seconds) {
-        $count = (int) floor($diff / $seconds);
-        return "$count $label" . ($count > 1 ? 's' : '') . ' ago';
-      }
-    }
-
-    return 'Moments ago'; // fallback
+      return $timeAgo->inWords(new DateTime($time, $timezone));
   }
 }
 

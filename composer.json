@@ -44,7 +44,8 @@
         "erusev/parsedown": "^1.7",
         "symfony/console": "^7.1",
         "assegaiphp/attributes": "^1.0",
-        "assegaiphp/common": "^0.4"
+        "assegaiphp/common": "^0.4",
+        "jimmiw/php-time-ago": "^3.3"
     },
     "scripts": {
         "test": "vendor/bin/codecept run Unit",

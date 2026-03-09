@@ -222,6 +222,13 @@ class Request
    */
   public function header(string $name): string
   {
+    if (function_exists('apache_request_headers')) {
+      $headers = apache_request_headers();
+      if (isset($headers[$name])) {
+        return $headers[$name];
+      }
+    }
+
     $key = strtoupper($name);
 
     if (isset($_SERVER["HTTP_$key"])) {
@@ -385,6 +392,27 @@ class Request
   }
 
   /**
+   * Replaces the current route parameters.
+   *
+   * @param array $params
+   * @return void
+   */
+  public function setParams(array $params): void
+  {
+    $this->params = $params;
+  }
+
+  /**
+   * Clears the current route parameters.
+   *
+   * @return void
+   */
+  public function clearParams(): void
+  {
+    $this->params = [];
+  }
+
+  /**
    * @return RequestQuery
    */
   public function getQuery(): RequestQuery
@@ -445,6 +473,8 @@ class Request
     if (str_starts_with($path, '/')) {
       $path = substr($path, 1);
     }
+
+    $this->params = [];
     $pattern = str_replace('/', '\/', $pattern);
     $params = [];
     if (preg_match("/$pattern/", $path, $matches)) {

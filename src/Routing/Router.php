@@ -35,6 +35,7 @@ use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
 use Assegai\Core\Interfaces\IPipeTransform;
+use Assegai\Core\ModuleManager;
 use Assegai\Core\Util\TypeManager;
 use Assegai\Core\Util\Validator;
 use Exception;
@@ -74,6 +75,10 @@ final class Router
    */
   private ControllerManager $controllerManager;
   /**
+   * @var ModuleManager The module manager instance.
+   */
+  private ModuleManager $moduleManager;
+  /**
    * @var array The global pipes.
    */
   private array $globalPipes = [];
@@ -92,6 +97,7 @@ final class Router
     $this->interceptorsConsumer = InterceptorsConsumer::getInstance();
     $this->guardsConsumer = GuardsConsumer::getInstance();
     $this->controllerManager = ControllerManager::getInstance();
+    $this->moduleManager = ModuleManager::getInstance();
   }
 
   /**
@@ -127,24 +133,26 @@ final class Router
    */
   public function getActivatedController(Request $request, array $controllerTokensList): object
   {
-    $activatedController = null;
+    $rootController = null;
 
     foreach ($controllerTokensList as $reflectionController) {
       if ($this->isRootController($reflectionController)) {
-        $activatedController = $this->activateController($reflectionController);
-        continue;
-      }
-
-      if ($this->canActivateController($reflectionController)) {
-        return $this->activateController($reflectionController);
+        $rootController = $reflectionController;
+        break;
       }
     }
+
+    $activatedController = $this->getActivatedControllerToken(
+      request: $request,
+      moduleClass: $this->moduleManager->getRootModuleClass(),
+      fallbackController: $rootController,
+    );
 
     if (is_null($activatedController)) {
       throw new NotFoundException(path: $request->getPath());
     }
 
-    return $activatedController;
+    return $this->activateController($activatedController);
   }
 
   /**
@@ -155,42 +163,9 @@ final class Router
    * @throws HttpException If the controller is invalid.
    * @throws ReflectionException If there was an error processing a reflection.
    */
-  private function canActivateController(ReflectionClass $reflectionController): bool
+  private function canActivateController(ReflectionClass $reflectionController, Request $request): bool
   {
-    $request = Request::getInstance();
-    $path = str_starts_with($request->getPath(), '/') ? $request->getPath() : '/' . $request->getPath();
-
-    $controllerClassAttributes = $reflectionController->getAttributes(Controller::class);
-
-    if (!$controllerClassAttributes) {
-      $controllerClassAttributes = $reflectionController->getAttributes(\Assegai\Attributes\Controller::class);
-    }
-
-    if (empty($controllerClassAttributes)) {
-      throw new HttpException("Invalid controller: " . $reflectionController->getName());
-    }
-
-    foreach ($controllerClassAttributes as $attribute) {
-      $instance = $attribute->newInstance();
-      $prefix = str_replace('/^\/\//', '', '/' . $instance->path);
-
-      if ($path === $prefix) {
-        return true;
-      }
-
-      if (str_starts_with($path, $prefix)) {
-        if (!empty($path) && $prefix === '/') {
-          continue;
-        }
-        return true;
-      }
-    }
-
-    if ($this->isRootController($reflectionController)) {
-      return true;
-    }
-
-    return false;
+    return $this->getControllerMatchScore($reflectionController, $request) >= 0;
   }
 
   /**
@@ -296,17 +271,18 @@ final class Router
    */
   public function canActivateHandler(ReflectionMethod $handler, object $controller, Request $request): bool
   {
-    $path = $request->getPath();
+    $path = $this->normalizePath($request->getPath());
     $controllerPrefix = $this->getControllerPrefix(controller: $controller);
     $handlerPath = $this->getHandlerPath(handler: $handler);
-
-    $pattern = $this->getPathMatchingPattern(path: "$controllerPrefix/$handlerPath");
-
-    $request->extractParams(path: $path, pattern: $pattern);
+    $controllerParams = $this->matchRoutePath(route: $controllerPrefix, path: $path, allowPartial: true);
+    $remainingPath = $this->getRemainingPath(path: $path, prefix: $controllerPrefix);
+    $pattern = $this->getPathMatchingPattern(path: $handlerPath);
+    $handlerParams = $this->matchRoutePath(route: $handlerPath, path: $remainingPath);
 
     $attributes = $handler->getAttributes();
 
     if (empty($attributes)) {
+      $request->clearParams();
       return false;
     }
 
@@ -314,9 +290,9 @@ final class Router
     $foundPathMatch = false;
 
     foreach ($attributes as $attribute) {
-      $foundPathMatch = $this->patternMatchesPath(pattern: $pattern, path: $path);
+      $foundPathMatch = !is_null($controllerParams) && !is_null($handlerParams);
 
-      if ($foundPathMatch === false && $handler->getShortName() === trim($request->getPath(), '/')) {
+      if ($foundPathMatch === false && $handler->getShortName() === trim($remainingPath, '/')) {
         $foundPathMatch = true;
       }
 
@@ -366,7 +342,14 @@ final class Router
       }
     }
 
-    return $foundPathMatch && $requestMapperClassFound;
+    if ($foundPathMatch && $requestMapperClassFound) {
+      $request->setParams(array_merge($controllerParams ?? [], $handlerParams ?? []));
+      return true;
+    }
+
+    $request->clearParams();
+
+    return false;
   }
 
   /**
@@ -521,21 +504,25 @@ HTML);
    */
   private function getControllerPrefix(object $controller): string
   {
-    $reflectionController = new ReflectionClass($controller);
+    $reflectionController = $controller instanceof ReflectionClass ? $controller : new ReflectionClass($controller);
+    $resolvedPrefix = $this->controllerManager->getResolvedControllerPath($reflectionController->getName());
+
+    if ($resolvedPrefix) {
+      return $resolvedPrefix;
+    }
+
     $attributes = $reflectionController->getAttributes(Controller::class);
 
     if (!$attributes) {
       $attributes = $reflectionController->getAttributes(\Assegai\Attributes\Controller::class);
     }
 
-    # Find a Controller attribute
     foreach ($attributes as $attribute) {
       $instance = $attribute->newInstance();
-      return $instance->path;
+      return $this->normalizePath($instance->path ?? '/');
     }
 
-    # If no attributes are found, return an empty string.
-    return '';
+    return '/';
   }
 
   /**
@@ -577,6 +564,222 @@ HTML);
   }
 
   /**
+   * Matches a route template against a request path and returns extracted params on success.
+   *
+   * @param string $route
+   * @param string $path
+   * @param bool $allowPartial
+   * @return array<int|string, string>|null
+   */
+  private function matchRoutePath(string $route, string $path, bool $allowPartial = false): ?array
+  {
+    $routeSegments = $this->getPathSegments($route);
+    $pathSegments = $this->getPathSegments($path);
+
+    if (empty($routeSegments)) {
+      return ($allowPartial || empty($pathSegments)) ? [] : null;
+    }
+
+    $params = [];
+    $paramIndex = 0;
+
+    foreach ($routeSegments as $index => $routeSegment) {
+      if ($routeSegment === '*') {
+        return $params;
+      }
+
+      if (!isset($pathSegments[$index])) {
+        return null;
+      }
+
+      $pathSegment = $pathSegments[$index];
+
+      if (str_starts_with($routeSegment, ':')) {
+        $key = ltrim($routeSegment, ':');
+        $params[$paramIndex++] = $pathSegment;
+        $params[$key] = $pathSegment;
+        continue;
+      }
+
+      if ($routeSegment !== $pathSegment) {
+        return null;
+      }
+    }
+
+    if (!$allowPartial && count($pathSegments) !== count($routeSegments)) {
+      return null;
+    }
+
+    return $params;
+  }
+
+  /**
+   * Returns the request path remainder after removing the resolved controller prefix.
+   *
+   * @param string $path
+   * @param string $prefix
+   * @return string
+   */
+  private function getRemainingPath(string $path, string $prefix): string
+  {
+    $pathSegments = $this->getPathSegments($path);
+    $prefixSegments = $this->getPathSegments($prefix);
+    $wildcardIndex = array_search('*', $prefixSegments, true);
+    $consumedSegments = ($wildcardIndex === false) ? count($prefixSegments) : count($pathSegments);
+    $remainingSegments = array_slice($pathSegments, $consumedSegments);
+
+    return empty($remainingSegments) ? '/' : '/' . implode('/', $remainingSegments);
+  }
+
+  /**
+   * Determines which controller token should be activated within the current module branch.
+   *
+   * @param Request $request
+   * @param string $moduleClass
+   * @param ReflectionClass|null $fallbackController
+   * @return ReflectionClass|null
+   * @throws HttpException
+   * @throws ReflectionException
+   */
+  private function getActivatedControllerToken(
+    Request $request,
+    string $moduleClass,
+    ?ReflectionClass $fallbackController = null
+  ): ?ReflectionClass
+  {
+    $bestMatch = $fallbackController;
+
+    foreach ($this->controllerManager->getModuleControllerTokens($moduleClass) as $reflectionController) {
+      if (!$this->canActivateController($reflectionController, $request)) {
+        continue;
+      }
+
+      $bestMatch = $this->preferControllerMatch($request, $bestMatch, $reflectionController);
+    }
+
+    foreach ($this->moduleManager->getImportedModules($moduleClass) as $importedModuleClass) {
+      if (!$this->requestMatchesModuleBranch($request, $importedModuleClass)) {
+        continue;
+      }
+
+      $branchMatch = $this->getActivatedControllerToken(
+        request: $request,
+        moduleClass: $importedModuleClass,
+        fallbackController: $bestMatch,
+      );
+
+      $bestMatch = $this->preferControllerMatch($request, $bestMatch, $branchMatch);
+    }
+
+    return $bestMatch;
+  }
+
+  /**
+   * Chooses the more specific controller match for the current request.
+   *
+   * @param Request $request
+   * @param ReflectionClass|null $currentBest
+   * @param ReflectionClass|null $candidate
+   * @return ReflectionClass|null
+   */
+  private function preferControllerMatch(
+    Request $request,
+    ?ReflectionClass $currentBest,
+    ?ReflectionClass $candidate
+  ): ?ReflectionClass
+  {
+    if (is_null($candidate)) {
+      return $currentBest;
+    }
+
+    if (is_null($currentBest)) {
+      return $candidate;
+    }
+
+    $candidateScore = $this->getControllerMatchScore($candidate, $request);
+    $currentBestScore = $this->getControllerMatchScore($currentBest, $request);
+
+    if ($candidateScore > $currentBestScore) {
+      return $candidate;
+    }
+
+    if (
+      $candidateScore === $currentBestScore &&
+      strlen($this->getControllerPrefix($candidate)) > strlen($this->getControllerPrefix($currentBest))
+    ) {
+      return $candidate;
+    }
+
+    return $currentBest;
+  }
+
+  /**
+   * Returns the number of request URI segments matched by the controller prefix, or `-1` when it does not match.
+   *
+   * @param ReflectionClass $reflectionController
+   * @param Request $request
+   * @return int
+   */
+  private function getControllerMatchScore(ReflectionClass $reflectionController, Request $request): int
+  {
+    $controllerSegments = $this->getPathSegments($this->getControllerPrefix($reflectionController));
+    $requestSegments = $this->getPathSegments($request->getPath());
+
+    if (empty($controllerSegments)) {
+      return 0;
+    }
+
+    foreach ($controllerSegments as $index => $segment) {
+      if (!isset($requestSegments[$index])) {
+        return -1;
+      }
+
+      if ($segment === '*' || str_starts_with($segment, ':')) {
+        continue;
+      }
+
+      if ($requestSegments[$index] !== $segment) {
+        return -1;
+      }
+    }
+
+    return count($controllerSegments);
+  }
+
+  /**
+   * Determines if the current request can continue down the imported module branch.
+   *
+   * @param Request $request
+   * @param string $moduleClass
+   * @return bool
+   */
+  private function requestMatchesModuleBranch(Request $request, string $moduleClass): bool
+  {
+    $branchSegments = $this->getPathSegments($this->controllerManager->getModuleBranchPrefix($moduleClass));
+    $requestSegments = $this->getPathSegments($request->getPath());
+
+    if (empty($branchSegments)) {
+      return true;
+    }
+
+    foreach ($branchSegments as $index => $segment) {
+      if (!isset($requestSegments[$index])) {
+        return false;
+      }
+
+      if ($segment === '*' || str_starts_with($segment, ':')) {
+        continue;
+      }
+
+      if ($requestSegments[$index] !== $segment) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Determines if the given pattern matches the given path.
    *
    * @param string $pattern The pattern to be matched.
@@ -590,6 +793,69 @@ HTML);
     $result = preg_match("/^$pattern\/?$/", $path);
 
     return boolval($result) === true;
+  }
+
+  /**
+   * Joins path fragments into a normalized absolute route path.
+   *
+   * @param string ...$paths
+   * @return string
+   */
+  private function combinePaths(string ...$paths): string
+  {
+    $segments = [];
+
+    foreach ($paths as $path) {
+      $normalized = trim($path);
+
+      if ($normalized === '' || $normalized === '/') {
+        continue;
+      }
+
+      foreach (explode('/', trim($normalized, '/')) as $segment) {
+        if ($segment === '') {
+          continue;
+        }
+
+        $segments[] = $segment;
+      }
+    }
+
+    return empty($segments) ? '/' : '/' . implode('/', $segments);
+  }
+
+  /**
+   * Normalizes a route path to a leading-slash form.
+   *
+   * @param string $path
+   * @return string
+   */
+  private function normalizePath(string $path): string
+  {
+    $trimmedPath = trim($path);
+
+    if ($trimmedPath === '' || $trimmedPath === '/') {
+      return '/';
+    }
+
+    return '/' . trim($trimmedPath, '/');
+  }
+
+  /**
+   * Splits the given path into URI segments for prefix comparisons.
+   *
+   * @param string $path
+   * @return string[]
+   */
+  private function getPathSegments(string $path): array
+  {
+    $normalizedPath = trim($path, '/');
+
+    if ($normalizedPath === '') {
+      return [];
+    }
+
+    return array_values(array_filter(explode('/', $normalizedPath), static fn(string $segment) => $segment !== ''));
   }
 
   /**
@@ -721,7 +987,8 @@ HTML);
         default => $this->injector->resolve($paramTypeName, $paramAttributeReflections)
       };
 
-      $dependencies[] = $this->bindRequestHandlerAttributes($param, $dependency, $request);
+      $dependency = $this->bindRequestHandlerAttributes($param, $dependency, $request);
+      $dependencies[] = $this->resolveRouteParameterFallback($param, $dependency, $request);
     }
 
     return $dependencies;
@@ -753,7 +1020,9 @@ HTML);
   private function bindRequestHandlerAttributes(ReflectionParameter $param, mixed $dependency, Request $request): mixed
   {
     $paramAttributes = $param->getAttributes();
-    $paramTypeName = $param->getType()->getName();
+    $paramTypeName = $param->getType() instanceof ReflectionUnionType
+      ? $param->getType()->getTypes()[0]->getName()
+      : $param->getType()?->getName();
 
     foreach ($paramAttributes as $attribute) {
       $paramAttributeArgs = $attribute->getArguments();
@@ -766,7 +1035,8 @@ HTML);
               ? json_encode($request->getParams())
               : (object)$request->getParams();
           }
-          return $request->getParams()[$param->getPosition()] ??
+          return $request->getParams()[$paramAttributeInstance->key] ??
+            $request->getParams()[$param->getPosition()] ??
             ($param->isOptional() ? $param->getDefaultValue() : null);
 
         case Query::class:
@@ -776,7 +1046,7 @@ HTML);
               : $request->getQuery();
           }
 
-          return $request->getQuery()->toArray()[$param->getName()] ??
+          return $request->getQuery()->get($paramAttributeInstance->key) ??
             ($param->isOptional() ? $param->getDefaultValue() : null);
 
         case Body::class:
@@ -836,6 +1106,90 @@ HTML);
     }
 
     return $dependency;
+  }
+
+  /**
+   * Falls back to extracted route params for plain scalar handler arguments.
+   *
+   * @param ReflectionParameter $param
+   * @param mixed $dependency
+   * @param Request $request
+   * @return mixed
+   * @throws ReflectionException
+   */
+  private function resolveRouteParameterFallback(ReflectionParameter $param, mixed $dependency, Request $request): mixed
+  {
+    if (!is_null($dependency)) {
+      return $dependency;
+    }
+
+    $paramType = $param->getType();
+    $canBindScalarRouteValue = match (true) {
+      is_null($paramType) => true,
+      $paramType instanceof ReflectionUnionType =>
+        !empty(array_filter($paramType->getTypes(), static fn($type) => $type->isBuiltin() && $type->getName() !== 'null')),
+      default => $paramType->isBuiltin(),
+    };
+
+    if (!$canBindScalarRouteValue) {
+      return $dependency;
+    }
+
+    $requestParams = $request->getParams();
+    $routeValue = $requestParams[$param->getName()] ?? $requestParams[$param->getPosition()] ?? null;
+
+    if (is_null($routeValue)) {
+      return $param->isOptional() ? $param->getDefaultValue() : null;
+    }
+
+    return $this->castRouteParameterValue($param, $routeValue);
+  }
+
+  /**
+   * Casts an extracted route parameter to the handler parameter's declared scalar type.
+   *
+   * @param ReflectionParameter $param
+   * @param mixed $value
+   * @return mixed
+   */
+  private function castRouteParameterValue(ReflectionParameter $param, mixed $value): mixed
+  {
+    $paramType = $param->getType();
+
+    if (is_null($paramType)) {
+      return $value;
+    }
+
+    $typeName = match (true) {
+      $paramType instanceof ReflectionUnionType => $this->getPreferredBuiltInTypeName($paramType),
+      default => $paramType->getName(),
+    };
+
+    return match ($typeName) {
+      'int' => (int)$value,
+      'float' => (float)$value,
+      'bool' => filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool)$value,
+      'string' => (string)$value,
+      'array' => is_array($value) ? $value : [$value],
+      default => $value,
+    };
+  }
+
+  /**
+   * Returns the first non-null builtin type name from a union declaration.
+   *
+   * @param ReflectionUnionType $unionType
+   * @return string
+   */
+  private function getPreferredBuiltInTypeName(ReflectionUnionType $unionType): string
+  {
+    foreach ($unionType->getTypes() as $type) {
+      if ($type->isBuiltin() && $type->getName() !== 'null') {
+        return $type->getName();
+      }
+    }
+
+    return $unionType->getTypes()[0]->getName();
   }
 
   /**

@@ -5,6 +5,7 @@ namespace Assegai\Core;
 use Assegai\Core\Attributes\Component;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Modules\Module;
+use Assegai\Core\Config\ProjectConfig;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
@@ -25,6 +26,10 @@ use Symfony\Component\Console\Output\ConsoleOutput;
  */
 class ModuleManager implements SingletonInterface
 {
+  const array MANDATORY_PROVIDERS = [
+    ProjectConfig::class,
+  ];
+
   /**
    * @var ModuleManager|null The singleton instance of the ModuleManager.
    */
@@ -35,6 +40,14 @@ class ModuleManager implements SingletonInterface
    * @var ReflectionAttribute[] A list of all the imported module tokens
    */
   protected array $moduleTokens = [];
+  /**
+   * @var array<class-string, class-string[]> A map of module imports keyed by parent module class.
+   */
+  protected array $moduleImportsMap = [];
+  /**
+   * @var array<class-string, class-string|null> A map of module parents keyed by child module class.
+   */
+  protected array $moduleParentMap = [];
   /**
    * @var array<class-string> A list of all the controller tokens
    */
@@ -150,6 +163,11 @@ class ModuleManager implements SingletonInterface
   public function buildModuleTokensList(string $rootToken): void
   {
     try {
+      $this->moduleTokens = [];
+      $this->moduleImportsMap = [];
+      $this->moduleParentMap = [$rootToken => null];
+      $this->config = [];
+      $this->declarationTokens = [];
       $stack = [$rootToken]; // Stack to simulate recursion
       $processedTokens = []; // Prevents redundant processing
 
@@ -182,12 +200,14 @@ class ModuleManager implements SingletonInterface
 
         /** @var array{declarations: string[], imports: string[], exports: string[], providers: string[], controllers: string[], config: array<string, mixed>} $args */
         $args = $reflectionModuleAttribute->getArguments();
+        $imports = $args['imports'] ?? [];
 
         // Add module to processed list
         $processedTokens[$currentToken] = true;
 
         // Store module metadata
         $this->moduleTokens[$currentToken] = $reflectionModuleAttribute;
+        $this->moduleImportsMap[$currentToken] = $imports;
 
         // Merge config values
         if (!empty($args['config'])) {
@@ -204,7 +224,11 @@ class ModuleManager implements SingletonInterface
         }
 
         // Push imports onto the stack for later processing
-        foreach ($args['imports'] ?? [] as $import) {
+        foreach ($imports as $import) {
+          if (!array_key_exists($import, $this->moduleParentMap)) {
+            $this->moduleParentMap[$import] = $currentToken;
+          }
+
           if (!isset($processedTokens[$import])) {
             $stack[] = $import;
           }
@@ -248,8 +272,6 @@ class ModuleManager implements SingletonInterface
           continue;
         }
 
-        // TODO: Refactor declarations to allow components, directives and pipes
-        // See https://angular.io/guide/feature-modules
         $this->declaredAttributes[$componentAttributeInstance->selector] = $componentAttributeInstance;
         $this->declaredReflections[$componentAttributeInstance->selector] = $componentClassReflection;
         $this->declaredClassInstances[$componentAttributeInstance->selector] = $componentClassReflection->newInstance();
@@ -289,6 +311,28 @@ class ModuleManager implements SingletonInterface
   }
 
   /**
+   * Returns the imported child modules for the given module class.
+   *
+   * @param string $moduleClass
+   * @return class-string[]
+   */
+  public function getImportedModules(string $moduleClass): array
+  {
+    return $this->moduleImportsMap[$moduleClass] ?? [];
+  }
+
+  /**
+   * Returns the parent module for the given module class.
+   *
+   * @param string $moduleClass
+   * @return class-string|null
+   */
+  public function getParentModule(string $moduleClass): ?string
+  {
+    return $this->moduleParentMap[$moduleClass] ?? null;
+  }
+
+  /**
    * Returns a list of all the imported module tokens.
    *
    * @return array A list of all the imported module tokens.
@@ -319,6 +363,15 @@ class ModuleManager implements SingletonInterface
    */
   public function buildProviderTokensList(): void
   {
+    foreach (self::MANDATORY_PROVIDERS as $mandatoryProvider) {
+      $this->providerTokens[$mandatoryProvider] = $this->validateProvider($mandatoryProvider);
+      $instance = $this->injector->resolve($mandatoryProvider);
+
+      if ($instance) {
+        $this->injector->add($mandatoryProvider, $instance);
+      }
+    }
+
     foreach ($this->moduleTokens as $module) {
       /** @var array{imports: string[], exports: string[], providers: string[]} $args */
       $args = $module->getArguments();

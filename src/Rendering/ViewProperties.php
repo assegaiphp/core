@@ -67,10 +67,10 @@ class ViewProperties
    * @param array $styles The styles.
    * @param ViewMeta|array $meta The meta tags.
    * @param array $links The links to stylesheets.
-   * @param array $headScripts The javascript code to be included in the head.
-   * @param array $bodyScripts The javascript code to be included in the body.
-   * @param array $headScriptUrls The URLs of the javascript files to be included in the head.
-   * @param array $bodyScriptUrls The URLs of the javascript files to be included in the body.
+   * @param array $headScripts The JavaScript code to be included in the head.
+   * @param array $bodyScripts The JavaScript code to be included in the body.
+   * @param array $headScriptUrls The URLs of the JavaScript files to be included in the head.
+   * @param array $bodyScriptUrls The URLs of the JavaScript files to be included in the body.
    * @param string $base The base URL.
    * @param string $lang The language.
    * @param array $favicon The favicon URL and type.
