@@ -9,6 +9,7 @@ use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Rendering\View;
+use Assegai\Core\WebComponents\WebComponentSupport;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\ConsoleOutput;
@@ -119,6 +120,7 @@ START;
     echo PHP_EOL;
     echo $this->view->props->generateBodyScriptTags();
     echo $this->view->props->generateBodyScriptImportTags();
+    echo WebComponentSupport::renderBundleTag(getcwd() ?: '.');
 
     echo <<<END
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>

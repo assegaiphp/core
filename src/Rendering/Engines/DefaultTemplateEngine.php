@@ -8,6 +8,7 @@ use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Injector;
 use Assegai\Core\ModuleManager;
+use Assegai\Core\WebComponents\WebComponentSupport;
 use Assegai\Core\Routing\Router;
 use Assegai\Util\Path;
 use DateInvalidTimeZoneException;
@@ -24,6 +25,7 @@ use Twig\Extra\Markdown\DefaultMarkdown;
 use Twig\Extra\Markdown\MarkdownExtension;
 use Twig\Extra\Markdown\MarkdownRuntime;
 use Twig\Loader\FilesystemLoader;
+use Twig\Markup;
 use Twig\RuntimeLoader\RuntimeLoaderInterface;
 
 /**
@@ -184,6 +186,14 @@ class DefaultTemplateEngine extends TemplateEngine
       $ctx->addMethod('getLang', fn() => Request::getInstance()->getLang());
     }
 
+    if (!method_exists($ctx, 'webComponentProps')) {
+      $ctx->addMethod('webComponentProps', fn(mixed $props = []) => new Markup(web_component_props($props), 'UTF-8'));
+    }
+
+    if (!method_exists($ctx, 'webComponentBundleUrl')) {
+      $ctx->addMethod('webComponentBundleUrl', fn() => web_component_bundle_url());
+    }
+
     $data['ctx'] = $ctx;
 
     foreach ($componentReflection->getProperties() as $reflectionProperty) {
@@ -230,6 +240,7 @@ PROPS;
     $props .= $this->loadScripts();
     $output = $template->render([...$this->data]);
     $charSet = $this->meta['charset'] ?? 'UTF-8';
+    $webComponentBundleTag = $this->loadWebComponentBundle();
 
     return <<<START
 <!DOCTYPE html>
@@ -243,6 +254,7 @@ PROPS;
   </head>
   <body>\n
     $output
+    $webComponentBundleTag
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   </body>
 </html>
@@ -319,6 +331,16 @@ START;
     }
 
     return $scripts;
+  }
+
+  /**
+   * Loads the Web Components bundle if one is configured for the workspace.
+   */
+  private function loadWebComponentBundle(): string
+  {
+    $scriptTag = WebComponentSupport::renderBundleTag(getcwd() ?: '.');
+
+    return $scriptTag ? $scriptTag . PHP_EOL : '';
   }
 
   /**

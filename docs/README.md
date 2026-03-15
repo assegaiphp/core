@@ -27,7 +27,7 @@ The goal is to show how Assegai helps you move quickly without giving up structu
 3. [Architecture and Lifecycle](./architecture-and-lifecycle.md)
 4. [Controllers and Routing](./controllers-and-routing.md)
 5. [Modules and Providers](./modules-and-providers.md)
-6. [Pages and Components](./pages-and-components.md)
+6. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
 7. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
 8. [Data and ORM](./data-and-orm.md)
 9. [Queues and Background Jobs](./queues-and-background-jobs.md)
@@ -63,7 +63,7 @@ Assegai is easiest to understand when you see it as a few cooperating concepts:
 - providers hold application logic
 - DTOs shape input
 - entities shape persistence
-- declarations and components shape rendered pages
+- declarations, HTMX, and Web Components shape rendered pages
 - responders turn handler return values into JSON or HTML
 - the CLI keeps those conventions easy to create and maintain
 
