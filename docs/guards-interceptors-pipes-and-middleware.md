@@ -233,7 +233,7 @@ At app level there is also a `useGlobalPipes(...)` API on `App`, though the clea
 Middleware exists in the current core surface through:
 
 - `MiddlewareInterface`
-- `MiddlewareConsumerInterface`
+- `MiddlewareConsumer`
 - `Route`
 - `AssegaiModuleInterface::configure(...)`
 

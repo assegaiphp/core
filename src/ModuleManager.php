@@ -6,9 +6,11 @@ use Assegai\Core\Attributes\Component;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Config\ProjectConfig;
+use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
+use Assegai\Core\Interfaces\AssegaiModuleInterface;
 use Assegai\Core\Interfaces\SingletonInterface;
 use Assegai\Core\Util\Debug\Log;
 use Assegai\Util\Path;
@@ -16,6 +18,7 @@ use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionUnionType;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\ConsoleOutput;
 
@@ -343,6 +346,26 @@ class ModuleManager implements SingletonInterface
   }
 
   /**
+   * Allows modules to register route-bound middleware once controller metadata has been resolved.
+   *
+   * @param MiddlewareConsumer $consumer
+   * @return void
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  public function configureMiddleware(MiddlewareConsumer $consumer): void
+  {
+    foreach (array_keys($this->moduleTokens) as $moduleClass) {
+      if (!is_subclass_of($moduleClass, AssegaiModuleInterface::class)) {
+        continue;
+      }
+
+      $moduleInstance = $this->instantiateModule($moduleClass);
+      $moduleInstance->configure($consumer);
+    }
+  }
+
+  /**
    * Determines if the given module is valid.
    *
    * @param array $lastLoadedAttributes The last loaded attributes.
@@ -425,6 +448,43 @@ class ModuleManager implements SingletonInterface
   private function loadModuleAttributes(ReflectionClass $reflectionClass): array
   {
     return $reflectionClass->getAttributes(Module::class);
+  }
+
+  /**
+   * Creates an instance of the given module class using DI-resolved constructor dependencies where available.
+   *
+   * @param class-string<AssegaiModuleInterface> $moduleClass
+   * @return AssegaiModuleInterface
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  private function instantiateModule(string $moduleClass): AssegaiModuleInterface
+  {
+    if (!isset($this->reflectionCache['rootToken'][$moduleClass])) {
+      $this->reflectionCache['rootToken'][$moduleClass] = new ReflectionClass($moduleClass);
+    }
+
+    $reflectionClass = $this->reflectionCache['rootToken'][$moduleClass];
+    $constructor = $reflectionClass->getConstructor();
+
+    if (!$constructor || !$constructor->getParameters()) {
+      return $reflectionClass->newInstance();
+    }
+
+    $dependencies = [];
+
+    foreach ($constructor->getParameters() as $parameter) {
+      $type = $parameter->getType();
+
+      if (!$type || $type instanceof ReflectionUnionType || $type->isBuiltin()) {
+        $dependencies[] = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null;
+        continue;
+      }
+
+      $dependencies[] = $this->injector->resolve($type->getName());
+    }
+
+    return $reflectionClass->newInstanceArgs($dependencies);
   }
 
   /**
