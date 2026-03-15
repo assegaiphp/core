@@ -70,8 +70,8 @@ class Body
 
     $this->value = $value;
 
-    if (!empty($this->key) && isset($this->value->$key)) {
-      $this->value = $this->value->$key;
+    if (!empty($this->key) && isset($this->value->{$this->key})) {
+      $this->value = $this->value->{$this->key};
     }
   }
 }

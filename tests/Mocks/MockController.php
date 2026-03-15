@@ -3,12 +3,19 @@
 namespace Mocks;
 
 use Assegai\Core\Attributes\Controller;
+use Assegai\Core\Attributes\HostParam;
 use Assegai\Core\Attributes\Http\Delete;
 use Assegai\Core\Attributes\Http\Get;
+use Assegai\Core\Attributes\Http\Header;
+use Assegai\Core\Attributes\Http\HttpCode;
 use Assegai\Core\Attributes\Http\Patch;
 use Assegai\Core\Attributes\Http\Post;
+use Assegai\Core\Attributes\Http\Redirect;
 use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Attributes\Param;
+use Assegai\Core\Attributes\Res;
+use Assegai\Core\Attributes\ResponseStatus;
+use Assegai\Core\Http\Responses\Response;
 
 #[Controller('test')]
 class MockController
@@ -268,6 +275,117 @@ class MismatchedConstraintController
   }
 }
 
+#[Controller(path: 'dashboard')]
+class PublicDashboardController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'public-dashboard';
+  }
+}
+
+#[Controller(path: 'dashboard', host: ':account.example.com')]
+class TenantDashboardController
+{
+  #[Get]
+  public function index(#[HostParam('account')] string $account): string
+  {
+    return "tenant-$account";
+  }
+}
+
+#[Controller(path: 'dashboard', host: 'admin.example.com')]
+class AdminDashboardController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'admin-dashboard';
+  }
+}
+
+#[Controller(path: 'reports', host: ['ops.example.com', 'support.example.com'])]
+class MultiHostReportsController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'reports-dashboard';
+  }
+}
+
+#[Controller(path: 'response-metadata')]
+class ResponseMetadataController
+{
+  #[HttpCode(202)]
+  #[Get('accepted-before')]
+  public function acceptedBefore(): string
+  {
+    return 'accepted-before';
+  }
+
+  #[Get('accepted-after')]
+  #[HttpCode(202)]
+  public function acceptedAfter(): string
+  {
+    return 'accepted-after';
+  }
+
+  #[Get('no-content')]
+  #[ResponseStatus(204)]
+  public function noContent(): array
+  {
+    return [];
+  }
+
+  #[Header('X-Export-Version', '1')]
+  #[Get('headers')]
+  public function headers(): string
+  {
+    return 'headers';
+  }
+
+  #[Header('X-First', 'yes')]
+  #[Get('header-first')]
+  public function headerFirst(): string
+  {
+    return 'header-first';
+  }
+
+  #[Get('redirect')]
+  #[Redirect('/sign-in')]
+  public function redirect(): string
+  {
+    return 'redirect';
+  }
+
+  #[Get('manual-status')]
+  #[HttpCode(202)]
+  public function manualStatus(#[Res] Response $response): string
+  {
+    $response->setStatus(418);
+
+    return 'manual-status';
+  }
+
+  #[Get('manual-header')]
+  #[Header('X-Route', 'controller')]
+  public function manualHeader(#[Res] Response $response): string
+  {
+    $response->setHeader('X-Route', 'handler');
+
+    return 'manual-header';
+  }
+
+  #[Get('manual-redirect')]
+  #[Redirect('/route-default')]
+  public function manualRedirect(#[Res] Response $response): Response
+  {
+    return $response->redirect('/manual-target', 303);
+  }
+}
+
 #[Module(
   controllers: [ConstrainedUsersController::class, UuidOnlyController::class],
 )]
@@ -300,6 +418,25 @@ class UnknownConstraintModule
   controllers: [MismatchedConstraintController::class],
 )]
 class MismatchedConstraintModule
+{
+}
+
+#[Module(
+  controllers: [
+    PublicDashboardController::class,
+    TenantDashboardController::class,
+    AdminDashboardController::class,
+    MultiHostReportsController::class,
+  ],
+)]
+class HostRoutingAppModule
+{
+}
+
+#[Module(
+  controllers: [ResponseMetadataController::class],
+)]
+class ResponseMetadataAppModule
 {
 }
 

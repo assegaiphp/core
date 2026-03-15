@@ -27,7 +27,7 @@ class Query
 
     if ($this->key)
     {
-      $this->value = $this->value->get($key);
+      $this->value = $this->value->get($this->key);
     }
   }
 }

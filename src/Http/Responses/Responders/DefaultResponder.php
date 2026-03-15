@@ -14,7 +14,9 @@ class DefaultResponder implements Interfaces\ResponderInterface
    */
   public function respond(mixed $response, int|HttpStatusCode|null $code = null): never
   {
-    if (! headers_sent()) {
+    if ($response instanceof Response) {
+      $response->sendHeaders();
+    } elseif (! headers_sent()) {
       header('Content-Type: text/html');
     }
 

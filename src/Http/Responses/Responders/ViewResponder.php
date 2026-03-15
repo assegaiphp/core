@@ -34,6 +34,7 @@ class ViewResponder implements ResponderInterface
     if ($response instanceof Response) {
       $responseBody = $response->getBody();
       $response->setContentType(ContentType::HTML);
+      $response->sendHeaders();
 
       if ($responseBody instanceof View) {
         $this->viewEngine->load($responseBody)->render();

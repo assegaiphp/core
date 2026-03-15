@@ -9,6 +9,7 @@ use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Routing\Router;
 use Codeception\Attribute\Incomplete;
@@ -20,10 +21,12 @@ use Mocks\InvalidConstraintAppModule;
 use Mocks\LegacyAppModule;
 use Mocks\MismatchedConstraintAppModule;
 use Mocks\ExactWildcardController;
+use Mocks\HostRoutingAppModule;
 use Mocks\NestedApiController;
 use Mocks\NestedAppModule;
 use Mocks\NestedFeaturesController;
 use Mocks\NestedRootController;
+use Mocks\ResponseMetadataAppModule;
 use Mocks\UnknownConstraintAppModule;
 use Mocks\WildcardControllerAppModule;
 use Mocks\WildcardHandlerAppModule;
@@ -50,11 +53,15 @@ class RouterCest
     $_SERVER['REQUEST_URI'] = self::VALID_TEST_URI;
     $_SERVER['REQUEST_METHOD'] = 'GET';
     $_SERVER['REQUEST_SCHEME'] = 'http';
+    $_SERVER['HTTP_HOST'] = 'localhost';
     $_SERVER['REMOTE_HOST'] = 'localhost';
     $_SERVER['QUERY_STRING'] = '';
     $_GET['path'] = self::VALID_TEST_URI;
 
     $this->resetRequestSingleton();
+    Response::getInstance()->reset();
+    header_remove();
+    http_response_code(200);
     $this->router = Router::getInstance();
     $this->controller = new MockController();
   }
@@ -62,6 +69,9 @@ class RouterCest
   public function _after(): void
   {
     $this->resetRequestSingleton();
+    Response::getInstance()->reset();
+    header_remove();
+    http_response_code(200);
     $this->router = null;
   }
 
@@ -466,6 +476,200 @@ class RouterCest
   }
 
   /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testExactHostControllersBeatDynamicAndGenericControllers(UnitTester $I): void
+  {
+    $result = $this->dispatch('/dashboard', HostRoutingAppModule::class, 'admin.example.com');
+
+    $I->assertSame('admin-dashboard', $result['response']->getBody());
+    $I->assertSame([], $result['request']->getHostParams());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testDynamicHostControllersCaptureSubdomainTokens(UnitTester $I): void
+  {
+    $result = $this->dispatch('/dashboard', HostRoutingAppModule::class, 'acme.example.com');
+
+    $I->assertSame('tenant-acme', $result['response']->getBody());
+    $I->assertSame('acme', $result['request']->getHostParams()['account']);
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testGenericControllersStillHandleRequestsWhenNoHostPatternMatches(UnitTester $I): void
+  {
+    $result = $this->dispatch('/dashboard', HostRoutingAppModule::class, 'example.com');
+
+    $I->assertSame('public-dashboard', $result['response']->getBody());
+    $I->assertSame([], $result['request']->getHostParams());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testControllersCanMatchAgainstMultipleHosts(UnitTester $I): void
+  {
+    $result = $this->dispatch('/reports', HostRoutingAppModule::class, 'support.example.com');
+
+    $I->assertSame('reports-dashboard', $result['response']->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testPostHandlersDefaultToCreatedStatus(UnitTester $I): void
+  {
+    $result = $this->dispatch('/test', LegacyAppModule::class, 'localhost', 'POST');
+
+    $I->assertSame(201, $result['response']->getStatusCode());
+    $I->assertSame('create', $result['response']->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testHttpCodeOverridesVerbDefaultsRegardlessOfAttributeOrder(UnitTester $I): void
+  {
+    $before = $this->dispatch('/response-metadata/accepted-before', ResponseMetadataAppModule::class);
+    $after = $this->dispatch('/response-metadata/accepted-after', ResponseMetadataAppModule::class);
+
+    $I->assertSame(202, $before['response']->getStatusCode());
+    $I->assertSame(202, $after['response']->getStatusCode());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testResponseStatusAttributesAreApplied(UnitTester $I): void
+  {
+    $result = $this->dispatch('/response-metadata/no-content', ResponseMetadataAppModule::class);
+
+    $I->assertSame(204, $result['response']->getStatusCode());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testHeaderAttributesAreQueuedForTheActivatedRoute(UnitTester $I): void
+  {
+    $result = $this->dispatch('/response-metadata/headers', ResponseMetadataAppModule::class);
+
+    $I->assertSame('1', $result['response']->getHeader('X-Export-Version'));
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testNonRoutingAttributesDoNotBreakHandlerPathResolution(UnitTester $I): void
+  {
+    $result = $this->dispatch('/response-metadata/header-first', ResponseMetadataAppModule::class);
+
+    $I->assertSame('header-first', $result['response']->getBody());
+    $I->assertSame('yes', $result['response']->getHeader('X-First'));
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testHandlerCodeCanOverrideRouteLevelStatus(UnitTester $I): void
+  {
+    $result = $this->dispatch('/response-metadata/manual-status', ResponseMetadataAppModule::class);
+
+    $I->assertSame(418, $result['response']->getStatusCode());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testHandlerCodeCanOverrideRouteLevelHeaders(UnitTester $I): void
+  {
+    $result = $this->dispatch('/response-metadata/manual-header', ResponseMetadataAppModule::class);
+
+    $I->assertSame('handler', $result['response']->getHeader('X-Route'));
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testRedirectAttributesQueueLocationHeaders(UnitTester $I): void
+  {
+    $result = $this->dispatch('/response-metadata/redirect', ResponseMetadataAppModule::class);
+
+    $I->assertTrue($result['response']->isRedirect());
+    $I->assertSame('/sign-in', $result['response']->getRedirectUrl());
+    $I->assertSame('/sign-in', $result['response']->getHeader('Location'));
+    $I->assertSame(302, $result['response']->getStatusCode());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testHandlerCodeCanOverrideRouteLevelRedirects(UnitTester $I): void
+  {
+    $result = $this->dispatch('/response-metadata/manual-redirect', ResponseMetadataAppModule::class);
+
+    $I->assertTrue($result['response']->isRedirect());
+    $I->assertSame('/manual-target', $result['response']->getRedirectUrl());
+    $I->assertSame(303, $result['response']->getStatusCode());
+  }
+
+  /**
    * @return array<string, ReflectionClass>
    * @throws EntryNotFoundException
    * @throws HttpException
@@ -478,9 +682,13 @@ class RouterCest
   /**
    * @throws ReflectionException
    */
-  private function makeRequest(string $path): Request
+  private function makeRequest(string $path, string $host = 'localhost', string $method = 'GET'): Request
   {
     $_GET['path'] = $path;
+    $_SERVER['REQUEST_METHOD'] = $method;
+    $_SERVER['HTTP_HOST'] = $host;
+    $_SERVER['REMOTE_HOST'] = $host;
+    unset($_SERVER['HTTP_X_FORWARDED_HOST']);
     $this->resetRequestSingleton();
 
     return $this->router->getRequest();
@@ -522,10 +730,15 @@ class RouterCest
    * @throws NotFoundException
    * @throws ReflectionException
    */
-  private function dispatch(string $path, string $rootModuleClass): array
+  private function dispatch(
+    string $path,
+    string $rootModuleClass,
+    string $host = 'localhost',
+    string $method = 'GET',
+  ): array
   {
     $controllerTokensList = $this->buildControllerTokensForRootModule($rootModuleClass);
-    $request = $this->makeRequest($path);
+    $request = $this->makeRequest($path, $host, $method);
     $controller = $this->router->getActivatedController($request, $controllerTokensList);
     $response = $this->router->handleRequest($request, $controller);
 

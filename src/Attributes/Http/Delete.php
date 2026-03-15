@@ -16,7 +16,5 @@ class Delete
    * @param string $path
    */
   public function __construct(public readonly string $path = '')
-  {
-    http_response_code(200);
-  }
+  {}
 }

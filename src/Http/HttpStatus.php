@@ -8,9 +8,13 @@ class HttpStatus
   {
     return match($code) {
       100 => self::Continue(),
+      200 => self::OK(),
       201 => self::Created(),
       202 => self::Accepted(),
       204 => self::NoContent(),
+      301 => self::MovedPermanently(),
+      302 => self::Found(),
+      303 => self::SeeOther(),
       400 => self::BadRequest(),
       401 => self::Unauthorized(),
       403 => self::Forbidden(),
@@ -19,9 +23,26 @@ class HttpStatus
       409 => self::Conflict(),
       500 => self::InternalServerError(),
       501 => self::NotImplemented(),
+      307 => self::TemporaryRedirect(),
+      308 => self::PermanentRedirect(),
       503 => self::ServiceUnavailable(),
-      default => self::OK()
+      default => self::Custom($code)
     };
+  }
+
+  /**
+   * Creates a generic status object for valid numeric codes that are not yet mapped explicitly.
+   *
+   * @param int $code
+   * @return HttpStatusCode
+   */
+  public static function Custom(int $code): HttpStatusCode
+  {
+    return new HttpStatusCode(
+      code: $code,
+      name: 'Custom Status',
+      description: "Custom HTTP status code $code."
+    );
   }
 
   /**
@@ -102,6 +123,48 @@ class HttpStatus
       code: 204,
       name: 'No Content',
       description: 'There is no content to send for this request, but the headers may be useful. The user-agent may update its cached headers for this resource with the new ones.'
+    );
+  }
+
+  /**
+   * The URL of the requested resource has been changed permanently.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
+   */
+  public static function MovedPermanently(): HttpStatusCode
+  {
+    return new HttpStatusCode(
+      code: 301,
+      name: 'Moved Permanently',
+      description: 'The URL of the requested resource has been changed permanently. The new URL is given in the response.'
+    );
+  }
+
+  /**
+   * The URI of requested resource has been changed temporarily.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
+   */
+  public static function Found(): HttpStatusCode
+  {
+    return new HttpStatusCode(
+      code: 302,
+      name: 'Found',
+      description: 'The URI of requested resource has been changed temporarily. The new URI is given in the response.'
+    );
+  }
+
+  /**
+   * Directs the client to retrieve the requested resource at another URI using GET.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
+   */
+  public static function SeeOther(): HttpStatusCode
+  {
+    return new HttpStatusCode(
+      code: 303,
+      name: 'See Other',
+      description: 'The server sent this response to direct the client to get the requested resource at another URI with a GET request.'
     );
   }
 
@@ -259,6 +322,34 @@ class HttpStatus
         'HTTP header should, if possible, contain the estimated time before the recovery of the service. The ' .
         'webmaster must also take care about the caching-related headers that are sent along with this response, ' .
         'as these temporary condition responses should usually not be cached.'
+    );
+  }
+
+  /**
+   * The client should repeat the request with another URI, preserving the original HTTP method.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
+   */
+  public static function TemporaryRedirect(): HttpStatusCode
+  {
+    return new HttpStatusCode(
+      code: 307,
+      name: 'Temporary Redirect',
+      description: 'The server sends this response to direct the client to get the requested resource at another URI, preserving the original HTTP method.'
+    );
+  }
+
+  /**
+   * The client should use another URI permanently, preserving the original HTTP method.
+   *
+   * @return HttpStatusCode Returns an HttpStatusCode object.
+   */
+  public static function PermanentRedirect(): HttpStatusCode
+  {
+    return new HttpStatusCode(
+      code: 308,
+      name: 'Permanent Redirect',
+      description: 'This means that the resource is now permanently located at another URI, preserving the original HTTP method.'
     );
   }
 }

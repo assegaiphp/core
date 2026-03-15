@@ -19,7 +19,10 @@ class JsonResponder implements ResponderInterface
    */
   public function respond(mixed $response, int|HttpStatusCode|null $code = null): never
   {
-    if (! headers_sent()) {
+    if ($response instanceof Response) {
+      $response->setContentType(\Assegai\Core\Enumerations\Http\ContentType::JSON);
+      $response->sendHeaders();
+    } elseif (! headers_sent()) {
       header('Content-Type: application/json');
     }
 
