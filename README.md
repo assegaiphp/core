@@ -69,6 +69,12 @@ Start the dev server
 $ php -S localhost:5000 -t <path-to-project>
 ```
 
+### Server-rendered UI, HTMX, and Web Components
+
+Assegai is not JSON-only. The framework supports classic server-rendered views through `view(...)`, component-backed pages through `render(...)`, automatic HTMX inclusion in rendered HTML, and first-class Web Components hydration through safe `data-props` helpers plus automatic bundle injection.
+
+For the full walkthrough, see [Pages and Components](./docs/pages-and-components.md).
+
 ### Constrained Route Params
 
 Assegai routes support constrained dynamic params using angle-bracket syntax:
