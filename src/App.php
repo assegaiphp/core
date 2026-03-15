@@ -5,6 +5,7 @@ namespace Assegai\Core;
 use Assegai\Core\Config\AppConfig;
 use Assegai\Core\Config\ComposerConfig;
 use Assegai\Core\Config\ProjectConfig;
+use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\Enumerations\EventChannel;
 use Assegai\Core\Events\Event;
 use Assegai\Core\Events\EventManager;
@@ -23,7 +24,6 @@ use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\IAssegaiInterceptor;
-use Assegai\Core\Interfaces\ConsumerInterface;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
@@ -124,6 +124,10 @@ class App implements AppInterface
    */
   protected array $exceptionFilters = [];
   /**
+   * @var MiddlewareConsumer|null The middleware consumer
+   */
+  protected ?MiddlewareConsumer $middlewareConsumer = null;
+  /**
    * @var TemplateEngineInterface $templateEngine The template engine.
    */
   protected TemplateEngineInterface $templateEngine;
@@ -200,8 +204,8 @@ class App implements AppInterface
       $this->composerConfig = $config;
     }
 
-    if ($config instanceof ConsumerInterface) {
-      // TODO: Complete configuration logic
+    if ($config instanceof MiddlewareConsumer) {
+      $this->middlewareConsumer = $config;
     }
 
     return $this;
@@ -316,6 +320,11 @@ class App implements AppInterface
           $this->profileResults['Constroller Resolution'] = microtime(true) - $time;
           $time = microtime(true);
         }
+        $this->resolveMiddleware();
+        if ($this->withProfiling) {
+          $this->profileResults['Middleware Resolution'] = microtime(true) - $time;
+          $time = microtime(true);
+        }
         $this->handleRequest();
       }
     } catch (Throwable $exception) {
@@ -384,6 +393,26 @@ class App implements AppInterface
     $this->controllers = $this->controllerManager->buildControllerTokensList($this->getModuleTokens());
     $this->controllerMap = $this->controllerManager->getControllerPathTokenIdMap();
     broadcast(EventChannel::CONTROLLER_RESOLUTION_FINISH, new Event([$this->controllers, $this->controllerMap]));
+  }
+
+  /**
+   * Resolves module-configured middleware and shares the resulting consumer with the router.
+   *
+   * @return void
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  private function resolveMiddleware(): void
+  {
+    $consumer = new MiddlewareConsumer();
+
+    if ($this->middlewareConsumer) {
+      $consumer->merge($this->middlewareConsumer);
+    }
+
+    $this->moduleManager->configureMiddleware($consumer);
+    $this->middlewareConsumer = $consumer;
+    $this->router->setMiddlewareConsumer($consumer);
   }
 
   /**

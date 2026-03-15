@@ -12,16 +12,24 @@ interface ConsumerInterface
   /**
    * The object or class to be consumed.
    *
-   * @param string|object $class The object or class to be consumed.
+   * @param array|string|object ...$class The object or class to be consumed.
    * @return $this The consumer instance.
    */
-  public function apply(string|object $class): self;
+  public function apply(array|string|object ...$class): self;
+
+  /**
+   * Excludes routes from the current consumer registration.
+   *
+   * @param array|string|object ...$routes The routes to exclude.
+   * @return $this The consumer instance.
+   */
+  public function exclude(array|string|object ...$routes): self;
 
   /**
    * The routes to which the consumer applies.
    *
-   * @param array $routes The routes to which the consumer applies.
+   * @param array|string|object ...$routes The routes to which the consumer applies.
    * @return $this The consumer instance.
    */
-  public function forRoutes(array $routes): self;
+  public function forRoutes(array|string|object ...$routes): self;
 }

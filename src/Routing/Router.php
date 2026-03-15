@@ -19,6 +19,7 @@ use Assegai\Core\Attributes\Res;
 use Assegai\Core\Attributes\UseGuards;
 use Assegai\Core\Attributes\UseInterceptors;
 use Assegai\Core\Consumers\GuardsConsumer;
+use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\ControllerManager;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Container\ContainerException;
@@ -35,6 +36,7 @@ use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
 use Assegai\Core\Interfaces\IPipeTransform;
+use Assegai\Core\Interfaces\MiddlewareInterface;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Util\TypeManager;
 use Assegai\Core\Util\Validator;
@@ -104,6 +106,7 @@ final class Router
    * @var array<class-string|ExceptionFilterInterface> The global filters.
    */
   private array $globalFilters = [];
+  private ?MiddlewareConsumer $middlewareConsumer = null;
 
   private final function __construct()
   {
@@ -132,6 +135,17 @@ final class Router
   public function getRequest(): Request
   {
     return Request::getInstance();
+  }
+
+  /**
+   * Sets the middleware consumer that should be consulted before handler execution.
+   *
+   * @param MiddlewareConsumer|null $middlewareConsumer
+   * @return void
+   */
+  public function setMiddlewareConsumer(?MiddlewareConsumer $middlewareConsumer): void
+  {
+    $this->middlewareConsumer = $middlewareConsumer;
   }
 
   /**
@@ -322,11 +336,202 @@ final class Router
   {
     $handlers = $this->getControllerHandlers(controller: $controller);
     $activatedHandler = $this->getActivatedHandler(handlers: $handlers, controller: $controller, request: $request);
+    $response = Response::getInstance();
 
     if (!$activatedHandler) {
       throw new NotFoundException($request->getPath());
     }
 
+    $handledResponse = $response;
+    $shouldContinue = $this->runMiddleware(
+      request: $request,
+      response: $response,
+      next: function () use ($request, $controller, $activatedHandler, &$handledResponse, $response): void {
+        $handledResponse = $this->handleActivatedRoute($request, $controller, $activatedHandler, $response);
+      }
+    );
+
+    $finalResponse = $shouldContinue ? $handledResponse : $response;
+
+    return clone $finalResponse;
+  }
+
+  /**
+   * Runs the configured middleware chain for the current request.
+   *
+   * @param Request $request
+   * @param Response $response
+   * @param callable $next
+   * @return bool True when the request should continue to the handler pipeline.
+   * @throws ContainerException
+   * @throws ReflectionException
+   * @throws HttpException
+   */
+  private function runMiddleware(Request $request, Response $response, callable $next): bool
+  {
+    if (!$this->middlewareConsumer) {
+      $next();
+      return true;
+    }
+
+    $middleware = $this->middlewareConsumer->getMiddlewareForRequest($request);
+
+    if (!$middleware) {
+      $next();
+      return true;
+    }
+
+    return $this->executeMiddlewareStack($middleware, $request, $response, $next);
+  }
+
+  /**
+   * Executes the current middleware stack recursively so each middleware controls whether the chain continues.
+   *
+   * @param array<int, MiddlewareInterface|callable|class-string<MiddlewareInterface>> $middleware
+   * @param Request $request
+   * @param Response $response
+   * @param callable $destination
+   * @param int $index
+   * @return bool
+   * @throws ContainerException
+   * @throws ReflectionException
+   * @throws HttpException
+   */
+  private function executeMiddlewareStack(
+    array $middleware,
+    Request $request,
+    Response $response,
+    callable $destination,
+    int $index = 0,
+  ): bool
+  {
+    if (!isset($middleware[$index])) {
+      $destination();
+      return true;
+    }
+
+    $shouldContinue = false;
+    $next = function () use (&$shouldContinue, $middleware, $request, $response, $destination, $index): bool {
+      $shouldContinue = $this->executeMiddlewareStack($middleware, $request, $response, $destination, $index + 1);
+
+      return $shouldContinue;
+    };
+
+    $this->invokeMiddleware($middleware[$index], $request, $response, $next);
+
+    return $shouldContinue;
+  }
+
+  /**
+   * Invokes the given middleware definition, resolving class strings through the injector when possible.
+   *
+   * @param MiddlewareInterface|callable|class-string<MiddlewareInterface> $middleware
+   * @param Request $request
+   * @param Response $response
+   * @param callable $next
+   * @return void
+   * @throws ContainerException
+   * @throws ReflectionException
+   * @throws HttpException
+   */
+  private function invokeMiddleware(
+    object|string $middleware,
+    Request $request,
+    Response $response,
+    callable $next,
+  ): void
+  {
+    if ($middleware instanceof MiddlewareInterface) {
+      $middleware->use($request, $response, $next);
+      return;
+    }
+
+    if (is_string($middleware) && !class_exists($middleware) && is_callable($middleware)) {
+      $middleware($request, $response, $next);
+      return;
+    }
+
+    if (is_string($middleware)) {
+      $middleware = $this->resolveMiddlewareInstance($middleware);
+    }
+
+    if ($middleware instanceof MiddlewareInterface) {
+      $middleware->use($request, $response, $next);
+      return;
+    }
+
+    if (is_callable($middleware)) {
+      $middleware($request, $response, $next);
+      return;
+    }
+
+    throw new HttpException('Configured middleware must implement MiddlewareInterface or be callable.');
+  }
+
+  /**
+   * Resolves a middleware class into an executable instance.
+   *
+   * @param class-string<MiddlewareInterface> $middlewareClass
+   * @return object
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  private function resolveMiddlewareInstance(string $middlewareClass): object
+  {
+    try {
+      $resolved = $this->injector->resolve($middlewareClass);
+
+      if ($resolved instanceof MiddlewareInterface || is_callable($resolved)) {
+        return $resolved;
+      }
+    } catch (ContainerException) {
+      // Fall back to direct instantiation for lightweight middleware classes.
+    }
+
+    $reflectionClass = new ReflectionClass($middlewareClass);
+    $constructor = $reflectionClass->getConstructor();
+
+    if (!$constructor || !$constructor->getParameters()) {
+      return $reflectionClass->newInstance();
+    }
+
+    $dependencies = [];
+
+    foreach ($constructor->getParameters() as $parameter) {
+      $type = $parameter->getType();
+
+      if (!$type || $type instanceof ReflectionUnionType || $type->isBuiltin()) {
+        $dependencies[] = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null;
+        continue;
+      }
+
+      $dependencies[] = $this->injector->resolve($type->getName());
+    }
+
+    return $reflectionClass->newInstanceArgs($dependencies);
+  }
+
+  /**
+   * Continues the request pipeline once middleware has allowed the request through.
+   *
+   * @param Request $request
+   * @param object $controller
+   * @param ReflectionMethod $activatedHandler
+   * @param Response $response
+   * @return Response
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   * @throws ForbiddenException
+   * @throws HttpException
+   * @throws ReflectionException
+   */
+  private function handleActivatedRoute(
+    Request $request,
+    object $controller,
+    ReflectionMethod $activatedHandler,
+    Response $response,
+  ): Response
+  {
     $controllerReflection = new ReflectionClass($controller);
     $context = $this->createContext(class: $controllerReflection, handler: $activatedHandler);
 
@@ -395,7 +600,7 @@ final class Router
     return match(true) {
       $context instanceof ExecutionContext => $context->switchToHttp()->getResponse(),
       $context instanceof Response => $context,
-      default => Response::getInstance()
+      default => $response
     };
   }
 

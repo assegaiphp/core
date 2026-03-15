@@ -521,7 +521,17 @@ class Request
       throw new HttpException('Invalid request body.');
     }
 
-    return [];
+    if ($data === '') {
+      return [];
+    }
+
+    return match ($this->contentType) {
+      ContentType::FORM_URL_ENCODED => (function () use ($data) {
+        parse_str($data, $formData);
+        return is_array($formData) ? $formData : [];
+      })(),
+      default => [],
+    };
   }
 
   /**
@@ -537,15 +547,17 @@ class Request
     # Check if content type is form
     if ($this->contentType === ContentType::FORM_DATA || $this->contentType === ContentType::FORM_URL_ENCODED) {
       $this->form = new Form(method: HttpMethod::tryFrom($this->getMethod()->value));
-      $hasFile = !$_FILES;
+      $hasFile = !empty($_FILES);
 
       if ($hasFile) {
         $this->setFile((object)$_FILES);
       }
 
+      $hasFormSubmission = $this->form->isSubmitted() || $hasFile;
+
       return (object) match(true) {
-        $this->form->isSubmitted()  => $this->form->getData(),
-        default                     => file_get_contents('php://input')
+        $hasFormSubmission => $this->form->getData(),
+        default => $this->filterFormData(file_get_contents('php://input')),
       };
     }
 
