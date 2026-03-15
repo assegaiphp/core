@@ -120,7 +120,7 @@ START;
     echo PHP_EOL;
     echo $this->view->props->generateBodyScriptTags();
     echo $this->view->props->generateBodyScriptImportTags();
-    echo WebComponentSupport::renderBundleTag(getcwd() ?: '.');
+    echo WebComponentSupport::renderRuntimeTags(getcwd() ?: '.');
 
     echo <<<END
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>

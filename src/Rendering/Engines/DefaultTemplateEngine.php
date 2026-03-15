@@ -338,7 +338,7 @@ START;
    */
   private function loadWebComponentBundle(): string
   {
-    $scriptTag = WebComponentSupport::renderBundleTag(getcwd() ?: '.');
+    $scriptTag = WebComponentSupport::renderRuntimeTags(getcwd() ?: '.');
 
     return $scriptTag ? $scriptTag . PHP_EOL : '';
   }
