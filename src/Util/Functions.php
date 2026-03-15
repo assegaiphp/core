@@ -13,6 +13,7 @@ use Assegai\Core\Injector;
 use Assegai\Core\Rendering\View;
 use Assegai\Core\Rendering\ViewProperties;
 use Assegai\Core\Util\Paths;
+use Assegai\Core\WebComponents\WebComponentSupport;
 use Westsworld\TimeAgo;
 
 if (!function_exists('env')) {
@@ -216,6 +217,36 @@ if (!function_exists('register_dependency')) {
   function register_dependency(string $entryId, mixed $token): int
   {
     return Injector::getInstance()->add($entryId, $token);
+  }
+}
+
+if (!function_exists('web_component_props')) {
+  /**
+   * Encodes component props for safe use inside a custom element attribute.
+   */
+  function web_component_props(mixed $props = []): string
+  {
+    return WebComponentSupport::encodeProps($props);
+  }
+}
+
+if (!function_exists('web_component_bundle_url')) {
+  /**
+   * Returns the resolved Web Components bundle URL if one is available.
+   */
+  function web_component_bundle_url(?string $workingDirectory = null): ?string
+  {
+    return WebComponentSupport::getBundleUrl($workingDirectory);
+  }
+}
+
+if (!function_exists('web_component_bundle_tag')) {
+  /**
+   * Returns the module script tag for the configured Web Components bundle.
+   */
+  function web_component_bundle_tag(?string $workingDirectory = null): string
+  {
+    return WebComponentSupport::renderBundleTag($workingDirectory);
   }
 }
 
