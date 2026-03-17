@@ -109,6 +109,7 @@ Assegai is more than one package. The current public organization and guide surf
 
 - `assegaiphp/console` for project scaffolding and day-to-day CLI workflows
 - `assegaiphp/core` for modules, controllers, providers, routing, rendering, guards, interceptors, and pipes
+- `assegaiphp/auth` for session and JWT authentication strategies that you can wire into your own login flow
 - `assegaiphp/orm` for entity mapping and repository-backed data access
 - `assegaiphp/validation` for DTO validation attributes
 - `assegaiphp/forms` for form handling

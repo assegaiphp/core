@@ -39,6 +39,8 @@ Guards answer one question:
 
 They implement `ICanActivate` and receive an execution context.
 
+If you want reusable authentication helpers for those guards, `assegaiphp/auth` currently ships session and JWT strategies. It helps with credential verification and auth state, but your app still owns user lookup, login endpoints, and the guard logic that decides whether a request should proceed.
+
 ### A generated guard
 
 ```php
