@@ -22,13 +22,16 @@ class JsonResponder implements ResponderInterface
     if ($response instanceof Response) {
       $response->setContentType(\Assegai\Core\Enumerations\Http\ContentType::JSON);
       $response->sendHeaders();
+      $responseBody = $response->getBody();
+
+      if (!$response->shouldWrapJsonBody()) {
+        exit($this->encodePayload($responseBody));
+      }
     } elseif (! headers_sent()) {
       header('Content-Type: application/json');
     }
 
     if ($response instanceof Response) {
-      $responseBody = $response->getBody();
-
       if (is_array($responseBody)) {
         exit(new ApiResponse($responseBody));
       }
@@ -79,5 +82,18 @@ class JsonResponder implements ResponderInterface
     }
 
     throw new InternalServerErrorException('Invalid response type');
+  }
+
+  /**
+   * @param string|array|object $payload
+   * @return string
+   */
+  private function encodePayload(string|array|object $payload): string
+  {
+    if (is_string($payload)) {
+      return $payload;
+    }
+
+    return json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
   }
 }
