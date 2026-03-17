@@ -2,11 +2,14 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\ApiDocs\OpenApiGenerator;
+use Assegai\Core\ApiDocs\SwaggerUiRenderer;
 use Assegai\Core\Config\AppConfig;
 use Assegai\Core\Config\ComposerConfig;
 use Assegai\Core\Config\ProjectConfig;
 use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\Enumerations\EventChannel;
+use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Events\Event;
 use Assegai\Core\Events\EventManager;
 use Assegai\Core\Exceptions\Container\ContainerException;
@@ -320,6 +323,9 @@ class App implements AppInterface
           $this->profileResults['Constroller Resolution'] = microtime(true) - $time;
           $time = microtime(true);
         }
+        if ($this->handleGeneratedApiDocsRequest()) {
+          return;
+        }
         $this->resolveMiddleware();
         if ($this->withProfiling) {
           $this->profileResults['Middleware Resolution'] = microtime(true) - $time;
@@ -453,6 +459,80 @@ class App implements AppInterface
       $this->tabulate('Profile Results', ['Stage', 'Duration (in seconds)'], $this->profileResults);
     }
     $this->responder->respond(response: $this->response);
+  }
+
+  /**
+   * Builds the generated OpenAPI document for the current application graph.
+   *
+   * @return array<string, mixed>
+   */
+  public function describeApi(): array
+  {
+    $this->ensureControllerGraphResolved();
+
+    $generator = new OpenApiGenerator(
+      $this->controllerManager,
+      $this->moduleManager,
+      $this->request,
+      $this->composerConfig,
+      $this->projectConfig,
+    );
+
+    return $generator->generate($this->rootModuleClass);
+  }
+
+  /**
+   * Ensures module and controller metadata exists before API inspection work runs.
+   *
+   * @return void
+   */
+  protected function ensureControllerGraphResolved(): void
+  {
+    if ($this->moduleManager->getModuleTokens() === []) {
+      $this->resolveModules();
+    }
+
+    if ($this->controllers === []) {
+      $this->resolveControllers();
+    }
+  }
+
+  /**
+   * Serves the generated API docs endpoints when requested.
+   *
+   * @return bool
+   * @throws EntryNotFoundException
+   */
+  protected function handleGeneratedApiDocsRequest(): bool
+  {
+    $requestPath = trim($this->request->getPath(), '/');
+
+    if ($this->projectConfig?->get('apiDocs.enabled', true) === false) {
+      return false;
+    }
+
+    if (!in_array($requestPath, ['docs', 'openapi.json'], true)) {
+      return false;
+    }
+
+    $document = $this->describeApi();
+    $response = Response::getInstance();
+    $response->reset();
+
+    if ($requestPath === 'openapi.json') {
+      $response->jsonRaw($document);
+      $this->responder->respond($response);
+    }
+
+    $renderer = new SwaggerUiRenderer();
+    $response->setContentType(ContentType::HTML);
+    $response->setBody(
+      $renderer->render(
+        specUrl: '/openapi.json',
+        title: ($document['info']['title'] ?? 'Assegai API') . ' Docs',
+      )
+    );
+    $this->responder->respond($response);
   }
 
   /**

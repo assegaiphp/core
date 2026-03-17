@@ -133,6 +133,13 @@ The CLI serves the project through the root `index.php` router:
 assegai serve
 ```
 
+Once the server is up, you can also open:
+
+- `/docs` for Swagger UI
+- `/openapi.json` for the generated OpenAPI document
+
+That means a new app can expose API documentation immediately, without adding a separate OpenAPI package first.
+
 By default, a scaffolded project stores dev server settings in `assegai.json`:
 
 ```json

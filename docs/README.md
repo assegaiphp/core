@@ -2,12 +2,14 @@
 
 These guides are written for AssegaiPHP as a whole, not just `assegaiphp/core`.
 
-They are based on:
+They are written for developers who want to install Assegai, scaffold a project, and build features in their own environment.
 
-- the current `assegai` CLI installed in this environment
+They are grounded in:
+
+- the current Assegai CLI workflow
 - a freshly scaffolded Assegai app
 - generated `resource` and `page` schematics
-- the `assegaiphp/core`, `assegaiphp/orm`, and `assegaiphp/validation` packages available locally
+- the current `assegaiphp/core`, `assegaiphp/orm`, and `assegaiphp/validation` package behavior
 - the official [Assegai guide](https://assegaiphp.com/guide), the [AssegaiPHP GitHub organization](https://github.com/assegaiphp), and the general architectural direction of [NestJS](https://docs.nestjs.com/)
 
 The goal is to show how Assegai helps you move quickly without giving up structure:
@@ -28,14 +30,15 @@ The goal is to show how Assegai helps you move quickly without giving up structu
 4. [Modules and Providers](./modules-and-providers.md)
 5. [Controllers and Routing](./controllers-and-routing.md)
 6. [Request Data and Validation](./request-data-and-validation.md)
-7. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
-8. [Data and ORM](./data-and-orm.md)
-9. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
-10. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
-11. [ORM Relations](./orm-relations.md)
-12. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
-13. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
-14. [Queues and Background Jobs](./queues-and-background-jobs.md)
+7. [API Docs and Clients](./api-docs-and-clients.md)
+8. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
+9. [Data and ORM](./data-and-orm.md)
+10. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
+11. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
+12. [ORM Relations](./orm-relations.md)
+13. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
+14. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
+15. [Queues and Background Jobs](./queues-and-background-jobs.md)
 
 ## Guide map
 
@@ -52,6 +55,7 @@ These guides are about working style and day-to-day delivery rather than one iso
 
 - [Building a Feature](./building-a-feature.md) shows the happy path from scaffolded resource to a real feature.
 - [Request Data and Validation](./request-data-and-validation.md) shows how to keep transport concerns at the edge with DTOs and pipes.
+- [API Docs and Clients](./api-docs-and-clients.md) covers `/docs`, `/openapi.json`, Postman export, and the TypeScript client generator.
 - [Pages, Components, HTMX, and Web Components](./pages-and-components.md) covers server-rendered UI patterns and the new Web Components workflow.
 - [Data and ORM](./data-and-orm.md) is the ORM map, including the practical techniques that keep data-heavy features maintainable.
 
@@ -71,6 +75,7 @@ The shortest happy path looks like this:
 assegai new blog-api
 cd blog-api
 assegai serve
+open http://localhost:5000/docs
 assegai g r posts
 assegai g pg about
 ```
@@ -78,6 +83,7 @@ assegai g pg about
 From there you already have:
 
 - a running app
+- generated API docs at `/docs`
 - a root module
 - a home page
 - a generated CRUD-style `posts` feature

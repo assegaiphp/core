@@ -26,6 +26,10 @@ class Response implements Stringable
    */
   protected ContentType $contentType = ContentType::JSON;
   /**
+   * @var bool Whether JSON responses should be wrapped in ApiResponse.
+   */
+  protected bool $wrapJsonBody = true;
+  /**
    * @var HttpStatusCode|int The status code.
    */
   protected HttpStatusCode|int $status;
@@ -76,6 +80,7 @@ class Response implements Stringable
   {
     $this->body = new stdClass();
     $this->contentType = ContentType::HTML;
+    $this->wrapJsonBody = true;
     $this->status = HttpStatus::OK();
     $this->statusPriority = 0;
     $this->headers = [];
@@ -160,11 +165,27 @@ class Response implements Stringable
   public function json(array|stdClass|null $body = null): Response
   {
     $this->setContentType(ContentType::JSON);
+    $this->wrapJsonBody = true;
 
     if (!is_null($body))
     {
       $this->body = $body;
     }
+
+    return $this;
+  }
+
+  /**
+   * Configures a raw JSON response body without the framework API envelope.
+   *
+   * @param string|array|object $body
+   * @return $this
+   */
+  public function jsonRaw(string|array|object $body): Response
+  {
+    $this->setContentType(ContentType::JSON);
+    $this->wrapJsonBody = false;
+    $this->body = $body;
 
     return $this;
   }
@@ -249,6 +270,14 @@ class Response implements Stringable
   public function getBody(): string|array|object
   {
     return $this->body;
+  }
+
+  /**
+   * @return bool
+   */
+  public function shouldWrapJsonBody(): bool
+  {
+    return $this->wrapJsonBody;
   }
 
   /**
