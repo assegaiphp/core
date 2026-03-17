@@ -75,6 +75,16 @@ Assegai is not JSON-only. The framework supports classic server-rendered views t
 
 For the full walkthrough, see [Pages and Components](./docs/pages-and-components.md).
 
+### Data, ORM, and Relations
+
+For data-backed applications, Assegai ships with a TypeORM-inspired workflow around modules, repositories, entities, and migrations. The fuller persistence track now lives in:
+
+- [Data and ORM](./docs/data-and-orm.md)
+- [ORM Setup and Data Sources](./docs/orm-setup-and-data-sources.md)
+- [ORM Entities, Repositories, and Results](./docs/orm-entities-repositories-and-results.md)
+- [ORM Relations](./docs/orm-relations.md)
+- [ORM Migrations and Database Workflows](./docs/orm-migrations-and-database-workflows.md)
+
 ### Constrained Route Params
 
 Assegai routes support constrained dynamic params using angle-bracket syntax:

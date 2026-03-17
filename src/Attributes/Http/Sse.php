@@ -8,10 +8,5 @@ use Attribute;
 readonly class Sse
 {
   public function __construct(public string $path = '')
-  {
-    header('Content-Type: text/event-stream');
-    header('Cache-Control: no-cache');
-    header('Connection: keep-alive');
-    http_response_code(200);
-  }
+  {}
 }

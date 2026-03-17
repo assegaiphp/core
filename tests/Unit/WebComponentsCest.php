@@ -23,6 +23,7 @@ class WebComponentsCest
     $this->componentClass = "Tests\\WebComponents\\$componentBasename";
 
     mkdir($this->workspace . '/public/js', 0777, true);
+    mkdir($this->workspace . '/public/.assegai', 0777, true);
     mkdir($this->workspace . '/public/assets', 0777, true);
     mkdir($this->workspace . '/src', 0777, true);
 
@@ -107,6 +108,38 @@ TWIG
 
     $I->assertNull(web_component_bundle_url($this->workspace));
     $I->assertSame('', web_component_bundle_tag($this->workspace));
+  }
+
+  public function testTheWebComponentRuntimeTagsInjectHotReloadWhenWatchIsActive(UnitTester $I): void
+  {
+    $this->writeWorkspaceConfig([
+      'webComponents' => [
+        'enabled' => true,
+        'hotReload' => [
+          'enabled' => true,
+          'path' => 'public/.assegai/wc-hot-reload.json',
+          'pollInterval' => 500,
+        ],
+      ],
+    ]);
+
+    file_put_contents(
+      $this->workspace . '/public/.assegai/wc-hot-reload.json',
+      json_encode([
+        'active' => true,
+        'bundleUrl' => '/js/assegai-components.min.js',
+        'version' => 'build-1',
+        'interval' => 500,
+        'expiresAt' => gmdate(DATE_ATOM, time() + 300),
+      ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+    );
+
+    $tags = web_component_runtime_tags($this->workspace);
+
+    $I->assertStringContainsString('<script type="module" src="/js/assegai-components.min.js"></script>', $tags);
+    $I->assertStringContainsString('/.assegai/wc-hot-reload.json', $tags);
+    $I->assertStringContainsString('marker.version', $tags);
+    $I->assertStringContainsString('window.location.reload()', $tags);
   }
 
   public function testTheDefaultTemplateEngineInjectsTheBundleAndExposesTheTwigHelper(UnitTester $I): void

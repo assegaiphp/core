@@ -3,7 +3,6 @@
 namespace Assegai\Core\Attributes;
 
 use Assegai\Core\Http\HttpStatusCode;
-use Assegai\Core\Http\Responses\Responders\Responder;
 use Attribute;
 
 /**
@@ -14,14 +13,10 @@ class ResponseStatus
 {
   /**
    * @param HttpStatusCode|int $code
-   * @param Responder|null $responder
+   * @param string|null $responder
    */
   public function __construct(
     public readonly HttpStatusCode|int $code,
-    public readonly ?Responder $responder = null
-  )
-  {
-    $activeResponder = $this->responder ?? Responder::getInstance();
-    $activeResponder->setResponseCode($this->code);
-  }
+    public readonly ?string $responder = null
+  ) {}
 }

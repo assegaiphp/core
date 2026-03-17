@@ -573,9 +573,46 @@ class App implements AppInterface
     $this->responder = Responder::getInstance();
     $this->responder->setTemplateEngine($this->templateEngine);
     $this->moduleManager->setRootModuleClass($this->rootModuleClass);
+    $this->registerFrameworkDependencies();
 
     $this->isDebug = env('DEBUG_MODE', false);
     $this->withProfiling = env('PROFILING', false);
+  }
+
+  /**
+   * Registers framework-owned services so they can always be injected.
+   *
+   * @return void
+   */
+  protected function registerFrameworkDependencies(): void
+  {
+    $dependencies = [
+      self::class => $this,
+      AppInterface::class => $this,
+      AppConfig::class => $this->appConfig,
+      ComposerConfig::class => $this->composerConfig,
+      ProjectConfig::class => $this->projectConfig,
+      ArgumentsHost::class => $this->host,
+      Request::class => $this->request,
+      Response::class => $this->response,
+      Responder::class => $this->responder,
+      Router::class => $this->router,
+      ControllerManager::class => $this->controllerManager,
+      ModuleManager::class => $this->moduleManager,
+      Injector::class => $this->injector,
+      TemplateEngineInterface::class => $this->templateEngine,
+      LoggerInterface::class => $this->logger,
+    ];
+
+    if ($this->templateEngine instanceof DefaultTemplateEngine) {
+      $dependencies[DefaultTemplateEngine::class] = $this->templateEngine;
+    }
+
+    foreach ($dependencies as $entryId => $dependency) {
+      if (null !== $dependency) {
+        $this->injector->add($entryId, $dependency);
+      }
+    }
   }
 
   /**

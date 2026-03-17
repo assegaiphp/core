@@ -25,13 +25,43 @@ The goal is to show how Assegai helps you move quickly without giving up structu
 1. [Getting Started](./getting-started.md)
 2. [Building a Feature](./building-a-feature.md)
 3. [Architecture and Lifecycle](./architecture-and-lifecycle.md)
-4. [Controllers and Routing](./controllers-and-routing.md)
-5. [Modules and Providers](./modules-and-providers.md)
-6. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
-7. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
+4. [Modules and Providers](./modules-and-providers.md)
+5. [Controllers and Routing](./controllers-and-routing.md)
+6. [Request Data and Validation](./request-data-and-validation.md)
+7. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
 8. [Data and ORM](./data-and-orm.md)
-9. [Queues and Background Jobs](./queues-and-background-jobs.md)
-10. [Request Data and Validation](./request-data-and-validation.md)
+9. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
+10. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
+11. [ORM Relations](./orm-relations.md)
+12. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
+13. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
+14. [Queues and Background Jobs](./queues-and-background-jobs.md)
+
+## Guide map
+
+### Fundamentals
+
+- [Getting Started](./getting-started.md) introduces the CLI, the generated workspace, and the first running app.
+- [Architecture and Lifecycle](./architecture-and-lifecycle.md) explains how requests move through modules, controllers, providers, and responders.
+- [Modules and Providers](./modules-and-providers.md) covers dependency injection, module boundaries, and configuration.
+- [Controllers and Routing](./controllers-and-routing.md) is the main HTTP guide, including params, bodies, headers, status codes, redirects, and host-based routing.
+
+### Techniques
+
+These guides are about working style and day-to-day delivery rather than one isolated framework surface.
+
+- [Building a Feature](./building-a-feature.md) shows the happy path from scaffolded resource to a real feature.
+- [Request Data and Validation](./request-data-and-validation.md) shows how to keep transport concerns at the edge with DTOs and pipes.
+- [Pages, Components, HTMX, and Web Components](./pages-and-components.md) covers server-rendered UI patterns and the new Web Components workflow.
+- [Data and ORM](./data-and-orm.md) is the ORM map, including the practical techniques that keep data-heavy features maintainable.
+
+### Data and Persistence
+
+- [ORM Setup and Data Sources](./orm-setup-and-data-sources.md) covers installation, CLI database setup, data source resolution, and repository injection.
+- [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md) explains entity modeling, CRUD patterns, and the result objects controllers can return directly.
+- [ORM Relations](./orm-relations.md) is the relation guide for `OneToOne`, `ManyToOne`, `OneToMany`, and `ManyToMany`, with a strong focus on ownership and loading.
+- [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md) covers schema evolution and the CLI commands around migrations, loading, and seeding.
+- [Queues and Background Jobs](./queues-and-background-jobs.md) covers work that should move off the request path.
 
 ## What makes Assegai feel fast
 
@@ -78,6 +108,16 @@ Assegai is more than one package. The current public organization and guide surf
 - `assegaiphp/forms` for form handling
 - `assegaiphp/rabbitmq` and `assegaiphp/beanstalkd` for queue-backed background work
 - `assegaiphp/util`, `assegaiphp/common`, and `assegaiphp/collections` as supporting libraries
+
+## ORM track
+
+If your app is data-backed, the ORM reading path is:
+
+1. [Data and ORM](./data-and-orm.md)
+2. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
+3. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
+4. [ORM Relations](./orm-relations.md)
+5. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
 
 ## Notes on accuracy
 

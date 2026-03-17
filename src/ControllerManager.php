@@ -41,7 +41,7 @@ class ControllerManager
    */
   protected array $moduleBranchPrefixMap = [];
   /**
-   * @var array<class-string, array{module: class-string, local_path: string, resolved_path: string}>
+   * @var array<class-string, array{module: class-string, local_path: string, resolved_path: string, hosts: array<int, string>}>
    */
   protected array $controllerRouteMetadata = [];
 
@@ -118,6 +118,17 @@ class ControllerManager
   public function getResolvedControllerPath(string $controllerClass): ?string
   {
     return $this->controllerRouteMetadata[$controllerClass]['resolved_path'] ?? null;
+  }
+
+  /**
+   * Returns the configured host patterns for the given controller.
+   *
+   * @param string $controllerClass
+   * @return array<int, string>
+   */
+  public function getControllerHosts(string $controllerClass): array
+  {
+    return $this->controllerRouteMetadata[$controllerClass]['hosts'] ?? [];
   }
 
   /**
@@ -255,6 +266,7 @@ class ControllerManager
         'module' => $moduleClass,
         'local_path' => $localPath,
         'resolved_path' => $resolvedPath,
+        'hosts' => $this->getControllerHostsFromReflection($controllerReflection),
       ];
 
       $moduleControllers[$tokenId] = $controllerReflection;
@@ -285,6 +297,48 @@ class ControllerManager
    */
   private function getControllerPath(ReflectionClass $reflectionClass): string
   {
+    $instance = $this->getControllerAttributeInstance($reflectionClass);
+
+    if (is_null($instance)) {
+      return '/';
+    }
+
+    return $this->normalizePath($instance->path ?? '/');
+  }
+
+  /**
+   * Extracts the configured host patterns from the controller attribute.
+   *
+   * @param ReflectionClass $reflectionClass
+   * @return array<int, string>
+   */
+  private function getControllerHostsFromReflection(ReflectionClass $reflectionClass): array
+  {
+    $instance = $this->getControllerAttributeInstance($reflectionClass);
+    $hosts = $instance->host ?? null;
+
+    if (is_null($hosts)) {
+      return [];
+    }
+
+    if (is_string($hosts)) {
+      return [trim($hosts)];
+    }
+
+    return array_values(array_filter(
+      array_map(static fn(mixed $host): string => is_string($host) ? trim($host) : '', $hosts),
+      static fn(string $host): bool => $host !== ''
+    ));
+  }
+
+  /**
+   * Returns the concrete controller attribute instance for the given reflection.
+   *
+   * @param ReflectionClass $reflectionClass
+   * @return object|null
+   */
+  private function getControllerAttributeInstance(ReflectionClass $reflectionClass): ?object
+  {
     $attributes = $reflectionClass->getAttributes(Controller::class);
 
     if (!$attributes) {
@@ -292,12 +346,10 @@ class ControllerManager
     }
 
     if (empty($attributes)) {
-      return '/';
+      return null;
     }
 
-    $instance = $attributes[0]->newInstance();
-
-    return $this->normalizePath($instance->path ?? '/');
+    return $attributes[0]->newInstance();
   }
 
   /**

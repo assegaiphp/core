@@ -5,7 +5,6 @@ namespace Assegai\Core;
 use Assegai\Core\Attributes\Component;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Modules\Module;
-use Assegai\Core\Config\ProjectConfig;
 use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
@@ -29,10 +28,6 @@ use Symfony\Component\Console\Output\ConsoleOutput;
  */
 class ModuleManager implements SingletonInterface
 {
-  const array MANDATORY_PROVIDERS = [
-    ProjectConfig::class,
-  ];
-
   /**
    * @var ModuleManager|null The singleton instance of the ModuleManager.
    */
@@ -386,14 +381,7 @@ class ModuleManager implements SingletonInterface
    */
   public function buildProviderTokensList(): void
   {
-    foreach (self::MANDATORY_PROVIDERS as $mandatoryProvider) {
-      $this->providerTokens[$mandatoryProvider] = $this->validateProvider($mandatoryProvider);
-      $instance = $this->injector->resolve($mandatoryProvider);
-
-      if ($instance) {
-        $this->injector->add($mandatoryProvider, $instance);
-      }
-    }
+    $this->providerTokens = [];
 
     foreach ($this->moduleTokens as $module) {
       /** @var array{imports: string[], exports: string[], providers: string[]} $args */

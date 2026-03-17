@@ -10,6 +10,8 @@ use Assegai\Core\Util\Paths;
 final class WebComponentSupport
 {
     public const string DEFAULT_BUNDLE_URL = '/js/assegai-components.min.js';
+    public const string DEFAULT_HOT_RELOAD_URL = '/.assegai/wc-hot-reload.json';
+    public const int DEFAULT_HOT_RELOAD_INTERVAL = 1000;
 
     private final function __construct()
     {
@@ -49,6 +51,19 @@ final class WebComponentSupport
     }
 
     /**
+     * Renders all runtime tags needed for Web Components in the current workspace.
+     */
+    public static function renderRuntimeTags(?string $workingDirectory = null): string
+    {
+        $tags = array_filter([
+            self::renderBundleTag($workingDirectory),
+            self::renderHotReloadTag($workingDirectory),
+        ]);
+
+        return implode(PHP_EOL, $tags);
+    }
+
+    /**
      * Resolves the configured Web Components bundle URL, if available.
      */
     public static function getBundleUrl(?string $workingDirectory = null): ?string
@@ -75,6 +90,83 @@ final class WebComponentSupport
         return self::bundleExists(self::DEFAULT_BUNDLE_URL, $workingDirectory)
             ? self::DEFAULT_BUNDLE_URL
             : null;
+    }
+
+    /**
+     * Renders the hot-reload polling script when `wc:watch` is active.
+     */
+    public static function renderHotReloadTag(?string $workingDirectory = null): string
+    {
+        $state = self::getHotReloadState($workingDirectory);
+
+        if ($state === null) {
+            return '';
+        }
+
+        $markerUrl = json_encode($state['markerUrl'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '""';
+        $bundleUrl = json_encode($state['bundleUrl'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '""';
+        $interval = max(250, (int)($state['interval'] ?? self::DEFAULT_HOT_RELOAD_INTERVAL));
+
+        return <<<HTML
+<script>
+(() => {
+  const markerUrl = $markerUrl;
+  const interval = $interval;
+  const bundleUrl = $bundleUrl;
+  let version = null;
+
+  const tick = async () => {
+    try {
+      const markerResponse = await fetch(markerUrl + '?t=' + Date.now(), { cache: 'no-store' });
+
+      if (!markerResponse.ok) {
+        window.setTimeout(tick, interval);
+        return;
+      }
+
+      const marker = await markerResponse.json();
+
+      if (!marker || marker.active === false) {
+        window.setTimeout(tick, interval);
+        return;
+      }
+
+      const nextVersion = typeof marker.version === 'string' && marker.version !== ''
+        ? marker.version
+        : null;
+
+      if (!nextVersion) {
+        window.setTimeout(tick, interval);
+        return;
+      }
+
+      if (version === null) {
+        version = nextVersion;
+        window.setTimeout(tick, interval);
+        return;
+      }
+
+      if (marker.bundleUrl && marker.bundleUrl !== bundleUrl) {
+        window.location.reload();
+        return;
+      }
+
+      if (nextVersion !== version) {
+        window.location.reload();
+        return;
+      }
+    } catch (error) {
+      console.debug('[Assegai WC] Hot reload polling stopped.', error);
+      return;
+    }
+
+    window.setTimeout(tick, interval);
+  };
+
+  window.setTimeout(tick, interval);
+})();
+</script>
+HTML;
     }
 
     /**
@@ -108,25 +200,93 @@ final class WebComponentSupport
     }
 
     /**
+     * Resolves the current hot-reload state when `wc:watch` is active.
+     *
+     * @return array{bundleUrl: string, interval: int, markerUrl: string}|null
+     */
+    private static function getHotReloadState(?string $workingDirectory = null): ?array
+    {
+        $workingDirectory ??= getcwd() ?: '.';
+        $config = self::loadConfig($workingDirectory);
+        $hotReloadConfig = is_array($config['hotReload'] ?? null)
+            ? $config['hotReload']
+            : [];
+
+        if (($hotReloadConfig['enabled'] ?? true) === false) {
+            return null;
+        }
+
+        $markerUrl = self::normalizePublicUrl($hotReloadConfig['path'] ?? self::DEFAULT_HOT_RELOAD_URL);
+
+        if ($markerUrl === null) {
+            return null;
+        }
+
+        $markerFilename = Paths::join($workingDirectory, 'public', ltrim($markerUrl, '/'));
+
+        if (!is_file($markerFilename)) {
+            return null;
+        }
+
+        $contents = file_get_contents($markerFilename);
+
+        if (!$contents || !json_is_valid($contents)) {
+            return null;
+        }
+
+        $state = json_decode($contents, true);
+
+        if (!is_array($state) || ($state['active'] ?? false) !== true) {
+            return null;
+        }
+
+        $expiresAt = isset($state['expiresAt']) ? strtotime((string)$state['expiresAt']) : false;
+
+        if ($expiresAt !== false && $expiresAt < time()) {
+            return null;
+        }
+
+        $bundleUrl = self::normalizePublicUrl($state['bundleUrl'] ?? self::getBundleUrl($workingDirectory));
+
+        if ($bundleUrl === null) {
+            return null;
+        }
+
+        return [
+            'bundleUrl' => $bundleUrl,
+            'interval' => (int)($state['interval'] ?? $hotReloadConfig['pollInterval'] ?? self::DEFAULT_HOT_RELOAD_INTERVAL),
+            'markerUrl' => $markerUrl,
+        ];
+    }
+
+    /**
      * Normalizes a configured bundle path into a browser URL.
      */
     private static function normalizeBundleUrl(?string $bundlePath): ?string
     {
-        if (!$bundlePath) {
+        return self::normalizePublicUrl($bundlePath);
+    }
+
+    /**
+     * Normalizes a configured public asset path into a browser URL.
+     */
+    private static function normalizePublicUrl(?string $path): ?string
+    {
+        if (!$path) {
             return null;
         }
 
-        if (filter_var($bundlePath, FILTER_VALIDATE_URL)) {
-            return $bundlePath;
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
         }
 
-        $bundlePath = '/' . ltrim($bundlePath, '/');
+        $path = '/' . ltrim($path, '/');
 
-        if (str_starts_with($bundlePath, '/public/')) {
-            return substr($bundlePath, strlen('/public'));
+        if (str_starts_with($path, '/public/')) {
+            return substr($path, strlen('/public'));
         }
 
-        return $bundlePath;
+        return $path;
     }
 
     /**

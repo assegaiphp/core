@@ -116,6 +116,18 @@ class RequestCest
     $I->assertSame('avatar.png', $files->avatar['name']);
   }
 
+  public function testTheRequestNormalizesForwardedHosts(UnitTester $I): void
+  {
+    $request = $this->createRequest(
+      server: [
+        'HTTP_HOST' => 'tenant.example.com:8080',
+        'HTTP_X_FORWARDED_HOST' => 'Admin.Example.com:8443, proxy.internal',
+      ],
+    );
+
+    $I->assertSame('admin.example.com', $request->getHostName());
+  }
+
   private function createRequest(
     array $server = [],
     array $get = ['path' => '/test'],
@@ -130,6 +142,7 @@ class RequestCest
     $_SERVER = array_merge([
       'REQUEST_URI' => '/test',
       'REQUEST_METHOD' => 'GET',
+      'HTTP_HOST' => 'localhost',
       'REMOTE_HOST' => 'localhost',
     ], $server);
 

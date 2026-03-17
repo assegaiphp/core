@@ -250,6 +250,16 @@ if (!function_exists('web_component_bundle_tag')) {
   }
 }
 
+if (!function_exists('web_component_runtime_tags')) {
+  /**
+   * Returns the full set of runtime tags needed for Web Components in the current workspace.
+   */
+  function web_component_runtime_tags(?string $workingDirectory = null): string
+  {
+    return WebComponentSupport::renderRuntimeTags($workingDirectory);
+  }
+}
+
 if (!function_exists('inject')) {
   /**
    * Retrieves a dependency from the container.

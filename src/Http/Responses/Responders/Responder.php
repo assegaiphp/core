@@ -7,6 +7,7 @@ use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Enumerations\ResponderType;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
+use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Engines\ViewEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
@@ -97,7 +98,31 @@ class Responder implements ResponderInterface
    */
   public function respond(mixed $response, HttpStatusCode|int|null $code = null): never
   {
-    if ($code) {
+    if ($response instanceof Response) {
+      if ($code) {
+        $response->setStatus($code);
+      }
+
+      $this->setResponseCode($response->getStatus());
+
+      if ($response->isRedirect()) {
+        $response->sendHeaders();
+        $redirectUrl = htmlspecialchars($response->getRedirectUrl() ?? '/', ENT_QUOTES | ENT_HTML5);
+
+        exit(<<<HTML
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Redirecting...</title>
+  </head>
+  <body>
+    Redirecting to <a href="{$redirectUrl}">{$redirectUrl}</a>.
+  </body>
+</html>
+HTML);
+      }
+    } elseif ($code) {
       $this->setResponseCode($code);
     }
 

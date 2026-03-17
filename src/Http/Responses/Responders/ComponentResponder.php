@@ -38,6 +38,7 @@ class ComponentResponder implements ResponderInterface
   {
     if ($response instanceof Response) {
       $response->setContentType(ContentType::HTML);
+      $response->sendHeaders();
       $responseBody = $response->getBody();
 
       if ($this->isComponent($responseBody)) {

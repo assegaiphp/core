@@ -95,6 +95,10 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public function resolve(string $id, array $attributeReflections = []): mixed
   {
+    if ($this->has($id)) {
+      return $this->get($id);
+    }
+
     try {
       $stack = [$id]; // Stack to manage iterative processing
       $resolvedInstances = []; // Cache for resolved instances
@@ -104,6 +108,11 @@ final class Injector implements ITokenStoreOwner, IContainer
 
         // If already resolved, return from cache
         if (isset($resolvedInstances[$currentId])) {
+          continue;
+        }
+
+        if ($this->has($currentId)) {
+          $resolvedInstances[$currentId] = $this->get($currentId);
           continue;
         }
 
@@ -135,12 +144,14 @@ final class Injector implements ITokenStoreOwner, IContainer
           if ($reflectionClass->hasMethod('getInstance')) {
             /** @noinspection PhpUndefinedMethodInspection */
             $resolvedInstances[$currentId] = $this->bindHandlerAttributes($currentId::getInstance(), $attributeReflections);
+            $this->add($currentId, $resolvedInstances[$currentId]);
             continue;
           }
 
           if ($reflectionClass->hasMethod('newInstance')) {
             /** @noinspection PhpUndefinedMethodInspection */
             $resolvedInstances[$currentId] = $this->bindHandlerAttributes($currentId::newInstance(), $attributeReflections);
+            $this->add($currentId, $resolvedInstances[$currentId]);
             continue;
           }
 
@@ -153,6 +164,7 @@ final class Injector implements ITokenStoreOwner, IContainer
         // No constructor -> instantiate directly
         if (!$constructor) {
           $resolvedInstances[$currentId] = $this->bindHandlerAttributes(new $currentId, $attributeReflections);
+          $this->add($currentId, $resolvedInstances[$currentId]);
           continue;
         }
 
@@ -161,12 +173,14 @@ final class Injector implements ITokenStoreOwner, IContainer
         // No dependencies -> instantiate directly
         if (empty($parameters)) {
           $resolvedInstances[$currentId] = $this->bindHandlerAttributes(new $currentId, $attributeReflections);
+          $this->add($currentId, $resolvedInstances[$currentId]);
           continue;
         }
 
         // Resolve dependencies iteratively
         $dependencies = $this->resolveDependencies(id: $currentId, parameters: $parameters);
         $resolvedInstances[$currentId] = $this->bindHandlerAttributes($reflectionClass->newInstanceArgs($dependencies), $attributeReflections);
+        $this->add($currentId, $resolvedInstances[$currentId]);
       }
 
       return $resolvedInstances[$id] ?? null;
@@ -327,7 +341,44 @@ final class Injector implements ITokenStoreOwner, IContainer
         }
       }
 
-      return $this->get($paramType->getName());
+      $typeName = $paramType->getName();
+      $dependency = $this->get($typeName);
+
+      if (null !== $dependency) {
+        return $dependency;
+      }
+
+      try {
+        $dependency = $this->resolve($typeName);
+      } catch (ContainerException $exception) {
+        if ($param->isDefaultValueAvailable()) {
+          return $param->getDefaultValue();
+        }
+
+        if ($param->allowsNull()) {
+          return null;
+        }
+
+        throw new ResolveException(id: $id, message: "$resolveErrorPrefix — {$exception->getMessage()}");
+      }
+
+      if (null === $dependency) {
+        if ($param->isDefaultValueAvailable()) {
+          return $param->getDefaultValue();
+        }
+
+        if ($param->allowsNull()) {
+          return null;
+        }
+
+        throw new ResolveException(id: $id, message: "$resolveErrorPrefix — Unable to resolve $typeName");
+      }
+
+      if (!$this->has($typeName)) {
+        $this->add($typeName, $dependency);
+      }
+
+      return $dependency;
     }, $parameters);
   }
 

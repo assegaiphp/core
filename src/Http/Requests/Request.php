@@ -65,6 +65,10 @@ class Request
    */
   protected array $params = [];
   /**
+   * @var array The host parameters captured from host-aware routes.
+   */
+  protected array $hostParams = [];
+  /**
    * @var null|object|array The request file.
    */
   protected array|object|null $file = null;
@@ -107,7 +111,7 @@ class Request
     }
 
     $this->scheme = $scheme ?? ($_SERVER['REQUEST_SCHEME'] ?? 'http');
-    $this->host = $host ?? ($_SERVER['REMOTE_HOST'] ?? 'localhost');
+    $this->host = $this->resolveHostName($host);
     $this->path = $path;
     $this->query = new RequestQuery();
     $this->body = new stdClass();
@@ -356,7 +360,7 @@ class Request
    */
   public function getHostName(): string
   {
-    return $_SERVER['HTTP_HOST'] ?? 'localhost';
+    return $this->host ?? $this->resolveHostName();
   }
 
   /**
@@ -392,6 +396,14 @@ class Request
   }
 
   /**
+   * @return array
+   */
+  public function getHostParams(): array
+  {
+    return $this->hostParams ?? [];
+  }
+
+  /**
    * Replaces the current route parameters.
    *
    * @param array $params
@@ -403,6 +415,17 @@ class Request
   }
 
   /**
+   * Replaces the current host parameters.
+   *
+   * @param array $params
+   * @return void
+   */
+  public function setHostParams(array $params): void
+  {
+    $this->hostParams = $params;
+  }
+
+  /**
    * Clears the current route parameters.
    *
    * @return void
@@ -410,6 +433,16 @@ class Request
   public function clearParams(): void
   {
     $this->params = [];
+  }
+
+  /**
+   * Clears the current host parameters.
+   *
+   * @return void
+   */
+  public function clearHostParams(): void
+  {
+    $this->hostParams = [];
   }
 
   /**
@@ -580,6 +613,57 @@ class Request
     }
 
     return (object) $body;
+  }
+
+  /**
+   * Resolves the current request host from URL and proxy/server metadata.
+   *
+   * @param string|null $host
+   * @return string
+   */
+  private function resolveHostName(?string $host = null): string
+  {
+    $candidates = [
+      $host,
+      $_SERVER['HTTP_X_FORWARDED_HOST'] ?? null,
+      $_SERVER['HTTP_HOST'] ?? null,
+      $_SERVER['SERVER_NAME'] ?? null,
+      $_SERVER['REMOTE_HOST'] ?? null,
+      'localhost',
+    ];
+
+    foreach ($candidates as $candidate) {
+      if (!is_string($candidate) || trim($candidate) === '') {
+        continue;
+      }
+
+      return $this->normalizeHostName($candidate);
+    }
+
+    return 'localhost';
+  }
+
+  /**
+   * Normalizes host header values into a lowercase hostname without ports.
+   *
+   * @param string $host
+   * @return string
+   */
+  private function normalizeHostName(string $host): string
+  {
+    $host = trim(explode(',', $host)[0] ?? '');
+
+    if ($host === '') {
+      return 'localhost';
+    }
+
+    $parsedHost = parse_url(str_contains($host, '://') ? $host : 'http://' . $host, PHP_URL_HOST);
+
+    if (!is_string($parsedHost) || trim($parsedHost) === '') {
+      return 'localhost';
+    }
+
+    return strtolower(rtrim($parsedHost, '.'));
   }
 
   /**

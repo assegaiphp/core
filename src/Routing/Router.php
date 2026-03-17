@@ -7,15 +7,20 @@ use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Delete;
 use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Head;
+use Assegai\Core\Attributes\Http\Header;
+use Assegai\Core\Attributes\Http\HttpCode;
 use Assegai\Core\Attributes\Http\Options;
 use Assegai\Core\Attributes\Http\Patch;
 use Assegai\Core\Attributes\Http\Post;
 use Assegai\Core\Attributes\Http\Put;
+use Assegai\Core\Attributes\Http\Redirect;
+use Assegai\Core\Attributes\HostParam;
 use Assegai\Core\Attributes\Http\Query;
 use Assegai\Core\Attributes\Http\Sse;
 use Assegai\Core\Attributes\Param;
 use Assegai\Core\Attributes\Req;
 use Assegai\Core\Attributes\Res;
+use Assegai\Core\Attributes\ResponseStatus;
 use Assegai\Core\Attributes\UseGuards;
 use Assegai\Core\Attributes\UseInterceptors;
 use Assegai\Core\Consumers\GuardsConsumer;
@@ -30,6 +35,7 @@ use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\InterceptorException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\ExecutionContext;
+use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
@@ -42,6 +48,7 @@ use Assegai\Core\Util\TypeManager;
 use Assegai\Core\Util\Validator;
 use Exception;
 use ReflectionClass;
+use ReflectionAttribute;
 use ReflectionException;
 use ReflectionMethod;
 use ReflectionParameter;
@@ -69,6 +76,8 @@ final class Router
   private const int CONSTRAINED_DYNAMIC_ROUTE_PRIORITY = 200;
   private const int DYNAMIC_ROUTE_PRIORITY = 100;
   private const int WILDCARD_ROUTE_PRIORITY = -1;
+  private const int HANDLER_DEFAULT_STATUS_PRIORITY = 10;
+  private const int HANDLER_EXPLICIT_METADATA_PRIORITY = 20;
 
   /**
    * @var Router|null The Router instance.
@@ -177,8 +186,12 @@ final class Router
     );
 
     if (is_null($activatedController)) {
+      $request->clearHostParams();
       throw new NotFoundException(path: $request->getPath());
     }
+
+    $controllerMatch = $this->getControllerCandidateMatchData($activatedController, $request);
+    $request->setHostParams($controllerMatch['host_params'] ?? []);
 
     return $this->activateController($activatedController);
   }
@@ -192,7 +205,7 @@ final class Router
      */
   private function canActivateController(ReflectionClass $reflectionController, Request $request): bool
   {
-    return $this->getControllerMatchScore($reflectionController, $request) >= 0;
+    return !is_null($this->getControllerCandidateMatchData($reflectionController, $request));
   }
 
   /**
@@ -281,7 +294,6 @@ final class Router
     if ($bestHandler && $bestMatch) {
       $request->setParams($bestMatch['params']);
       $this->validateMatchedRouteConstraints($bestHandler, $bestMatch['constraints']);
-      $this->parseHandlerAttributes($bestHandler);
       return $bestHandler;
     }
 
@@ -337,10 +349,13 @@ final class Router
     $handlers = $this->getControllerHandlers(controller: $controller);
     $activatedHandler = $this->getActivatedHandler(handlers: $handlers, controller: $controller, request: $request);
     $response = Response::getInstance();
+    $response->reset();
 
     if (!$activatedHandler) {
       throw new NotFoundException($request->getPath());
     }
+
+    $this->applyHandlerResponseMetadata($activatedHandler, $response, $request->getMethod());
 
     $handledResponse = $response;
     $shouldContinue = $this->runMiddleware(
@@ -641,17 +656,31 @@ final class Router
    */
   public static function redirectTo(string $url, ?int $statusCode = null): never
   {
-    if ($statusCode) {
-      $code = $statusCode;
-      if (false === http_response_code($code)) {
-        throw new HttpException("Failed to set HTTP status code to $code");
-      }
+    $status = $statusCode ?? 302;
+
+    if (false === http_response_code($status)) {
+      throw new HttpException("Failed to set HTTP status code to $status");
     }
-    header("Content-Type: text/html");
+
+    if (!headers_sent()) {
+      header('Location: ' . $url, true, $status);
+      header('Content-Type: text/html');
+    }
+
+    $escapedUrl = htmlspecialchars($url, ENT_QUOTES | ENT_HTML5);
+
     exit(<<<HTML
-      <script>
-        window.location.href = "$url";
-</script>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="0;url={$escapedUrl}">
+    <title>Redirecting...</title>
+  </head>
+  <body>
+    Redirecting to <a href="{$escapedUrl}">{$escapedUrl}</a>.
+  </body>
+</html>
 HTML);
   }
 
@@ -687,15 +716,12 @@ HTML);
    * @param ReflectionMethod $handler
    * @return string
    */
-  private function getHandlerPath(ReflectionMethod $handler): string
+  private function getHandlerPath(ReflectionMethod $handler, ?RequestMethod $requestMethod = null): string
   {
-    # TODO: Filter by Request class
-    /*
-     * There is need to create a Request base class from which all HTTP verb methods inherit
-     */
-    $attributes = $handler->getAttributes();
-    foreach ($attributes as $attribute) {
-      return $attribute->newInstance()->path;
+    $requestMapperAttribute = $this->getRequestMapperAttribute($handler, $requestMethod);
+
+    if ($requestMapperAttribute) {
+      return $this->getRequestMapperPath($requestMapperAttribute);
     }
 
     return '';
@@ -735,15 +761,16 @@ HTML);
   {
     $path = $this->normalizePath($request->getPath());
     $controllerPrefix = $this->getControllerPrefix(controller: $controller);
-    $handlerPath = $this->getHandlerPath(handler: $handler);
+    $requestMapperAttribute = $this->getRequestMapperAttribute($handler, $request->getMethod());
+
+    if (is_null($requestMapperAttribute)) {
+      return null;
+    }
+
+    $handlerPath = $this->getRequestMapperPath($requestMapperAttribute);
     $controllerParams = $this->matchRoutePath(route: $controllerPrefix, path: $path, allowPartial: true);
     $remainingPath = $this->getRemainingPath(path: $path, prefix: $controllerPrefix);
     $handlerParams = $this->matchRoutePath(route: $handlerPath, path: $remainingPath);
-    $attributes = $handler->getAttributes();
-
-    if (empty($attributes)) {
-      return null;
-    }
 
     $foundPathMatch = !is_null($controllerParams) && !is_null($handlerParams);
 
@@ -753,58 +780,6 @@ HTML);
     }
 
     if (!$foundPathMatch) {
-      return null;
-    }
-
-    $requestMapperClassFound = false;
-
-    foreach ($attributes as $attribute) {
-      switch($request->getMethod()) {
-        case RequestMethod::OPTIONS:
-          if ($attribute->getName() === Options::class) {
-            $requestMapperClassFound = true;
-          }
-          break;
-
-        case RequestMethod::GET:
-          if ($attribute->getName() === Get::class || $attribute->getName() === Sse::class) {
-            $requestMapperClassFound = true;
-          }
-          break;
-
-        case RequestMethod::POST:
-          if ($attribute->getName() === Post::class) {
-            $requestMapperClassFound = true;
-          }
-          break;
-
-        case RequestMethod::PUT:
-          if ($attribute->getName() === Put::class) {
-            $requestMapperClassFound = true;
-          }
-          break;
-
-        case RequestMethod::PATCH:
-          if ($attribute->getName() === Patch::class) {
-            $requestMapperClassFound = true;
-          }
-          break;
-
-        case RequestMethod::DELETE:
-          if ($attribute->getName() === Delete::class) {
-            $requestMapperClassFound = true;
-          }
-          break;
-
-        case RequestMethod::HEAD:
-          if ($attribute->getName() === Head::class) {
-            $requestMapperClassFound = true;
-          }
-          break;
-      }
-    }
-
-    if (!$requestMapperClassFound) {
       return null;
     }
 
@@ -1000,8 +975,8 @@ HTML);
   /**
    * Determines whether a candidate route match is more specific than the current best match.
    *
-   * @param array{matched_segments: int, route_length: int, specificity: int} $candidate
-   * @param array{matched_segments: int, route_length: int, specificity: int} $currentBest
+   * @param array{matched_segments: int, route_length: int, specificity: int, host_specificity?: int} $candidate
+   * @param array{matched_segments: int, route_length: int, specificity: int, host_specificity?: int} $currentBest
    * @return bool
    */
   private function isBetterRouteMatch(array $candidate, array $currentBest): bool
@@ -1019,6 +994,17 @@ HTML);
     }
 
     if ($candidate['matched_segments'] < $currentBest['matched_segments']) {
+      return false;
+    }
+
+    $candidateHostSpecificity = $candidate['host_specificity'] ?? 0;
+    $currentHostSpecificity = $currentBest['host_specificity'] ?? 0;
+
+    if ($candidateHostSpecificity > $currentHostSpecificity) {
+      return true;
+    }
+
+    if ($candidateHostSpecificity < $currentHostSpecificity) {
       return false;
     }
 
@@ -1042,6 +1028,10 @@ HTML);
   ): ?ReflectionClass
   {
     $bestMatch = $fallbackController;
+
+    if (!is_null($bestMatch) && !$this->canActivateController($bestMatch, $request)) {
+      $bestMatch = null;
+    }
 
     foreach ($this->controllerManager->getModuleControllerTokens($moduleClass) as $reflectionController) {
       if (!$this->canActivateController($reflectionController, $request)) {
@@ -1090,18 +1080,16 @@ HTML);
       return $candidate;
     }
 
-    $candidateRoute = $this->getControllerPrefix($candidate);
-    $currentBestRoute = $this->getControllerPrefix($currentBest);
-    $candidateMatch = [
-      'matched_segments' => $this->getControllerMatchScore($candidate, $request),
-      'route_length' => strlen($candidateRoute),
-      'specificity' => $this->getRouteSpecificityScore($candidateRoute),
-    ];
-    $currentBestMatch = [
-      'matched_segments' => $this->getControllerMatchScore($currentBest, $request),
-      'route_length' => strlen($currentBestRoute),
-      'specificity' => $this->getRouteSpecificityScore($currentBestRoute),
-    ];
+    $candidateMatch = $this->getControllerCandidateMatchData($candidate, $request);
+    $currentBestMatch = $this->getControllerCandidateMatchData($currentBest, $request);
+
+    if (is_null($candidateMatch)) {
+      return $currentBest;
+    }
+
+    if (is_null($currentBestMatch)) {
+      return $candidate;
+    }
 
     if ($this->isBetterRouteMatch($candidateMatch, $currentBestMatch)) {
       return $candidate;
@@ -1119,14 +1107,146 @@ HTML);
    */
   private function getControllerMatchScore(ReflectionClass $reflectionController, Request $request): int
   {
-    $controllerPrefix = $this->getControllerPrefix($reflectionController);
-    $match = $this->matchRoutePath(route: $controllerPrefix, path: $request->getPath(), allowPartial: true);
+    return $this->getControllerCandidateMatchData($reflectionController, $request)['matched_segments'] ?? -1;
+  }
 
-    if (is_null($match)) {
-      return -1;
+  /**
+   * Returns controller match metadata for the current request, including host-level constraints.
+   *
+   * @param ReflectionClass $reflectionController
+   * @param Request $request
+   * @return array{matched_segments: int, route_length: int, specificity: int, host_specificity: int, host_params: array<int|string, string>}|null
+   */
+  private function getControllerCandidateMatchData(ReflectionClass $reflectionController, Request $request): ?array
+  {
+    $controllerPrefix = $this->getControllerPrefix($reflectionController);
+    $pathMatch = $this->matchRoutePath(route: $controllerPrefix, path: $request->getPath(), allowPartial: true);
+
+    if (is_null($pathMatch)) {
+      return null;
     }
 
-    return count($this->getPathSegments($controllerPrefix));
+    $hostMatch = $this->getControllerHostMatchData($reflectionController, $request);
+
+    if (is_null($hostMatch)) {
+      return null;
+    }
+
+    return [
+      'matched_segments' => count($this->getPathSegments($controllerPrefix)),
+      'route_length' => strlen($controllerPrefix),
+      'specificity' => $this->getRouteSpecificityScore($controllerPrefix),
+      'host_specificity' => $hostMatch['specificity'],
+      'host_params' => $hostMatch['params'],
+    ];
+  }
+
+  /**
+   * Matches the controller's configured host pattern(s) against the current request host.
+   *
+   * @param ReflectionClass $reflectionController
+   * @param Request $request
+   * @return array{params: array<int|string, string>, specificity: int}|null
+   */
+  private function getControllerHostMatchData(ReflectionClass $reflectionController, Request $request): ?array
+  {
+    $hosts = $this->controllerManager->getControllerHosts($reflectionController->getName());
+
+    if (empty($hosts)) {
+      return [
+        'params' => [],
+        'specificity' => 0,
+      ];
+    }
+
+    $bestMatch = null;
+    $requestHost = $request->getHostName();
+
+    foreach ($hosts as $hostPattern) {
+      $match = $this->matchHostPattern($hostPattern, $requestHost);
+
+      if (is_null($match)) {
+        continue;
+      }
+
+      if (is_null($bestMatch) || $match['specificity'] > $bestMatch['specificity']) {
+        $bestMatch = $match;
+      }
+    }
+
+    return $bestMatch;
+  }
+
+  /**
+   * Matches a host template such as `:account.example.com` against the request host.
+   *
+   * @param string $pattern
+   * @param string $host
+   * @return array{params: array<int|string, string>, specificity: int}|null
+   */
+  private function matchHostPattern(string $pattern, string $host): ?array
+  {
+    $patternLabels = $this->getHostLabels($pattern);
+    $hostLabels = $this->getHostLabels($host);
+
+    if (count($patternLabels) !== count($hostLabels)) {
+      return null;
+    }
+
+    $params = [];
+    $paramIndex = 0;
+    $specificity = 0;
+
+    foreach ($patternLabels as $index => $patternLabel) {
+      $hostLabel = $hostLabels[$index];
+
+      if ($patternLabel === '*') {
+        continue;
+      }
+
+      if (str_starts_with($patternLabel, ':')) {
+        $key = substr($patternLabel, 1);
+
+        if ($key === '') {
+          return null;
+        }
+
+        $params[$paramIndex++] = $hostLabel;
+        $params[$key] = $hostLabel;
+        $specificity += 10;
+        continue;
+      }
+
+      if ($patternLabel !== $hostLabel) {
+        return null;
+      }
+
+      $specificity += 100;
+    }
+
+    return [
+      'params' => $params,
+      'specificity' => $specificity,
+    ];
+  }
+
+  /**
+   * Splits a host string into normalized labels for matching.
+   *
+   * @param string $host
+   * @return array<int, string>
+   */
+  private function getHostLabels(string $host): array
+  {
+    $host = strtolower(trim($host));
+    $host = rtrim($host, '.');
+    $host = preg_replace('/:\d+$/', '', $host) ?? $host;
+
+    if ($host === '') {
+      return [];
+    }
+
+    return array_values(array_filter(explode('.', $host), 'strlen'));
   }
 
   /**
@@ -1227,18 +1347,6 @@ HTML);
   }
 
   /**
-   * @param ReflectionMethod $activatedHandler A reflection instance of the handler method to be parsed.
-   * @return void
-   */
-  private function parseHandlerAttributes(ReflectionMethod $activatedHandler): void
-  {
-    $reflectionAttributes = $activatedHandler->getAttributes();
-    foreach ($reflectionAttributes as $attribute) {
-      $attribute->newInstance();
-    }
-  }
-
-  /**
    * @param ReflectionClass $class
    * @param ReflectionMethod $handler
    * @return ExecutionContext
@@ -1246,6 +1354,138 @@ HTML);
   private function createContext(ReflectionClass $class, ReflectionMethod $handler): ExecutionContext
   {
     return new ExecutionContext(class: $class, handler: $handler);
+  }
+
+  /**
+   * Applies route-level response metadata to the shared response before middleware and handler execution.
+   *
+   * @param ReflectionMethod $handler
+   * @param Response $response
+   * @param RequestMethod $requestMethod
+   * @return void
+   */
+  private function applyHandlerResponseMetadata(
+    ReflectionMethod $handler,
+    Response $response,
+    RequestMethod $requestMethod,
+  ): void
+  {
+    $requestMapperAttribute = $this->getRequestMapperAttribute($handler, $requestMethod);
+
+    if ($requestMapperAttribute) {
+      $response->applyStatus(
+        $this->getDefaultStatusForRequestMapper($requestMapperAttribute),
+        self::HANDLER_DEFAULT_STATUS_PRIORITY,
+      );
+
+      if ($requestMapperAttribute->getName() === Sse::class) {
+        $response->setHeader('Content-Type', 'text/event-stream');
+        $response->setHeader('Cache-Control', 'no-cache');
+        $response->setHeader('Connection', 'keep-alive');
+      }
+    }
+
+    foreach ($handler->getAttributes() as $attribute) {
+      $instance = $attribute->newInstance();
+
+      switch ($instance::class) {
+        case HttpCode::class:
+        case ResponseStatus::class:
+          $response->applyStatus($instance->code, self::HANDLER_EXPLICIT_METADATA_PRIORITY);
+          break;
+
+        case Header::class:
+          $response->setHeader(
+            $instance->key,
+            $instance->value,
+            $instance->replace,
+            $instance->statusCode,
+          );
+          break;
+
+        case Redirect::class:
+          $response->applyRedirect(
+            $instance->url,
+            $instance->status,
+            self::HANDLER_EXPLICIT_METADATA_PRIORITY,
+          );
+          break;
+      }
+    }
+  }
+
+  /**
+   * Returns the request-mapping attribute for a handler, optionally scoped to a specific request method.
+   *
+   * @param ReflectionMethod $handler
+   * @param RequestMethod|null $requestMethod
+   * @return ReflectionAttribute|null
+   */
+  private function getRequestMapperAttribute(
+    ReflectionMethod $handler,
+    ?RequestMethod $requestMethod = null,
+  ): ?ReflectionAttribute
+  {
+    foreach ($handler->getAttributes() as $attribute) {
+      if (!Validator::isValidRequestMapperAttribute($attribute)) {
+        continue;
+      }
+
+      if (!is_null($requestMethod) && !$this->attributeMatchesRequestMethod($attribute, $requestMethod)) {
+        continue;
+      }
+
+      return $attribute;
+    }
+
+    return null;
+  }
+
+  /**
+   * Resolves the route path declared by a request-mapping attribute without instantiating unrelated attributes.
+   *
+   * @param ReflectionAttribute $attribute
+   * @return string
+   */
+  private function getRequestMapperPath(ReflectionAttribute $attribute): string
+  {
+    $arguments = $attribute->getArguments();
+
+    return $arguments['path'] ?? $arguments[0] ?? '';
+  }
+
+  /**
+   * Determines whether a request-mapping attribute handles the given request method.
+   *
+   * @param ReflectionAttribute $attribute
+   * @param RequestMethod $requestMethod
+   * @return bool
+   */
+  private function attributeMatchesRequestMethod(ReflectionAttribute $attribute, RequestMethod $requestMethod): bool
+  {
+    return match ($requestMethod) {
+      RequestMethod::OPTIONS => $attribute->getName() === Options::class,
+      RequestMethod::GET => in_array($attribute->getName(), [Get::class, Sse::class], true),
+      RequestMethod::POST => $attribute->getName() === Post::class,
+      RequestMethod::PUT => $attribute->getName() === Put::class,
+      RequestMethod::PATCH => $attribute->getName() === Patch::class,
+      RequestMethod::DELETE => $attribute->getName() === Delete::class,
+      RequestMethod::HEAD => $attribute->getName() === Head::class,
+    };
+  }
+
+  /**
+   * Returns the default success status associated with a request-mapping attribute.
+   *
+   * @param ReflectionAttribute $attribute
+   * @return int
+   */
+  private function getDefaultStatusForRequestMapper(ReflectionAttribute $attribute): int
+  {
+    return match ($attribute->getName()) {
+      Post::class => HttpStatus::Created()->code,
+      default => HttpStatus::OK()->code,
+    };
   }
 
   /**
@@ -1405,6 +1645,19 @@ HTML);
           }
           return $request->getParams()[$paramAttributeInstance->key] ??
             $request->getParams()[$param->getPosition()] ??
+            ($param->isOptional() ? $param->getDefaultValue() : null);
+
+        case HostParam::class:
+          $hostParams = $request->getHostParams();
+
+          if (empty($paramAttributeArgs)) {
+            return ($paramTypeName === 'string')
+              ? json_encode($hostParams)
+              : (object)$hostParams;
+          }
+
+          return $hostParams[$paramAttributeInstance->key] ??
+            $hostParams[$param->getPosition()] ??
             ($param->isOptional() ? $param->getDefaultValue() : null);
 
         case Query::class:
