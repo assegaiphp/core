@@ -84,6 +84,10 @@ final class Paths
    */
   public static function getPublicPath(?string $filename = ''): string
   {
+    if ($filename) {
+      $filename = parse_url($filename, PHP_URL_PATH) ?: $filename;
+    }
+
     return self::join(self::getWorkingDirectory(), 'public', $filename);
   }
 

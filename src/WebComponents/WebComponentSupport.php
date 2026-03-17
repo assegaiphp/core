@@ -111,55 +111,47 @@ final class WebComponentSupport
 <script>
 (() => {
   const markerUrl = $markerUrl;
-  const bundleUrl = $bundleUrl;
   const interval = $interval;
-  let signature = null;
-
-  const readSignature = async () => {
-    const response = await fetch(bundleUrl + '?t=' + Date.now(), {
-      method: 'HEAD',
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return [
-      response.headers.get('etag'),
-      response.headers.get('last-modified'),
-      response.headers.get('content-length'),
-    ].filter(Boolean).join('|') || null;
-  };
+  const bundleUrl = $bundleUrl;
+  let version = null;
 
   const tick = async () => {
     try {
       const markerResponse = await fetch(markerUrl + '?t=' + Date.now(), { cache: 'no-store' });
 
       if (!markerResponse.ok) {
+        window.setTimeout(tick, interval);
         return;
       }
 
       const marker = await markerResponse.json();
 
       if (!marker || marker.active === false) {
-        return;
-      }
-
-      const nextSignature = await readSignature();
-
-      if (!nextSignature) {
         window.setTimeout(tick, interval);
         return;
       }
 
-      if (signature === null) {
-        signature = nextSignature;
+      const nextVersion = typeof marker.version === 'string' && marker.version !== ''
+        ? marker.version
+        : null;
+
+      if (!nextVersion) {
         window.setTimeout(tick, interval);
         return;
       }
 
-      if (nextSignature !== signature) {
+      if (version === null) {
+        version = nextVersion;
+        window.setTimeout(tick, interval);
+        return;
+      }
+
+      if (marker.bundleUrl && marker.bundleUrl !== bundleUrl) {
+        window.location.reload();
+        return;
+      }
+
+      if (nextVersion !== version) {
         window.location.reload();
         return;
       }

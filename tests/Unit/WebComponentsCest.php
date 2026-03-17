@@ -128,6 +128,7 @@ TWIG
       json_encode([
         'active' => true,
         'bundleUrl' => '/js/assegai-components.min.js',
+        'version' => 'build-1',
         'interval' => 500,
         'expiresAt' => gmdate(DATE_ATOM, time() + 300),
       ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
@@ -137,6 +138,7 @@ TWIG
 
     $I->assertStringContainsString('<script type="module" src="/js/assegai-components.min.js"></script>', $tags);
     $I->assertStringContainsString('/.assegai/wc-hot-reload.json', $tags);
+    $I->assertStringContainsString('marker.version', $tags);
     $I->assertStringContainsString('window.location.reload()', $tags);
   }
 
