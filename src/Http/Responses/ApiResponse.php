@@ -3,6 +3,7 @@
 namespace Assegai\Core\Http\Responses;
 
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use JetBrains\PhpStorm\ArrayShape;
 
 /**
@@ -13,9 +14,9 @@ use JetBrains\PhpStorm\ArrayShape;
 class ApiResponse
 {
   /**
-   * @var Request The request object.
+   * @var RequestInterface The request object.
    */
-  protected Request $request;
+  protected RequestInterface $request;
   /**
    * @var bool Whether the data is a result object.
    */
@@ -26,12 +27,12 @@ class ApiResponse
    *
    * @param mixed $data The data to return.
    * @param int|null $total The total number of records.
-   * @param Request|null $request The request object.
+   * @param RequestInterface|null $request The request object.
    */
   public function __construct(
     public readonly mixed $data,
     public readonly ?int $total = null,
-    ?Request $request = null
+    ?RequestInterface $request = null
   )
   {
     $this->request = $request ?? Request::current();

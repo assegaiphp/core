@@ -6,6 +6,7 @@ use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
+use Assegai\Core\Injector;
 use Assegai\Core\Interfaces\IHttpArgumentsHost;
 use Assegai\Core\Session;
 
@@ -50,7 +51,7 @@ class HttpArgumentsHost implements IHttpArgumentsHost
    */
   public function getRequest(): RequestInterface
   {
-    return Request::current();
+    return Injector::getInstance()->get(RequestInterface::class) ?? Request::current();
   }
 
   /**
@@ -60,7 +61,7 @@ class HttpArgumentsHost implements IHttpArgumentsHost
    */
   public function getResponse(): ResponseInterface
   {
-    return Response::current();
+    return Injector::getInstance()->get(ResponseInterface::class) ?? Response::current();
   }
 
   /**
@@ -88,6 +89,6 @@ class HttpArgumentsHost implements IHttpArgumentsHost
    */
   public function getSession(): Session
   {
-    return Session::getInstance();
+    return Injector::getInstance()->get(Session::class) ?? Session::getInstance();
   }
 }

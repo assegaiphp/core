@@ -47,6 +47,6 @@ class HttpException extends Exception
       $this->status = HttpStatus::InternalServerError();
     }
 
-    Responder::getInstance()->setResponseCode($this->status);
+    Responder::current()->setResponseCode($this->status);
   }
 }

@@ -3,6 +3,7 @@
 namespace Assegai\Core\Routing;
 
 use Assegai\Core\Attributes\Controller;
+use Assegai\Core\Attributes\Http\All;
 use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Delete;
 use Assegai\Core\Attributes\Http\Get;
@@ -659,7 +660,7 @@ final class Router
     $response = Response::current();
     $response->reset();
     $response->redirect($url, $statusCode ?? 302);
-    Responder::getInstance()->respond($response);
+    Responder::current()->respond($response);
   }
 
   /**
@@ -1352,7 +1353,7 @@ final class Router
 
     if ($requestMapperAttribute) {
       $response->applyStatus(
-        $this->getDefaultStatusForRequestMapper($requestMapperAttribute),
+        $this->getDefaultStatusForRequestMapper($requestMapperAttribute, $requestMethod),
         self::HANDLER_DEFAULT_STATUS_PRIORITY,
       );
 
@@ -1442,13 +1443,13 @@ final class Router
   private function attributeMatchesRequestMethod(ReflectionAttribute $attribute, RequestMethod $requestMethod): bool
   {
     return match ($requestMethod) {
-      RequestMethod::OPTIONS => $attribute->getName() === Options::class,
-      RequestMethod::GET => in_array($attribute->getName(), [Get::class, Sse::class], true),
-      RequestMethod::POST => $attribute->getName() === Post::class,
-      RequestMethod::PUT => $attribute->getName() === Put::class,
-      RequestMethod::PATCH => $attribute->getName() === Patch::class,
-      RequestMethod::DELETE => $attribute->getName() === Delete::class,
-      RequestMethod::HEAD => $attribute->getName() === Head::class,
+      RequestMethod::OPTIONS => in_array($attribute->getName(), [All::class, Options::class], true),
+      RequestMethod::GET => in_array($attribute->getName(), [All::class, Get::class, Sse::class], true),
+      RequestMethod::POST => in_array($attribute->getName(), [All::class, Post::class], true),
+      RequestMethod::PUT => in_array($attribute->getName(), [All::class, Put::class], true),
+      RequestMethod::PATCH => in_array($attribute->getName(), [All::class, Patch::class], true),
+      RequestMethod::DELETE => in_array($attribute->getName(), [All::class, Delete::class], true),
+      RequestMethod::HEAD => in_array($attribute->getName(), [All::class, Head::class], true),
     };
   }
 
@@ -1458,9 +1459,15 @@ final class Router
    * @param ReflectionAttribute $attribute
    * @return int
    */
-  private function getDefaultStatusForRequestMapper(ReflectionAttribute $attribute): int
+  private function getDefaultStatusForRequestMapper(
+    ReflectionAttribute $attribute,
+    RequestMethod $requestMethod = RequestMethod::GET,
+  ): int
   {
     return match ($attribute->getName()) {
+      All::class => $requestMethod === RequestMethod::POST
+        ? HttpStatus::Created()->code
+        : HttpStatus::OK()->code,
       Post::class => HttpStatus::Created()->code,
       default => HttpStatus::OK()->code,
     };
@@ -1587,7 +1594,9 @@ final class Router
    */
   private function isRootController(ReflectionClass $controllerReflection): bool
   {
-    return $controllerReflection->getName() === $this->controllerManager->getRootControllerClass();
+    $rootControllerClass = $this->controllerManager->getRootControllerClass();
+
+    return !is_null($rootControllerClass) && $controllerReflection->getName() === $rootControllerClass;
   }
 
   /**

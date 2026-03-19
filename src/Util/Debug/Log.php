@@ -25,35 +25,59 @@ class Log
   {
     $logDir = dirname(DEFAULT_LOG_FILE);
     $errorDir = dirname(DEFAULT_ERROR_LOG);
+    self::ensureDirectoryExists($logDir);
+    self::ensureFileExists(DEFAULT_LOG_FILE);
 
-    if (!is_dir($logDir))
-    {
-      if (!@mkdir($logDir, 0777, true) && !is_dir($logDir))
-      {
+    if ($errorDir !== $logDir) {
+      self::ensureDirectoryExists($errorDir);
+    }
+
+    if (DEFAULT_ERROR_LOG !== DEFAULT_LOG_FILE) {
+      self::ensureFileExists(DEFAULT_ERROR_LOG);
+    }
+  }
+
+  /**
+   * Ensures the target log directory exists.
+   *
+   * @param string $directory
+   * @return void
+   */
+  private static function ensureDirectoryExists(string $directory): void
+  {
+    clearstatcache(true, $directory);
+
+    if (is_dir($directory)) {
+      return;
+    }
+
+    if (!@mkdir($directory, 0777, true)) {
+      clearstatcache(true, $directory);
+
+      if (!is_dir($directory)) {
         throw new RuntimeException('Failed to create the log directory.');
       }
     }
+  }
 
-    if (! file_exists(DEFAULT_LOG_FILE))
-    {
-      if (!@touch(DEFAULT_LOG_FILE) && !file_exists(DEFAULT_LOG_FILE))
-      {
-        throw new RuntimeException('Failed to create the log file.');
-      }
+  /**
+   * Ensures the target log file exists.
+   *
+   * @param string $filename
+   * @return void
+   */
+  private static function ensureFileExists(string $filename): void
+  {
+    clearstatcache(true, $filename);
+
+    if (file_exists($filename)) {
+      return;
     }
 
-    if (!is_dir($errorDir))
-    {
-      if (!@mkdir($errorDir, 0777, true) && !is_dir($errorDir))
-      {
-        throw new RuntimeException('Failed to create the log directory.');
-      }
-    }
+    if (!@touch($filename)) {
+      clearstatcache(true, $filename);
 
-    if (! file_exists(DEFAULT_ERROR_LOG))
-    {
-      if (!@touch(DEFAULT_ERROR_LOG) && !file_exists(DEFAULT_ERROR_LOG))
-      {
+      if (!file_exists($filename)) {
         throw new RuntimeException('Failed to create the log file.');
       }
     }

@@ -2,6 +2,8 @@
 
 namespace Assegai\Core\Exceptions\Handlers;
 
+use Assegai\Core\Enumerations\Http\ContentType;
+use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use ErrorException;
@@ -19,6 +21,8 @@ use Whoops\Run;
  */
 class WhoopsErrorHandler implements ErrorHandlerInterface
 {
+    use EmitsErrorResponses;
+
     /**
      * WhoopsExceptionHandler constructor.
      */
@@ -41,15 +45,15 @@ class WhoopsErrorHandler implements ErrorHandlerInterface
     {
         $whoops = $this->createWhoopsRun();
 
-        if (!headers_sent()) {
-            header('Content-Type: ' . $this->getContentType());
+        ob_start();
+        $renderedBody = $whoops->handleException($error);
+        $bufferedBody = ob_get_clean() ?: '';
 
-            if ($error instanceof HttpException) {
-                $whoops->sendHttpCode($error->getCode());
-            }
-        }
-
-        echo $whoops->handleException($error);
+        $this->emitErrorResponse(
+            body: is_string($renderedBody) && $renderedBody !== '' ? $renderedBody : $bufferedBody,
+            contentType: $this->getResponseContentType(),
+            statusCode: $error instanceof HttpException ? $error->getStatus()->code : 500,
+        );
     }
 
     /**
@@ -87,6 +91,15 @@ class WhoopsErrorHandler implements ErrorHandlerInterface
             'plain' => 'text/plain',
             'json' => 'application/json',
             default => 'text/html',
+        };
+    }
+
+    protected function getResponseContentType(): ContentType
+    {
+        return match ($this->getResponseMode()) {
+            'plain' => ContentType::PLAIN,
+            'json' => ContentType::JSON,
+            default => ContentType::HTML,
         };
     }
 

@@ -7,8 +7,8 @@ use Assegai\Core\Exceptions\Http\InternalServerErrorException;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
 use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
-use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Rendering\Engines\ViewEngine;
 use Assegai\Core\Rendering\View;
 
@@ -27,7 +27,8 @@ class ViewResponder implements ResponderInterface
    */
   public function __construct(
     protected ViewEngine $viewEngine,
-    protected ResponseEmitterInterface $emitter = new PhpResponseEmitter()
+    protected ResponseEmitterInterface $emitter = new PhpResponseEmitter(),
+    protected ?ResponseInterface $response = null,
   )
   {
   }
@@ -37,7 +38,7 @@ class ViewResponder implements ResponderInterface
    */
   public function respond(mixed $response, int|HttpStatusCode|null $code = null): void
   {
-    if ($response instanceof Response) {
+    if ($response instanceof ResponseInterface) {
       $responseBody = $response->getBody();
       $response->setContentType(ContentType::HTML);
 
@@ -53,7 +54,7 @@ class ViewResponder implements ResponderInterface
     }
 
     if ($response instanceof View) {
-      $emissionResponse = Response::current();
+      $emissionResponse = $this->response ?? \Assegai\Core\Http\Responses\Response::current();
       $emissionResponse->setContentType(ContentType::HTML);
       $this->emitter->emit($this->viewEngine->load($response)->render(), $emissionResponse);
       return;

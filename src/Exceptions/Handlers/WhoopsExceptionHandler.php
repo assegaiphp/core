@@ -2,6 +2,8 @@
 
 namespace Assegai\Core\Exceptions\Handlers;
 
+use Assegai\Core\Enumerations\Http\ContentType;
+use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
 use Psr\Log\LoggerInterface;
@@ -18,6 +20,8 @@ use Whoops\Run;
  */
 class WhoopsExceptionHandler implements ExceptionHandlerInterface
 {
+  use EmitsErrorResponses;
+
   /**
    * WhoopsExceptionHandler constructor.
    *
@@ -33,17 +37,17 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
   public function handle(Throwable $exception): void
   {
     $whoops = $this->createWhoopsRun();
-
-    if (!headers_sent()) {
-      header('Content-Type: ' . $this->getContentType());
-    }
-
-    if ($exception instanceof HttpException) {
-      $whoops->sendHttpCode($exception->getCode());
-    }
-
     $this->logger->error($exception->getMessage());
-    echo $whoops->handleException($exception);
+
+    ob_start();
+    $renderedBody = $whoops->handleException($exception);
+    $bufferedBody = ob_get_clean() ?: '';
+
+    $this->emitErrorResponse(
+      body: is_string($renderedBody) && $renderedBody !== '' ? $renderedBody : $bufferedBody,
+      contentType: $this->getResponseContentType(),
+      statusCode: $exception instanceof HttpException ? $exception->getStatus()->code : 500,
+    );
   }
 
   /**
@@ -81,6 +85,15 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
       'plain' => 'text/plain',
       'json' => 'application/json',
       default => 'text/html',
+    };
+  }
+
+  protected function getResponseContentType(): ContentType
+  {
+    return match ($this->getResponseMode()) {
+      'plain' => ContentType::PLAIN,
+      'json' => ContentType::JSON,
+      default => ContentType::HTML,
     };
   }
 

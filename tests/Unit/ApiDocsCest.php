@@ -207,7 +207,6 @@ class ApiDocsCest
     $_GET['path'] = 'openapi.json';
 
     $app = AssegaiFactory::create(ApiDocsAppModule::class);
-    $this->resetSingleton(Responder::class);
     $capturingEmitter = new class implements ResponseEmitterInterface {
       /** @var array<int, array{body: string, response: ResponseInterface|null}> */
       public array $emissions = [];
@@ -221,7 +220,7 @@ class ApiDocsCest
       }
     };
 
-    $responder = Responder::getInstance();
+    $responder = Responder::current();
     $responder->setEmitter($capturingEmitter);
 
     $responderProperty = new ReflectionProperty($app, 'responder');

@@ -11,6 +11,7 @@ use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
+use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
 use Assegai\Core\Interfaces\AppInterface;
@@ -171,6 +172,8 @@ class InjectorCest
     $I->assertSame(Response::getInstance(), $injector->get(Response::class));
     $I->assertSame(Request::getInstance(), $injector->get(RequestInterface::class));
     $I->assertSame(Response::getInstance(), $injector->get(ResponseInterface::class));
+    $I->assertSame($injector->get(Responder::class), Responder::current());
+    $I->assertSame($injector->get(ResponderInterface::class), Responder::current());
     $I->assertSame(Request::current(), $injector->get(Request::class));
     $I->assertSame(Response::current(), $injector->get(Response::class));
     $I->assertInstanceOf(ProjectConfig::class, $injector->get(ProjectConfig::class));

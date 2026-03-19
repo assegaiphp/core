@@ -5,6 +5,7 @@ namespace Mocks;
 use Assegai\Core\Attributes\Controller;
 use Assegai\Core\Attributes\HostParam;
 use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Attributes\Http\All;
 use Assegai\Core\Attributes\Http\Delete;
 use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Header;
@@ -438,6 +439,16 @@ class RequestAwarePipelineController
   }
 }
 
+#[Controller(path: 'all-routes')]
+class AllRoutesController
+{
+  #[All]
+  public function index(): string
+  {
+    return 'all-routes';
+  }
+}
+
 #[Module(
   controllers: [ConstrainedUsersController::class, UuidOnlyController::class],
 )]
@@ -496,6 +507,20 @@ class ResponseMetadataAppModule
   controllers: [RequestAwarePipelineController::class],
 )]
 class RequestAwarePipelineAppModule
+{
+}
+
+#[Module(
+  controllers: [AllRoutesController::class],
+)]
+class AllRoutesAppModule
+{
+}
+
+#[Module(
+  imports: [ResponseMetadataAppModule::class],
+)]
+class ImportOnlyRootAppModule
 {
 }
 

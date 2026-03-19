@@ -684,7 +684,7 @@ class App implements AppInterface
     ]);
     Log::init();
     $this->responseEmitter = new PhpResponseEmitter();
-    $this->responder = Responder::getInstance();
+    $this->responder = Responder::create();
     $this->responder->setTemplateEngine($this->templateEngine);
     $this->responder->setEmitter($this->responseEmitter);
     $this->moduleManager->setRootModuleClass($this->rootModuleClass);

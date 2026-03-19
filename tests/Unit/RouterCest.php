@@ -14,6 +14,7 @@ use Assegai\Core\ModuleManager;
 use Assegai\Core\Routing\Router;
 use Codeception\Attribute\Incomplete;
 use Codeception\Attribute\Skip;
+use Mocks\AllRoutesAppModule;
 use Mocks\MockController;
 use Mocks\ConstrainedRoutingAppModule;
 use Mocks\ConstrainedUsersController;
@@ -22,6 +23,7 @@ use Mocks\LegacyAppModule;
 use Mocks\MismatchedConstraintAppModule;
 use Mocks\ExactWildcardController;
 use Mocks\HostRoutingAppModule;
+use Mocks\ImportOnlyRootAppModule;
 use Mocks\NestedApiController;
 use Mocks\NestedAppModule;
 use Mocks\NestedFeaturesController;
@@ -483,6 +485,21 @@ class RouterCest
    * @throws ContainerException
    * @throws EntryNotFoundException
    */
+  public function testImportOnlyRootModulesCanStillResolveControllersFromImportedModules(UnitTester $I): void
+  {
+    $result = $this->dispatch('/response-metadata/headers', ImportOnlyRootAppModule::class);
+
+    $I->assertSame('headers', $result['response']->getBody());
+    $I->assertSame('1', $result['response']->getHeader('X-Export-Version'));
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
   public function testExactHostControllersBeatDynamicAndGenericControllers(UnitTester $I): void
   {
     $result = $this->dispatch('/dashboard', HostRoutingAppModule::class, 'admin.example.com');
@@ -548,6 +565,24 @@ class RouterCest
 
     $I->assertSame(201, $result['response']->getStatusCode());
     $I->assertSame('create', $result['response']->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testAllHandlersMatchMultipleMethodsWithoutGlobalStatusSideEffects(UnitTester $I): void
+  {
+    $getResult = $this->dispatch('/all-routes', AllRoutesAppModule::class, 'localhost', 'GET');
+    $postResult = $this->dispatch('/all-routes', AllRoutesAppModule::class, 'localhost', 'POST');
+
+    $I->assertSame('all-routes', $getResult['response']->getBody());
+    $I->assertSame('all-routes', $postResult['response']->getBody());
+    $I->assertSame(200, $getResult['response']->getStatusCode());
+    $I->assertSame(201, $postResult['response']->getStatusCode());
   }
 
   /**

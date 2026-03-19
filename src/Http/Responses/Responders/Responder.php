@@ -5,12 +5,14 @@ namespace Assegai\Core\Http\Responses\Responders;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
 use Assegai\Core\Http\Responses\Enumerations\ResponderType;
 use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Injector;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Engines\ViewEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
@@ -60,6 +62,16 @@ class Responder implements ResponderInterface
   }
 
   /**
+   * Creates a fresh responder instance for an application context.
+   *
+   * @return Responder
+   */
+  public static function create(): Responder
+  {
+    return new Responder();
+  }
+
+  /**
    * Get an instance of Responder.
    *
    * @return Responder The Responder instance.
@@ -71,6 +83,23 @@ class Responder implements ResponderInterface
     }
 
     return self::$instance;
+  }
+
+  /**
+   * Returns the responder bound to the active application context when available.
+   *
+   * @return Responder
+   */
+  public static function current(): Responder
+  {
+    $injector = Injector::getInstance();
+    $responder = $injector->get(self::class);
+
+    if ($responder instanceof self) {
+      return $responder;
+    }
+
+    return self::getInstance();
   }
 
   /**
@@ -120,7 +149,7 @@ class Responder implements ResponderInterface
    *
    * @return Request The Request instance.
    */
-  public function getRequest(): Request
+  public function getRequest(): RequestInterface
   {
     return Request::current();
   }
@@ -164,6 +193,9 @@ HTML, $response);
           'viewEngine' => $this->viewEngine,
           'templateEngine' => $this->templateEngine,
           'emitter' => $this->emitter,
+          'request' => $this->getRequest(),
+          'response' => Response::current(),
+          'responder' => $this,
         ]
       );
 

@@ -369,7 +369,7 @@ final class Injector implements ITokenStoreOwner, IContainer
         RequestInterface::class => Request::current(),
         ResponseInterface::class => Response::current(),
         ResponseEmitterInterface::class => $this->get(ResponseEmitterInterface::class) ?? new PhpResponseEmitter(),
-        ResponderInterface::class => $this->get(ResponderInterface::class) ?? Responder::getInstance(),
+        ResponderInterface::class => $this->get(ResponderInterface::class) ?? Responder::current(),
         default => null,
       };
 

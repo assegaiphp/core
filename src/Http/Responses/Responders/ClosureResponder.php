@@ -15,7 +15,8 @@ use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
 class ClosureResponder implements ResponderInterface
 {
   public function __construct(
-    protected ResponseEmitterInterface $emitter = new PhpResponseEmitter()
+    protected ResponseEmitterInterface $emitter = new PhpResponseEmitter(),
+    protected ?ResponderInterface $responder = null,
   )
   {
   }
@@ -26,7 +27,7 @@ class ClosureResponder implements ResponderInterface
   public function respond(mixed $response, int|HttpStatusCode|null $code = null): void
   {
     if (is_callable($response)) {
-      Responder::getInstance()->respond($response(), $code);
+      ($this->responder ?? Responder::current())->respond($response(), $code);
     }
   }
 }
