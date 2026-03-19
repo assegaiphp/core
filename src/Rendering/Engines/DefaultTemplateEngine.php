@@ -9,7 +9,7 @@ use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Injector;
 use Assegai\Core\ModuleManager;
-use Assegai\Core\Rendering\ViewProperties;
+use Assegai\Core\Rendering\DocumentProperties;
 use Assegai\Core\WebComponents\WebComponentSupport;
 use Assegai\Core\Routing\Router;
 use Assegai\Util\Path;
@@ -230,7 +230,7 @@ class DefaultTemplateEngine extends TemplateEngine
       $this->author = $author ?? $_ENV['DOCUMENT_AUTHOR'] ?? $this->getAppDocumentConfigValue('author', '');
     }
 
-    $documentProps = ViewProperties::fromArray(is_array($props ?? null) ? $props : []);
+    $documentProps = DocumentProperties::fromArray(is_array($props ?? null) ? $props : []);
     $lang ??= $documentProps->lang ?: Request::current()->getLang();
     $headAssets = $documentProps->generateHeadAssetTags();
 
@@ -247,6 +247,7 @@ class DefaultTemplateEngine extends TemplateEngine
     $bodyScripts = $documentProps->generateBodyScriptTags() . $documentProps->generateBodyScriptImportTags();
     $webComponentBundleTag = $this->loadWebComponentBundle();
     $escapedTitle = htmlspecialchars($this->title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $htmxLink ??= $documentProps->htmxLink ?? '';
 
     return <<<START
 <!DOCTYPE html>
@@ -263,7 +264,7 @@ class DefaultTemplateEngine extends TemplateEngine
     $output
     $bodyScripts
     $webComponentBundleTag
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="{$htmxLink}"></script>
   </body>
 </html>
 START;

@@ -4,6 +4,7 @@ namespace Unit;
 
 use Assegai\Core\Config as FrameworkConfig;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
+use Assegai\Core\Rendering\DocumentProperties;
 use Assegai\Core\Rendering\ViewProperties;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -202,6 +203,20 @@ TWIG
     $I->assertSame(['/js/runtime.js', '/js/page.js'], $props->headScriptUrls);
     $I->assertSame(['/js/body.js', '/js/page-body.js'], $props->bodyScriptUrls);
     $I->assertSame(['/custom.ico', 'image/x-icon'], $props->favicon);
+  }
+
+  public function testDocumentPropertiesMergeGlobalDocumentConfigForComponentRendering(UnitTester $I): void
+  {
+    $props = DocumentProperties::fromArray([
+      'title' => 'Homepage',
+      'headScriptUrls' => ['/js/home.js'],
+    ]);
+
+    $I->assertSame('Homepage', $props->title);
+    $I->assertSame('fr', $props->lang);
+    $I->assertSame(['/css/site.css'], $props->links);
+    $I->assertSame(['/assets/favicon.svg', 'image/svg+xml'], $props->favicon);
+    $I->assertSame(['/js/runtime.js', '/js/home.js'], $props->headScriptUrls);
   }
 
   public function testTheDefaultTemplateEngineUsesGlobalDocumentConfig(UnitTester $I): void
