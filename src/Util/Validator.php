@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Util;
 
+use Assegai\Core\Attributes\Http\All;
 use Assegai\Core\Attributes\Http\Delete;
 use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Head;
@@ -20,6 +21,7 @@ class Validator
   public static function isValidRequestMapperAttribute(ReflectionAttribute $attribute): bool
   {
     $requestMapperClasses = [
+      All::class,
       Delete::class,
       Get::class,
       Head::class,

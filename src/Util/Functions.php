@@ -144,7 +144,7 @@ if (!function_exists('translate')) {
   function translate(string $id, array $parameters = [], string $domain = '', ?string $locale = null): string
   {
     $default = $id;
-    $request = Request::getInstance();
+    $request = Request::current();
 
     $effectiveLocale = $locale ?? $request->getLang() ?? App::DEFAULT_LOCALE;
     $langFilename = Paths::join(Paths::getLangDirectory(), $domain, $effectiveLocale);

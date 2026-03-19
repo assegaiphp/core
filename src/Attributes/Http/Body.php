@@ -6,7 +6,6 @@ use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Http\Requests\Request;
-use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Attribute;
 use ReflectionException;
@@ -45,13 +44,13 @@ class Body
     public readonly array|IPipeTransform|string|null $pipes = null
   )
   {
-    $request = Request::getInstance();
+    $request = Request::current();
     $value = $request->getBody();
 
     if ($this->pipes) {
       if(is_string($this->pipes)) {
         if (!is_subclass_of($this->pipes, IPipeTransform::class, true)) {
-          Responder::getInstance()->respond(new EntryNotFoundException($this->pipes));
+          throw new EntryNotFoundException($this->pipes);
         }
 
         /** @var IPipeTransform $pipe */

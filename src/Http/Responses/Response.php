@@ -6,12 +6,14 @@ use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
+use Assegai\Core\Injector;
 use JetBrains\PhpStorm\ArrayShape;
 use stdClass;
 use Stringable;
 
 #[Injectable]
-class Response implements Stringable
+class Response implements Stringable, ResponseInterface
 {
   /**
    * @var Response|null The Response instance.
@@ -65,10 +67,54 @@ class Response implements Stringable
   {
     if (!self::$instance)
     {
-      self::$instance = new Response();
+      self::$instance = self::create();
     }
 
     return self::$instance;
+  }
+
+  /**
+   * Returns the response bound to the active request scope when available.
+   *
+   * @return Response
+   */
+  public static function current(): Response
+  {
+    $injector = Injector::getInstance();
+    $response = $injector->get(self::class);
+
+    if ($response instanceof self) {
+      return $response;
+    }
+
+    $response = $injector->get(ResponseInterface::class);
+
+    if ($response instanceof self) {
+      return $response;
+    }
+
+    return self::getInstance();
+  }
+
+  /**
+   * Creates a fresh response object for a request cycle.
+   *
+   * @return Response
+   */
+  public static function create(): Response
+  {
+    return new Response();
+  }
+
+  /**
+   * Replaces the current in-flight response instance.
+   *
+   * @param Response|null $instance
+   * @return void
+   */
+  public static function setInstance(?Response $instance): void
+  {
+    self::$instance = $instance;
   }
 
   /**

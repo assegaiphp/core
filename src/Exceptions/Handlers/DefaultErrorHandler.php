@@ -4,6 +4,8 @@ namespace Assegai\Core\Exceptions\Handlers;
 
 use Assegai\Core\Config;
 use Assegai\Core\Enumerations\EnvironmentType;
+use Assegai\Core\Enumerations\Http\ContentType;
+use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use Assegai\Core\Http\HttpStatus;
 use Error;
@@ -16,13 +18,14 @@ use Throwable;
  */
 class DefaultErrorHandler implements ErrorHandlerInterface
 {
+  use EmitsErrorResponses;
+
   /**
    * @inheritDoc
    */
   public function handle(int $errno, string $errstr, string $errfile, int $errline): void
   {
     $status = HttpStatus::fromInt(500);
-    http_response_code($status->code);
 
     $response = match (Config::environment()) {
       EnvironmentType::PRODUCTION => [
@@ -35,7 +38,7 @@ class DefaultErrorHandler implements ErrorHandlerInterface
         'error' => $status->name,
       ]
     };
-    echo json_encode($response);
+    $this->emitErrorResponse(json_encode($response), ContentType::JSON, $status->code);
   }
 
   /**

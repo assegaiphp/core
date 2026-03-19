@@ -1,6 +1,8 @@
 # Building a Feature
 
-This guide walks through the kind of workflow that makes Assegai feel fast in practice:
+You do not need to understand every Assegai term before you start. This guide introduces the moving pieces in the order a normal app needs them.
+
+It walks through the kind of workflow that makes Assegai feel fast in practice:
 
 1. scaffold a new app
 2. generate a resource

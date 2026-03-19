@@ -4,6 +4,8 @@ namespace Mocks;
 
 use Assegai\Core\Attributes\Controller;
 use Assegai\Core\Attributes\HostParam;
+use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Attributes\Http\All;
 use Assegai\Core\Attributes\Http\Delete;
 use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Header;
@@ -15,7 +17,14 @@ use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Attributes\Param;
 use Assegai\Core\Attributes\Res;
 use Assegai\Core\Attributes\ResponseStatus;
+use Assegai\Core\Attributes\UseGuards;
+use Assegai\Core\Attributes\UseInterceptors;
+use Assegai\Core\ExecutionContext;
+use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Interfaces\IAssegaiInterceptor;
+use Assegai\Core\Interfaces\ICanActivate;
+use Assegai\Core\Interfaces\IExecutionContext;
 
 #[Controller('test')]
 class MockController
@@ -386,6 +395,60 @@ class ResponseMetadataController
   }
 }
 
+#[Injectable]
+class RequestAwareGuard implements ICanActivate
+{
+  public function __construct(private readonly Request $request)
+  {
+  }
+
+  public function canActivate(IExecutionContext $context): bool
+  {
+    return trim($this->request->getPath(), '/') === 'pipeline/request-aware';
+  }
+}
+
+#[Injectable]
+class RequestAwareInterceptor implements IAssegaiInterceptor
+{
+  public function __construct(private readonly Request $request)
+  {
+  }
+
+  public function intercept(ExecutionContext $context): ?callable
+  {
+    $path = trim($this->request->getPath(), '/');
+
+    return function (ExecutionContext $context) use ($path) {
+      $context->switchToHttp()->getResponse()->setHeader('X-Request-Path', $path);
+
+      return $context;
+    };
+  }
+}
+
+#[Controller(path: 'pipeline')]
+class RequestAwarePipelineController
+{
+  #[Get('request-aware')]
+  #[UseGuards(RequestAwareGuard::class)]
+  #[UseInterceptors(RequestAwareInterceptor::class)]
+  public function requestAware(): string
+  {
+    return 'request-aware';
+  }
+}
+
+#[Controller(path: 'all-routes')]
+class AllRoutesController
+{
+  #[All]
+  public function index(): string
+  {
+    return 'all-routes';
+  }
+}
+
 #[Module(
   controllers: [ConstrainedUsersController::class, UuidOnlyController::class],
 )]
@@ -437,6 +500,27 @@ class HostRoutingAppModule
   controllers: [ResponseMetadataController::class],
 )]
 class ResponseMetadataAppModule
+{
+}
+
+#[Module(
+  controllers: [RequestAwarePipelineController::class],
+)]
+class RequestAwarePipelineAppModule
+{
+}
+
+#[Module(
+  controllers: [AllRoutesController::class],
+)]
+class AllRoutesAppModule
+{
+}
+
+#[Module(
+  imports: [ResponseMetadataAppModule::class],
+)]
+class ImportOnlyRootAppModule
 {
 }
 

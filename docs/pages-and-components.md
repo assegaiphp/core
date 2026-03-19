@@ -1,43 +1,46 @@
 # Pages and Components
 
-Assegai is not limited to JSON APIs. The rendering stack already supports a practical server-first UI model built from four pieces that work well together:
+This guide is about the HTML side of Assegai.
 
-- classic `View` rendering for straightforward templates
-- component-backed pages built from module declarations and `AssegaiComponent`
-- HTMX, which is injected automatically into rendered HTML pages
-- Web Components, which can be rendered on the server and hydrated in the browser
+You do not need a SPA or a lot of browser code to build useful pages. The same app can render HTML on the server, add HTMX where it helps, and hydrate custom elements only when a piece of UI needs browser-side behavior.
 
-The important idea is that Assegai treats HTML as a first-class response type. You can start with server-rendered pages, add HTMX where interaction helps, and introduce Web Components when a custom element earns its keep.
+That gives you three practical UI shapes:
+
+- classic `View` rendering for straightforward server-rendered pages
+- component-backed pages when a feature deserves its own template, service, and module boundary
+- browser-side Web Components when a specific piece of UI needs lifecycle hooks or reusable client-side behavior
+
+If you are trying to decide where front-end code should live in a real project, read [Frontend with Web Components](./frontend-with-web-components.md) alongside this guide. That guide covers the supported runtime flow for new apps and includes a short FAQ for older projects that still define everything in `public/js/main.js`.
 
 ## Choose the simplest rendering shape that fits
 
 Use a classic `View` when:
 
-- the page is mostly a template and some data
-- you want the shortest path from controller or service to HTML
+- the page is mostly template plus data
+- you want the shortest path from controller to HTML
 - the page already belongs under `src/Views`
 
 Use a component-backed page when:
 
 - the page belongs to a feature module
 - template, styles, controller, and service should live together
-- you want declarations to participate in the module graph
+- you want page UI to participate in the same module graph as the rest of the feature
 
 Add HTMX when:
 
-- you want progressive enhancement without committing to a SPA
-- user actions should fetch or swap HTML over HTTP
-- the page already works server-side and just needs more interactivity
+- you want progressive enhancement without moving to a SPA
+- user actions should request or swap HTML over HTTP
+- the page already works server-side and just needs richer interaction
 
 Add Web Components when:
 
-- a piece of UI benefits from browser lifecycle hooks
+- a specific element benefits from browser lifecycle hooks
 - you want reusable custom elements across pages or features
-- the server should still own the initial HTML shape and data
+- the server should still own the initial HTML and data shape
 
 ## Classic views are the fastest path to HTML
 
-The scaffolded starter app uses a `View`:
+The starter app uses a `View`:
 
 ```php
 <?php
@@ -64,7 +67,7 @@ class AppService
       'title' => 'Muli Bwanji',
       'subtitle' => "Congratulations! $name is running.",
       'welcomeLink' => Config::get('contact')['links']['assegai_website'],
-      'documentationLink' => Config::get('contact')['links']['documentation_link'],
+      'guideLink' => Config::get('contact')['links']['guide_link'],
     ]);
   }
 }
@@ -76,7 +79,7 @@ That helper resolves templates from:
 src/Views/
 ```
 
-This is the right fit when you want plain server-rendered HTML without introducing a dedicated feature module.
+This is the right fit when you want plain server-rendered HTML without introducing a feature-specific page component.
 
 ## Component-backed pages give UI a feature boundary
 
@@ -119,7 +122,7 @@ readonly class AboutModule
 }
 ```
 
-`declarations` is the key piece. It tells Assegai which UI components belong to the module's rendering graph.
+`declarations` is the important piece. It tells Assegai which UI components belong to the module's rendering graph.
 
 ### The service returns a rendered component
 
@@ -141,11 +144,7 @@ class AboutService
 }
 ```
 
-The `render()` helper resolves the component through the container and hands it to the HTML responder.
-
 ### The generated component is server-rendered
-
-With the current generator defaults, the component selector is prefixed:
 
 ```php
 <?php
@@ -166,7 +165,7 @@ class AboutComponent extends AssegaiComponent
 }
 ```
 
-And the template stays simple:
+And the template can stay small:
 
 ```twig
 <p>{{ name }} works!</p>
@@ -174,9 +173,7 @@ And the template stays simple:
 
 ## HTMX is available on rendered pages out of the box
 
-Both of Assegai's HTML rendering paths inject HTMX automatically. That means server-rendered pages can start using `hx-*` attributes immediately without any extra setup step in your layout.
-
-For example, a component template can progressively enhance a normal page section:
+Both HTML rendering paths inject HTMX automatically. That means server-rendered pages can start using `hx-*` attributes without a separate layout step.
 
 ```twig
 <section>
@@ -194,19 +191,17 @@ For example, a component template can progressively enhance a normal page sectio
 </section>
 ```
 
-Assegai does not force an SPA-style rendering model here. The page is still server-rendered first, and HTMX becomes an opt-in enhancement on top.
+You do not need to choose between HTMX and Web Components for the whole app. A page can use both.
 
-## Web Components now fit naturally into the rendering story
+## Web Components fit naturally into the rendering story
 
-Server-rendered HTML and custom elements are a good match. Assegai's Web Components support is built around that idea:
+Assegai's Web Components support is built around a server-first model:
 
 - render a custom element tag from Twig or a PHP view
 - pass props from PHP into a safe `data-props` attribute
 - let the browser hydrate that element once the module bundle loads
 
 ### Twig templates get a safe props helper
-
-Inside Twig component templates, use `ctx.webComponentProps(...)`:
 
 ```twig
 <app-user-card data-props='{{ ctx.webComponentProps({
@@ -217,11 +212,11 @@ Inside Twig component templates, use `ctx.webComponentProps(...)`:
 </app-user-card>
 ```
 
-This helper returns JSON escaped for use inside an HTML attribute, so quotes and markup in the payload do not break the page.
+That helper is doing one practical job: turning your PHP or Twig data into JSON that is safe to place inside an HTML attribute.
+
+Without that step, quotes and special characters can break the markup. So although the browser ultimately receives a JSON string, `ctx.webComponentProps(...)` keeps the template code safe and predictable.
 
 ### PHP views can use the same pattern
-
-In a classic PHP view, use the global helper directly:
 
 ```php
 <app-user-card
@@ -232,7 +227,27 @@ In a classic PHP view, use the global helper directly:
 ></app-user-card>
 ```
 
-### The bundle is injected automatically when available
+The PHP helper exists for the same reason. It keeps the Twig and PHP view story consistent.
+
+## Keep `main.js` and first-party Web Components in the right places
+
+This is the part that tends to cause confusion in upgraded projects.
+
+Use `public/js/main.js` for:
+
+- small global page scripts
+- third-party browser libraries that are not part of the Assegai Web Components workflow
+- one-off DOM hooks that do not need to become reusable custom elements
+
+Use generated `.wc.ts` files for:
+
+- new custom elements created through `assegai g wc ...`
+- paired page or component runtime files created with `--wc`
+- client-side UI that should be discovered by `wc:list`, bundled by `wc:build`, and watched by `wc:watch`
+
+You can keep an existing `main.js` in an older project. The important part is not to keep adding new first-party Assegai Web Components there once you move onto the new runtime flow.
+
+## The bundle is injected automatically when available
 
 Assegai looks for a Web Components bundle and injects a module script tag into rendered HTML when it resolves one.
 
@@ -270,9 +285,9 @@ The runtime currently recognizes these keys:
 
 Use `enabled: false` to disable automatic injection entirely.
 
-### Helpful runtime helpers are available
+## Helpful runtime helpers are available
 
-Assegai exposes small helpers around the bundle and prop encoding:
+Assegai exposes small helpers around bundle resolution and prop encoding:
 
 ```php
 web_component_props($props);
@@ -289,25 +304,27 @@ Inside Twig component templates, these are surfaced through `ctx`:
 
 In most apps you will not need to call `web_component_bundle_tag()` manually because the default HTML renderers already append it for you.
 
-## HTMX and Web Components complement each other well
+## Global favicon and script defaults now come from app config
 
-These tools are solving different parts of the same problem:
+If you want a global favicon, extra scripts, or extra links without repeating them per page, configure them in `config/default.php`:
 
-- HTMX is great at asking the server for more HTML
-- Web Components are great at owning client-side behavior for a specific custom element
+```php
+<?php
 
-That makes this a natural combination:
+return [
+  'app' => [
+    'title' => 'Blog API',
+    'favicon' => ['/favicon.ico', 'image/x-icon'],
+    'links' => ['/css/style.css'],
+    'headScriptUrls' => ['/js/main.js'],
+    'bodyScriptUrls' => ['/js/analytics.js'],
+  ],
+];
+```
 
-1. the server renders an initial page
-2. HTMX swaps in more HTML later
-3. that HTML can include custom elements such as `<app-user-card>`
-4. once the module bundle is loaded, the browser upgrades those elements
+Those defaults apply to both classic `View` rendering and component-backed rendered pages.
 
-You do not need to choose one or the other for the whole application.
-
-## The CLI workflow now supports paired Web Components
-
-With the current `assegaiphp/console` support, you can keep the server-rendered feature structure and add browser-side elements where useful.
+## The CLI workflow supports paired Web Components
 
 Generate a standalone Web Component:
 
@@ -330,27 +347,13 @@ assegai wc:watch
 assegai wc:list
 ```
 
-The default build target is:
+For the most convenient development loop:
 
-```text
-public/js/assegai-components.min.js
+```bash
+assegai serve --dev
 ```
 
-which lines up with the automatic bundle detection in `assegaiphp/core`.
-
-The CLI side of the workflow is driven by `assegai.json`:
-
-```json
-{
-  "webComponents": {
-    "prefix": "app",
-    "output": "public/js/assegai-components.min.js",
-    "buildOnDumpAutoload": false
-  }
-}
-```
-
-Use `prefix` to control generated selectors such as `app-about` and `app-user-card`. Use `output` to control where the bundle is written. If you want the bundle rebuilt as part of `assegai dump-autoload`, set `buildOnDumpAutoload` to `true`.
+That starts the PHP dev server and the Web Components watcher together.
 
 ## How the full rendering flow fits together
 
@@ -362,15 +365,15 @@ flowchart LR
   D --> E["DefaultTemplateEngine"]
   E --> F["Twig template"]
   F --> G["HTML document"]
-  G --> H["HTMX script injected"]
+  G --> H["HTMX injected"]
   G --> I["Web Components bundle injected when available"]
   I --> J["Custom elements hydrate in the browser"]
 ```
 
-## A good default way to think about it
+## Good default mental model
 
 Start with server-rendered HTML.
 
-Reach for a classic `View` when the page is simple. Reach for a component-backed page when the feature deserves its own boundary. Add HTMX when interactions should request HTML over HTTP. Add Web Components when a specific element needs browser-side lifecycle and behavior.
+Reach for a classic `View` when the page is simple. Reach for a component-backed page when the feature deserves its own boundary. Add HTMX when interactions should request HTML over HTTP. Add Web Components when a specific element needs client-side lifecycle and behavior.
 
-That keeps Assegai in its strongest shape: server-first, modular, progressively enhanced, and still comfortable to grow.
+For the practical front-end workflow, continue with [Frontend with Web Components](./frontend-with-web-components.md).

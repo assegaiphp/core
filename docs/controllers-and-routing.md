@@ -2,6 +2,8 @@
 
 Controllers are where Assegai turns an incoming HTTP request into application work.
 
+If it helps, think of a controller the simple way: receive a request, read the useful input, call a service, and return a response.
+
 They are responsible for:
 
 - declaring route prefixes and handlers

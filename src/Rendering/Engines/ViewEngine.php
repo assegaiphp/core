@@ -73,21 +73,19 @@ final class ViewEngine
   /**
    * Renders the view.
    *
-   * @return never
+   * @return string
    * @throws FileException If the view or template is invalid.
    * @throws NotFoundException If the view or template is not found.
    * @throws RenderingException if the view or template is invalid.
    */
-  public function render(): never
+  public function render(): string
   {
-    header("Content-Type: text/html");
-
     if (!$this->view) {
       throw new RenderingException("Invalid view");
     }
     $lang = $this->view->props->lang;
 
-    echo <<<START
+    $html = <<<START
 <!DOCTYPE html>
 <html lang="$lang">
   <head>
@@ -96,11 +94,10 @@ final class ViewEngine
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {$this->view->props}
   </head>
-  <body>\n
+  <body>
 START;
 
     $data = $this->view->data;
-    extract($data);
     $__render = function (string $selector, array $props = []): string {
       return "Rendering $selector";
     };
@@ -111,23 +108,30 @@ START;
       throw new RenderingException("Invalid template");
     }
 
+    extract($data);
+    ob_start();
+
     if ($component = $this->view->getComponent()) {
       echo $this->resolveTemplates(template: $template, component: $component);
     } else {
       require $this->view->templateUrl;
     }
 
-    echo PHP_EOL;
-    echo $this->view->props->generateBodyScriptTags();
-    echo $this->view->props->generateBodyScriptImportTags();
-    echo WebComponentSupport::renderRuntimeTags(getcwd() ?: '.');
+    $bodyContent = ob_get_clean() ?: '';
+    $html .= PHP_EOL
+      . $bodyContent
+      . PHP_EOL
+      . $this->view->props->generateBodyScriptTags()
+      . $this->view->props->generateBodyScriptImportTags()
+      . WebComponentSupport::renderRuntimeTags(getcwd() ?: '.');
 
-    echo <<<END
+    $html .= <<<END
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   </body>
 </html>
 END;
-    exit;
+
+    return $html;
   }
 
   /**

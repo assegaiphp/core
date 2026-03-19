@@ -3,27 +3,29 @@
 namespace Assegai\Core\GraphQL;
 
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
+use Assegai\Core\Injector;
 use Assegai\Core\Interfaces\IHttpArgumentsHost;
+use Assegai\Core\Session;
 
 class GraphQLArgumentsHost implements IHttpArgumentsHost
 {
   /**
-   * @return Request
+   * @return RequestInterface
    */
-  public function getRequest(): Request
+  public function getRequest(): RequestInterface
   {
-    // TODO: Implement getRequest() method.
-    return Request::getInstance();
+    return Injector::getInstance()->get(RequestInterface::class) ?? Request::current();
   }
 
   /**
-   * @return Response
+   * @return ResponseInterface
    */
-  public function getResponse(): Response
+  public function getResponse(): ResponseInterface
   {
-    // TODO: Implement getResponse() method.
-    return Response::getInstance();
+    return Injector::getInstance()->get(ResponseInterface::class) ?? Response::current();
   }
 
   /**
@@ -41,7 +43,11 @@ class GraphQLArgumentsHost implements IHttpArgumentsHost
   public function getArgs(): array
   {
     global $argv;
-    // TODO: Implement getArgs() method.
     return $argv;
+  }
+
+  public function getSession(): Session
+  {
+    return Injector::getInstance()->get(Session::class) ?? Session::getInstance();
   }
 }

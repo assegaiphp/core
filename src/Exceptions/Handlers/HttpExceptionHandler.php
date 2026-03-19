@@ -2,6 +2,8 @@
 
 namespace Assegai\Core\Exceptions\Handlers;
 
+use Assegai\Core\Enumerations\Http\ContentType;
+use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
 use Assegai\Core\Http\HttpStatus;
@@ -17,6 +19,8 @@ use Throwable;
  */
 class HttpExceptionHandler implements ExceptionHandlerInterface
 {
+  use EmitsErrorResponses;
+
   /**
    * @inheritDoc
    */
@@ -29,17 +33,12 @@ class HttpExceptionHandler implements ExceptionHandlerInterface
    */
   public function handle(Throwable $exception): void
   {
-    $statusCode = http_response_code();
+    $statusCode = 500;
 
     if ($exception instanceof HttpException) {
       $statusCode = $exception->getStatus()->code;
 
-      if (!headers_sent()) {
-        header('Content-Type: text/html');
-      }
-
       error_log($exception->getMessage() . ' in ' . $exception->getFile() . ' on line ' . $exception->getLine() . PHP_EOL . $exception->getTraceAsString() . PHP_EOL . PHP_EOL, 0);
-      http_response_code($statusCode);
     }
 
     $this->logger->error($exception->getMessage());
@@ -60,7 +59,7 @@ CONTENT,
     };
 
     $statusName = HttpStatus::fromInt($statusCode)->name;
-    echo <<<HTML
+    $body = <<<HTML
   <head>
       <title>Error $statusCode - $statusName</title>
   </head>
@@ -83,5 +82,7 @@ CONTENT,
   <img src="/images/logo.png" alt="Logo" width="200">
   $content
 HTML;
+
+    $this->emitErrorResponse($body, ContentType::HTML, $statusCode);
   }
 }

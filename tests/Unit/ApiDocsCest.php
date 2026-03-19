@@ -2,6 +2,7 @@
 
 namespace Unit;
 
+use Assegai\Core\AssegaiFactory;
 use Assegai\Core\ApiDocs\OpenApiGenerator;
 use Assegai\Core\ApiDocs\PostmanCollectionGenerator;
 use Assegai\Core\ApiDocs\SwaggerUiRenderer;
@@ -10,24 +11,42 @@ use Assegai\Core\Config\ComposerConfig;
 use Assegai\Core\Config\ProjectConfig;
 use Assegai\Core\ControllerManager;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Http\Responses\Responders\JsonResponder;
+use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\ModuleManager;
 use Mocks\ApiDocsAppModule;
+use ReflectionProperty;
 use Tests\Support\UnitTester;
 
 class ApiDocsCest
 {
   private string $workspace = '';
   private string $originalWorkingDirectory = '';
+  private string $envFile = '';
+  private string $configDirectory = '';
+  private string $defaultConfigFile = '';
+  private string $sourceDirectory = '';
+  private string $logsDirectory = '';
+  private string $logFile = '';
 
   public function _before(UnitTester $I): void
   {
     $this->originalWorkingDirectory = getcwd() ?: '.';
     $this->workspace = sys_get_temp_dir() . '/assegai-api-docs-' . uniqid('', true);
+    $this->envFile = $this->workspace . '/.env';
+    $this->configDirectory = $this->workspace . '/config';
+    $this->defaultConfigFile = $this->configDirectory . '/default.php';
+    $this->sourceDirectory = $this->workspace . '/src';
+    $this->logsDirectory = $this->workspace . '/logs';
+    $this->logFile = $this->logsDirectory . '/assegai.log';
     require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
     require_once dirname(__DIR__) . '/Mocks/MockApiDocs.php';
     mkdir($this->workspace, 0777, true);
+    mkdir($this->configDirectory, 0777, true);
+    mkdir($this->sourceDirectory, 0777, true);
     file_put_contents($this->workspace . '/composer.json', json_encode([
       'name' => 'tests/api-docs-app',
       'version' => '0.1.0',
@@ -35,6 +54,8 @@ class ApiDocsCest
     file_put_contents($this->workspace . '/assegai.json', json_encode([
       'name' => 'Test API',
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    file_put_contents($this->envFile, '');
+    file_put_contents($this->defaultConfigFile, '<?php return [];');
     chdir($this->workspace);
 
     $_SERVER['REQUEST_METHOD'] = 'GET';
@@ -57,6 +78,30 @@ class ApiDocsCest
 
     if (is_file($this->workspace . '/assegai.json')) {
       unlink($this->workspace . '/assegai.json');
+    }
+
+    if (is_file($this->envFile)) {
+      unlink($this->envFile);
+    }
+
+    if (is_file($this->defaultConfigFile)) {
+      unlink($this->defaultConfigFile);
+    }
+
+    if (is_file($this->logFile)) {
+      unlink($this->logFile);
+    }
+
+    if (is_dir($this->logsDirectory)) {
+      rmdir($this->logsDirectory);
+    }
+
+    if (is_dir($this->sourceDirectory)) {
+      rmdir($this->sourceDirectory);
+    }
+
+    if (is_dir($this->configDirectory)) {
+      rmdir($this->configDirectory);
     }
 
     if (is_dir($this->workspace)) {
@@ -156,10 +201,51 @@ class ApiDocsCest
     $I->assertFalse($response->shouldWrapJsonBody());
   }
 
+  public function testGeneratedOpenApiEndpointRespondsOnceWithoutFallingThrough(UnitTester $I): void
+  {
+    $_SERVER['REQUEST_URI'] = '/openapi.json';
+    $_GET['path'] = 'openapi.json';
+
+    $app = AssegaiFactory::create(ApiDocsAppModule::class);
+    $capturingEmitter = new class implements ResponseEmitterInterface {
+      /** @var array<int, array{body: string, response: ResponseInterface|null}> */
+      public array $emissions = [];
+
+      public function emit(string $body, ?ResponseInterface $response = null): void
+      {
+        $this->emissions[] = [
+          'body' => $body,
+          'response' => $response,
+        ];
+      }
+    };
+
+    $responder = Responder::current();
+    $responder->setEmitter($capturingEmitter);
+
+    $responderProperty = new ReflectionProperty($app, 'responder');
+    $responderProperty->setValue($app, $responder);
+
+    $refreshRequestScope = new \ReflectionMethod($app, 'refreshRequestScope');
+    $refreshRequestScope->invoke($app);
+
+    $handleGeneratedApiDocsRequest = new \ReflectionMethod($app, 'handleGeneratedApiDocsRequest');
+    $handled = $handleGeneratedApiDocsRequest->invoke($app);
+
+    $I->assertTrue($handled);
+    $I->assertCount(1, $capturingEmitter->emissions);
+    $I->assertSame('3.1.0', json_decode($capturingEmitter->emissions[0]['body'], true)['openapi']);
+  }
+
   private function resetRequestSingleton(): void
   {
     $reflection = new \ReflectionProperty(Request::class, 'instance');
-    $reflection->setAccessible(true);
+    $reflection->setValue(null, null);
+  }
+
+  private function resetSingleton(string $className): void
+  {
+    $reflection = new ReflectionProperty($className, 'instance');
     $reflection->setValue(null, null);
   }
 }

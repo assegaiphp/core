@@ -5,9 +5,14 @@ namespace Assegai\Core\Http\Responses\Responders;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
+use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
 use Assegai\Core\Http\Responses\Enumerations\ResponderType;
+use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Injector;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Engines\ViewEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
@@ -37,6 +42,10 @@ class Responder implements ResponderInterface
    * @var ResponderType The ResponderType.
    */
   protected ResponderType $responderType;
+  /**
+   * @var ResponseEmitterInterface The active response emitter.
+   */
+  protected ResponseEmitterInterface $emitter;
 
   /**
    * Constructs a Responder.
@@ -45,7 +54,21 @@ class Responder implements ResponderInterface
   {
     $this->viewEngine = ViewEngine::getInstance();
     $this->templateEngine = new DefaultTemplateEngine();
-    $this->context = ResponderFactory::createResponder(data: ['templateEngine' => $this->templateEngine]);
+    $this->emitter = new PhpResponseEmitter();
+    $this->context = ResponderFactory::createResponder(data: [
+      'templateEngine' => $this->templateEngine,
+      'emitter' => $this->emitter,
+    ]);
+  }
+
+  /**
+   * Creates a fresh responder instance for an application context.
+   *
+   * @return Responder
+   */
+  public static function create(): Responder
+  {
+    return new Responder();
   }
 
   /**
@@ -60,6 +83,23 @@ class Responder implements ResponderInterface
     }
 
     return self::$instance;
+  }
+
+  /**
+   * Returns the responder bound to the active application context when available.
+   *
+   * @return Responder
+   */
+  public static function current(): Responder
+  {
+    $injector = Injector::getInstance();
+    $responder = $injector->get(self::class);
+
+    if ($responder instanceof self) {
+      return $responder;
+    }
+
+    return self::getInstance();
   }
 
   /**
@@ -84,21 +124,42 @@ class Responder implements ResponderInterface
   }
 
   /**
+   * Sets the response emitter used by downstream responders.
+   *
+   * @param ResponseEmitterInterface $emitter
+   * @return void
+   */
+  public function setEmitter(ResponseEmitterInterface $emitter): void
+  {
+    $this->emitter = $emitter;
+  }
+
+  /**
+   * Returns the active response emitter.
+   *
+   * @return ResponseEmitterInterface
+   */
+  public function getEmitter(): ResponseEmitterInterface
+  {
+    return $this->emitter;
+  }
+
+  /**
    * Get Request instance
    *
    * @return Request The Request instance.
    */
-  public function getRequest(): Request
+  public function getRequest(): RequestInterface
   {
-    return Request::getInstance();
+    return Request::current();
   }
 
   /**
    * @inheritDoc
    */
-  public function respond(mixed $response, HttpStatusCode|int|null $code = null): never
+  public function respond(mixed $response, HttpStatusCode|int|null $code = null): void
   {
-    if ($response instanceof Response) {
+    if ($response instanceof ResponseInterface) {
       if ($code) {
         $response->setStatus($code);
       }
@@ -106,10 +167,8 @@ class Responder implements ResponderInterface
       $this->setResponseCode($response->getStatus());
 
       if ($response->isRedirect()) {
-        $response->sendHeaders();
         $redirectUrl = htmlspecialchars($response->getRedirectUrl() ?? '/', ENT_QUOTES | ENT_HTML5);
-
-        exit(<<<HTML
+        $this->emitter->emit(<<<HTML
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -120,7 +179,8 @@ class Responder implements ResponderInterface
     Redirecting to <a href="{$redirectUrl}">{$redirectUrl}</a>.
   </body>
 </html>
-HTML);
+HTML, $response);
+        return;
       }
     } elseif ($code) {
       $this->setResponseCode($code);
@@ -131,7 +191,11 @@ HTML);
         ResponderType::fromResponse($response),
         [
           'viewEngine' => $this->viewEngine,
-          'templateEngine' => $this->templateEngine
+          'templateEngine' => $this->templateEngine,
+          'emitter' => $this->emitter,
+          'request' => $this->getRequest(),
+          'response' => Response::current(),
+          'responder' => $this,
         ]
       );
 
@@ -146,16 +210,11 @@ HTML);
    */
   public function setResponseCode(HttpStatusCode|int|null $code = 200): void
   {
-    $codeObject = $code;
-
-    if (!$codeObject) {
+    if (!$code) {
       return;
     }
 
-    if (is_int($code)) {
-      $codeObject = HttpStatus::fromInt($code);
-    }
-
-    http_response_code($codeObject->code);
+    $codeObject = is_int($code) ? HttpStatus::fromInt($code) : $code;
+    Response::current()->setStatus($codeObject);
   }
 }

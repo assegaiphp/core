@@ -7,6 +7,8 @@ AssegaiPHP supports queue-backed background work through:
 
 This matters because not all useful work belongs inside the request-response cycle.
 
+Use a queue when a request should start work, not wait for every piece of that work to finish before the user gets a response.
+
 Queues are a good fit when you want to:
 
 - keep HTTP requests fast
@@ -34,6 +36,47 @@ composer require assegaiphp/rabbitmq
 ```bash
 composer require assegaiphp/beanstalkd
 ```
+
+## RabbitMQ setup note
+
+`assegaiphp/rabbitmq` currently requires the PHP `amqp` extension in addition to the Composer package itself.
+
+If you see an error like this during `composer install` or `composer require`:
+
+```text
+Root composer.json requires PHP extension ext-amqp * but it is missing from your system.
+```
+
+that does **not** usually mean RabbitMQ itself is broken. It means the copy of PHP that Composer is using does not have the `amqp` extension enabled.
+
+Start by checking the PHP CLI environment that Composer is using:
+
+```bash
+php --ini
+php -m | grep amqp
+```
+
+If `amqp` does not appear in the module list, install or enable it for the same PHP version you use on the command line.
+
+On Debian or Ubuntu systems, that is often one of these:
+
+```bash
+sudo apt install php-amqp
+```
+
+```bash
+sudo apt install php8.5-amqp
+```
+
+If your package manager does not provide it yet, `pecl` is often the fallback:
+
+```bash
+sudo pecl install amqp
+```
+
+After enabling the extension, run `php -m | grep amqp` again and then rerun Composer.
+
+Avoid using `--ignore-platform-req=ext-amqp` for normal development. It can install the package into an environment that still cannot actually run the RabbitMQ driver.
 
 ## Configure named queue connections
 
@@ -149,17 +192,147 @@ readonly class NotificationsController
 
 This is where queues become practically useful. Instead of sending the notification during the request, you accept the job quickly and let a worker handle the heavier part later.
 
-## Worker side responsibilities
+## What the worker side does
 
-The producer side shown above is verified directly in the current PHP packages: queues are configured by name and injected with `#[InjectQueue(...)]`.
+The code above shows the application side of queues: your controller accepts a request, your service pushes a job onto a named queue, and the HTTP response can return quickly.
 
-The worker side is intentionally documented here at the architectural level rather than tied to one unverified consumer API shape.
+The other half is a worker process. You can think of it as a long-running background process that listens for jobs on the queue and does the slow work there instead of inside the request.
 
-The important idea is the separation of concerns:
+The exact worker command depends on the queue package and the way you choose to run background processes in your environment. The main idea to keep in mind is simpler than the command syntax:
 
 - controllers and services enqueue work
-- worker processes consume and process it off the main request path
-- queue infrastructure handles delivery and retries
+- worker processes consume jobs away from the request path
+- the queue backend handles delivery between the two sides
+
+If you are new to queues, that separation matters more than memorizing a worker command first. Once the handoff pattern makes sense, the worker process is just the piece that keeps reading from the queue and running the job logic.
+
+## Add a queue processor
+
+Assegai now includes queue commands in the CLI, so the normal workflow is:
+
+1. enqueue jobs from a controller or service
+2. generate or add a processor class for that queue
+3. run `assegai queue:work driver.connection`
+
+You can scaffold the processor with the CLI:
+
+```bash
+assegai g qp notifications --queue=beanstalk.notifications
+```
+
+If you already have a concrete job class, you can type the handler method while generating:
+
+```bash
+assegai g qp notifications --queue=beanstalk.notifications --job=Jobs/NotificationJob
+```
+
+If your feature already has a local `Jobs` folder, a bare job name works too:
+
+```bash
+assegai g qp notifications --queue=beanstalk.notifications --job=notification-job
+```
+
+Here is a small processor example:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Assegaiphp\BlogApi\Notifications;
+
+use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Queues\Attributes\QueueProcessor;
+use Assegaiphp\BlogApi\Notifications\DTOs\CreateNotificationDTO;
+
+#[Injectable]
+#[QueueProcessor('beanstalk.notifications')]
+final class NotificationsProcessor
+{
+  public function process(CreateNotificationDTO $job): void
+  {
+    // Replace this with the real work for the job.
+    // For example: send an email, call an external API, or write to the database.
+  }
+}
+```
+
+The important part is the attribute:
+
+- `#[QueueProcessor('beanstalk.notifications')]` tells the CLI which queue this class works
+- `process(...)` is the method the worker calls for each job
+- the class should be an injectable provider so it can use constructor injection like the rest of the app
+
+Once that processor is registered in a module provider list, you can run:
+
+```bash
+assegai queue:list
+assegai queue:work beanstalk.notifications
+```
+
+If you want the worker to process one job and exit, use:
+
+```bash
+assegai queue:work beanstalk.notifications --once
+```
+
+`queue:list` helps you confirm two things:
+
+- the queue connection exists in `config/queues.php`
+- the CLI discovered the processor class for that queue
+
+## Fallback: a plain PHP worker script
+
+If you do not want to use the CLI worker yet, you can still run a simple PHP script yourself:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Assegai\Common\Interfaces\Queues\QueueInterface;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$driverClass = config('queues.drivers.beanstalk');
+$queueConfig = config('queues.connections.beanstalk.notifications');
+
+if (!is_string($driverClass) || !class_exists($driverClass) || !is_array($queueConfig)) {
+  throw new RuntimeException('Queue configuration for beanstalk.notifications is missing.');
+}
+
+$queueConfig['name'] ??= 'notifications';
+
+/** @var QueueInterface $queue */
+$queue = $driverClass::create($queueConfig);
+
+while (true) {
+  $result = $queue->process(function (object $job): void {
+    printf("Processing %s\n", $job::class);
+  });
+
+  if ($result->getJob() === null) {
+    usleep(500_000);
+    continue;
+  }
+
+  if ($result->isError()) {
+    foreach ($result->getErrors() as $error) {
+      error_log($error->getMessage());
+    }
+  }
+}
+```
+
+That fallback is useful if you want total control over the worker loop, but the CLI path is usually the easier place to start.
+
+The moving parts are still the same:
+
+- load the app dependencies
+- read the queue configuration
+- create the queue connection
+- keep processing jobs in a loop
+- handle idle time and errors
 
 ## How it fits the Assegai architecture
 

@@ -5,35 +5,44 @@ namespace Assegai\Core\Http\Responses\Responders;
 use Assegai\Core\Exceptions\Http\InternalServerErrorException;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Responses\ApiResponse;
+use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
+use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
-use Assegai\Core\Http\Responses\Response;
 use Throwable;
 
 class JsonResponder implements ResponderInterface
 {
+  public function __construct(
+    protected ResponseEmitterInterface $emitter = new PhpResponseEmitter(),
+    protected ?RequestInterface $request = null,
+    protected ?ResponseInterface $response = null,
+  )
+  {
+  }
 
   /**
    * @inheritDoc
    * @throws Throwable
    */
-  public function respond(mixed $response, int|HttpStatusCode|null $code = null): never
+  public function respond(mixed $response, int|HttpStatusCode|null $code = null): void
   {
-    if ($response instanceof Response) {
+    if ($response instanceof ResponseInterface) {
       $response->setContentType(\Assegai\Core\Enumerations\Http\ContentType::JSON);
-      $response->sendHeaders();
       $responseBody = $response->getBody();
 
       if (!$response->shouldWrapJsonBody()) {
-        exit($this->encodePayload($responseBody));
+        $this->emitter->emit($this->encodePayload($responseBody), $response);
+        return;
       }
-    } elseif (! headers_sent()) {
-      header('Content-Type: application/json');
     }
 
-    if ($response instanceof Response) {
+    if ($response instanceof ResponseInterface) {
       if (is_array($responseBody)) {
-        exit(new ApiResponse($responseBody));
+        $this->emitter->emit((string)new ApiResponse($responseBody), $response);
+        return;
       }
 
       if (is_object($responseBody)) {
@@ -52,33 +61,44 @@ class JsonResponder implements ResponderInterface
 
         if ( str_contains($responseBodyClassName, 'FindResult') ) {
           $total = method_exists($responseBody, 'getTotal') ? $responseBody->getTotal() : null;
-          exit(new ApiResponse($responseBody->getData(), $total));
+          $this->emitter->emit((string)new ApiResponse($responseBody->getData(), $total), $response);
+          return;
         }
 
         if ( str_contains($responseBodyClassName, 'UpdateResult') || str_contains($responseBodyClassName, 'InsertResult') ) {
           if (method_exists($responseBody, 'getData')) {
-            exit(new ApiResponse($responseBody->getData()));
+            $this->emitter->emit((string)new ApiResponse($responseBody->getData()), $response);
+            return;
           }
         }
 
         if ( str_contains($responseBodyClassName, 'DeleteResult') ) {
-          $request = Request::getInstance();
-          exit(json_encode([
+          $request = $this->request ?? Request::current();
+          $this->emitter->emit(json_encode([
             'params' => implode($request->getParams()),
             'affected' => $responseBody->affected
-          ]));
+          ]), $response);
+          return;
         }
 
         if (is_array($responseBody)) {
-          exit(new ApiResponse($responseBody));
+          $this->emitter->emit((string)new ApiResponse($responseBody), $response);
+          return;
         }
 
-        exit(new ApiResponse($responseBody));
+        $this->emitter->emit((string)new ApiResponse($responseBody), $response);
+        return;
       }
     }
 
     if (is_object($response) || is_array($response)) {
-      exit(new ApiResponse(json_encode($response, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)));
+      $emissionResponse = $this->response ?? \Assegai\Core\Http\Responses\Response::current();
+      $emissionResponse->setContentType(\Assegai\Core\Enumerations\Http\ContentType::JSON);
+      $this->emitter->emit(
+        (string)new ApiResponse(json_encode($response, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)),
+        $emissionResponse
+      );
+      return;
     }
 
     throw new InternalServerErrorException('Invalid response type');
