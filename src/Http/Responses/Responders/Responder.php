@@ -151,6 +151,7 @@ class Responder implements ResponderInterface
   </body>
 </html>
 HTML, $response);
+        return;
       }
     } elseif ($code) {
       $this->setResponseCode($code);
@@ -177,16 +178,11 @@ HTML, $response);
    */
   public function setResponseCode(HttpStatusCode|int|null $code = 200): void
   {
-    $codeObject = $code;
-
-    if (!$codeObject) {
+    if (!$code) {
       return;
     }
 
-    if (is_int($code)) {
-      $codeObject = HttpStatus::fromInt($code);
-    }
-
-    http_response_code($codeObject->code);
+    $codeObject = is_int($code) ? HttpStatus::fromInt($code) : $code;
+    Response::current()->setStatus($codeObject);
   }
 }

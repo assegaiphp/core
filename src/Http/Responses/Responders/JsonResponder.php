@@ -32,12 +32,14 @@ class JsonResponder implements ResponderInterface
 
       if (!$response->shouldWrapJsonBody()) {
         $this->emitter->emit($this->encodePayload($responseBody), $response);
+        return;
       }
     }
 
     if ($response instanceof Response) {
       if (is_array($responseBody)) {
         $this->emitter->emit((string)new ApiResponse($responseBody), $response);
+        return;
       }
 
       if (is_object($responseBody)) {
@@ -57,11 +59,13 @@ class JsonResponder implements ResponderInterface
         if ( str_contains($responseBodyClassName, 'FindResult') ) {
           $total = method_exists($responseBody, 'getTotal') ? $responseBody->getTotal() : null;
           $this->emitter->emit((string)new ApiResponse($responseBody->getData(), $total), $response);
+          return;
         }
 
         if ( str_contains($responseBodyClassName, 'UpdateResult') || str_contains($responseBodyClassName, 'InsertResult') ) {
           if (method_exists($responseBody, 'getData')) {
             $this->emitter->emit((string)new ApiResponse($responseBody->getData()), $response);
+            return;
           }
         }
 
@@ -71,13 +75,16 @@ class JsonResponder implements ResponderInterface
             'params' => implode($request->getParams()),
             'affected' => $responseBody->affected
           ]), $response);
+          return;
         }
 
         if (is_array($responseBody)) {
           $this->emitter->emit((string)new ApiResponse($responseBody), $response);
+          return;
         }
 
         $this->emitter->emit((string)new ApiResponse($responseBody), $response);
+        return;
       }
     }
 
@@ -88,6 +95,7 @@ class JsonResponder implements ResponderInterface
         (string)new ApiResponse(json_encode($response, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)),
         $emissionResponse
       );
+      return;
     }
 
     throw new InternalServerErrorException('Invalid response type');

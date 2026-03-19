@@ -12,7 +12,7 @@ class PhpResponseEmitter implements ResponseEmitterInterface
    * @inheritDoc
    * @throws HttpException
    */
-  public function emit(string $body, ?ResponseInterface $response = null): never
+  public function emit(string $body, ?ResponseInterface $response = null): void
   {
     if ($response) {
       if (false === http_response_code($response->getStatusCode())) {
@@ -23,6 +23,5 @@ class PhpResponseEmitter implements ResponseEmitterInterface
     }
 
     echo $body;
-    exit;
   }
 }

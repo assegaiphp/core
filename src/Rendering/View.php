@@ -84,7 +84,7 @@ class View
         throw new RenderingException(message: 'Failed to open file at ' . $this->templateUrl);
       }
     } catch (ReflectionException $exception) {
-      die(new HttpException($exception->getMessage()));
+      throw new HttpException($exception->getMessage());
     }
   }
 

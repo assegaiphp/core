@@ -54,6 +54,7 @@ class ComponentResponder implements ResponderInterface
             ->render(),
           $response
         );
+        return;
       }
     }
 
@@ -67,6 +68,7 @@ class ComponentResponder implements ResponderInterface
           ->render(),
         $emissionResponse
       );
+      return;
     }
 
     throw new InternalServerErrorException("Invalid response.");

@@ -46,6 +46,7 @@ class ViewResponder implements ResponderInterface
           $this->viewEngine->load($responseBody)->render(),
           $response
         );
+        return;
       }
 
       throw new InternalServerErrorException("Response body is not a View instance.");
@@ -55,6 +56,7 @@ class ViewResponder implements ResponderInterface
       $emissionResponse = Response::current();
       $emissionResponse->setContentType(ContentType::HTML);
       $this->emitter->emit($this->viewEngine->load($response)->render(), $emissionResponse);
+      return;
     }
 
     throw new InternalServerErrorException("Response is not a View instance.");

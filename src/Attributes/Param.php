@@ -5,7 +5,6 @@ namespace Assegai\Core\Attributes;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Http\Requests\Request;
-use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Attribute;
 use ReflectionException;
@@ -45,10 +44,14 @@ class Param
     $value = ( !empty($this->key) ) ? ($params[$this->key] ?? $params) : json_decode(json_encode($params));
 
     if ($this->pipes) {
-      if(is_string($value)) {
+      if (is_string($this->pipes)) {
         if (!is_subclass_of($this->pipes, IPipeTransform::class, true)) {
-          Responder::getInstance()->respond(new EntryNotFoundException($this->pipes));
+          throw new EntryNotFoundException($this->pipes);
         }
+
+        /** @var IPipeTransform $pipe */
+        $pipe = new $this->pipes;
+        $value = $pipe->transform($value);
       } else if (is_array($this->pipes)) {
         foreach ($this->pipes as $pipe) {
           if ($pipe instanceof IPipeTransform) {

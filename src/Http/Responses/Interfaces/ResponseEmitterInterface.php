@@ -9,7 +9,7 @@ interface ResponseEmitterInterface
    *
    * @param string $body
    * @param ResponseInterface|null $response
-   * @return never
+   * @return void
    */
-  public function emit(string $body, ?ResponseInterface $response = null): never;
+  public function emit(string $body, ?ResponseInterface $response = null): void;
 }

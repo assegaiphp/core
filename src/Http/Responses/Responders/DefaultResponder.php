@@ -27,6 +27,7 @@ class DefaultResponder implements Interfaces\ResponderInterface
 
       if (is_scalar($responseBody)) {
         $this->emitter->emit((string)$responseBody, $response);
+        return;
       }
     }
 
@@ -34,6 +35,7 @@ class DefaultResponder implements Interfaces\ResponderInterface
       $emissionResponse = Response::current();
       $emissionResponse->setContentType(\Assegai\Core\Enumerations\Http\ContentType::HTML);
       $this->emitter->emit((string)$response, $emissionResponse);
+      return;
     }
 
     throw new InternalServerErrorException('Invalid response type');

@@ -557,6 +557,7 @@ class App implements AppInterface
       $response->jsonRaw($document);
       $this->closeSessionForCurrentRequest();
       $this->responder->respond($response);
+      return true;
     }
 
     $renderer = new SwaggerUiRenderer();
@@ -569,6 +570,7 @@ class App implements AppInterface
     );
     $this->closeSessionForCurrentRequest();
     $this->responder->respond($response);
+    return true;
   }
 
   /**

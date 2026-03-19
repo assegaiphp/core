@@ -235,13 +235,12 @@ final class Router
         try {
           $dependencies[] = $this->injector->resolve($param->getType()->getName());
         } catch (Exception $exception) {
-          exit(var_export([
-            'exception' => $exception,
-            'controllerAttributes' => $controllerAttributes,
-            'dependencies' => $dependencies,
-            'param' => $param,
-            'param-type' => $param->getType()->getName(),
-          ], true));
+          throw new ContainerException(sprintf(
+            'Failed to resolve %s for controller %s: %s',
+            $param->getType()?->getName() ?? '$unknown',
+            $reflectionController->getName(),
+            $exception->getMessage(),
+          ));
         }
       }
     }
