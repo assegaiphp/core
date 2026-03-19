@@ -24,6 +24,6 @@ class UploadedFile
    */
   public function __construct(public readonly array|IPipeTransform|null $pipeTransform = null)
   {
-    $this->value = Request::getInstance()->getFile();
+    $this->value = Request::current()->getFile();
   }
 }

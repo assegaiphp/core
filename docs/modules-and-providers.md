@@ -2,6 +2,8 @@
 
 Modules are the structural backbone of an Assegai application. Providers are the units of behavior those modules expose.
 
+In plain terms, a module answers "what belongs together?" and a provider answers "which class contains the application work?"
+
 If controllers are the framework-facing edge of your app, providers are the application-facing core.
 
 ## A real root module
@@ -14,16 +16,12 @@ A scaffolded app starts with a root module like this:
 namespace Assegaiphp\BlogApi;
 
 use Assegai\Core\Attributes\Modules\Module;
-use Assegai\Core\Config\ProjectConfig;
 use Assegaiphp\BlogApi\Users\UsersModule;
 use Assegaiphp\BlogApi\About\AboutModule;
 use Assegaiphp\BlogApi\Posts\PostsModule;
 
 #[Module(
-  providers: [
-    ProjectConfig::class,
-    AppService::class,
-  ],
+  providers: [AppService::class],
   controllers: [AppController::class],
   imports: [UsersModule::class, AboutModule::class, PostsModule::class],
 )]
@@ -31,6 +29,8 @@ class AppModule
 {
 }
 ```
+
+Framework-provided services like `ProjectConfig`, `Request`, and `Response` do not need to be added here manually.
 
 This is already a strong statement about how Assegai wants you to build:
 

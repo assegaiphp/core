@@ -1,6 +1,13 @@
 # Request Data and Validation
 
-Assegai's request pipeline is easiest to use when you lean on DTOs, parameter decorators, and pipes instead of hand-parsing everything inside controllers.
+Request handling becomes much easier when each part has one job:
+
+- route and query parameters identify what the request is targeting
+- DTOs describe the input shape you expect
+- validation checks whether that input is acceptable
+- controllers hand the cleaned data to a service
+
+That is the mindset behind Assegai's request pipeline.
 
 ## Generated DTOs are the starting point
 
@@ -63,7 +70,7 @@ Built-in pipes currently include:
 - `ParseFilePipe`
 - `MapProperties`
 
-At the application level, `App` also exposes `useGlobalPipes(...)`. In the current codebase, the clearest verified request-time pipe flow is through decorator-bound parameter handling, especially on `#[Body(...)]`.
+At the application level, `App` also exposes `useGlobalPipes(...)`. In practice, the clearest request-time pipe flow is still decorator-bound parameter handling, especially on `#[Body(...)]`.
 
 ## App-level pipe registration
 
@@ -76,7 +83,7 @@ use Assegai\Core\AssegaiFactory;
 use Assegai\Core\Pipes\ValidationPipe;
 use Assegaiphp\BlogApi\AppModule;
 
-require './vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
 function bootstrap(): void
 {
@@ -90,7 +97,7 @@ bootstrap();
 
 If your target app version uses that app-level pipe path, this keeps validation close to the HTTP boundary instead of scattering it through every service method.
 
-For the current core codebase, the clearest request-time pipe path I verified directly is still decorator-bound parameter handling such as `#[Body(pipes: ...)]`.
+The clearest request-time pipe path is still decorator-bound parameter handling such as `#[Body(pipes: ...)]`.
 
 ## Apply a pipe to a bound request body
 

@@ -1,5 +1,9 @@
 # Getting Started
 
+This guide assumes you are new to Assegai.
+
+If you can install a Composer package and run a PHP command, you can follow along. The goal is to get you to a running project first, then explain the pieces as they appear.
+
 The recommended way to start an Assegai project is with the CLI, not by wiring files together manually.
 
 ## Start with the CLI
@@ -75,6 +79,10 @@ Two details are worth calling out immediately:
 - the HTTP router entry point is the project-root `index.php`
 - the starter home page is rendered from `src/Views/index.php`
 
+One front-end detail matters early too:
+
+- `public/js/main.js` is the default global browser script, not the long-term home for new first-party Assegai Web Components
+
 ## How the scaffold boots
 
 The root `index.php` sets CORS headers, normalizes the request path, and forwards every request into `bootstrap.php`:
@@ -96,7 +104,7 @@ if (!isset($_GET['path']) || $_GET['path'] === '') {
   $_GET['path'] = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 }
 
-require_once './bootstrap.php';
+require_once __DIR__ . '/bootstrap.php';
 ```
 
 `bootstrap.php` is intentionally tiny:
@@ -107,7 +115,7 @@ require_once './bootstrap.php';
 use Assegai\Core\AssegaiFactory;
 use Assegaiphp\BlogApi\AppModule;
 
-require './vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
 function bootstrap(): void
 {
@@ -138,7 +146,10 @@ Once the server is up, you can also open:
 - `/docs` for Swagger UI
 - `/openapi.json` for the generated OpenAPI document
 
-That means a new app can expose API documentation immediately, without adding a separate OpenAPI package first.
+For that route to be useful, the project needs a current OpenAPI document. The predictable development flow is either:
+
+- run `assegai api:export openapi`
+- or enable export-on-serve in `assegai.json`
 
 By default, a scaffolded project stores dev server settings in `assegai.json`:
 
@@ -275,10 +286,7 @@ And `AppModule` is extended to import the new module:
 
 ```php
 #[Module(
-  providers: [
-    ProjectConfig::class,
-    AppService::class,
-  ],
+  providers: [AppService::class],
   controllers: [AppController::class],
   imports: [UsersModule::class, PostsModule::class],
 )]
@@ -331,6 +339,8 @@ http://localhost:5000/about
 
 This is a big part of the Assegai value proposition: the same project can host JSON endpoints and server-rendered pages without switching frameworks or inventing a parallel structure.
 
+If you are building interactive front-end features, the next guide to read is [Frontend with Web Components](./frontend-with-web-components.md). It explains how to keep `main.js`, generated `.wc.ts` files, and the Web Components runtime in the right places.
+
 ## Why this workflow matters
 
 The CLI is not just a convenience layer. It encodes the framework's conventions:
@@ -347,6 +357,7 @@ That means even a fast-moving prototype tends to stay organized.
 
 Continue with:
 
+- [Frontend with Web Components](./frontend-with-web-components.md)
 - [Architecture and Lifecycle](./architecture-and-lifecycle.md)
 - [Controllers and Routing](./controllers-and-routing.md)
 - [Pages and Components](./pages-and-components.md)

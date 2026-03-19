@@ -1,6 +1,8 @@
 # ORM Setup and Data Sources
 
-This guide is about wiring the ORM into an Assegai app cleanly:
+This guide helps you get from "I have a database" to "my feature can inject a repository" without hand-building database connections in every service.
+
+It is about wiring the ORM into an Assegai app cleanly:
 
 - installing the package
 - configuring databases with the CLI

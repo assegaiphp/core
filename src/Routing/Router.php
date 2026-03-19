@@ -3,6 +3,7 @@
 namespace Assegai\Core\Routing;
 
 use Assegai\Core\Attributes\Controller;
+use Assegai\Core\Attributes\Http\All;
 use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Delete;
 use Assegai\Core\Attributes\Http\Get;
@@ -38,6 +39,7 @@ use Assegai\Core\ExecutionContext;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
@@ -143,7 +145,7 @@ final class Router
    */
   public function getRequest(): Request
   {
-    return Request::getInstance();
+    return Request::current();
   }
 
   /**
@@ -234,13 +236,12 @@ final class Router
         try {
           $dependencies[] = $this->injector->resolve($param->getType()->getName());
         } catch (Exception $exception) {
-          exit(var_export([
-            'exception' => $exception,
-            'controllerAttributes' => $controllerAttributes,
-            'dependencies' => $dependencies,
-            'param' => $param,
-            'param-type' => $param->getType()->getName(),
-          ], true));
+          throw new ContainerException(sprintf(
+            'Failed to resolve %s for controller %s: %s',
+            $param->getType()?->getName() ?? '$unknown',
+            $reflectionController->getName(),
+            $exception->getMessage(),
+          ));
         }
       }
     }
@@ -348,7 +349,7 @@ final class Router
   {
     $handlers = $this->getControllerHandlers(controller: $controller);
     $activatedHandler = $this->getActivatedHandler(handlers: $handlers, controller: $controller, request: $request);
-    $response = Response::getInstance();
+    $response = Response::current();
     $response->reset();
 
     if (!$activatedHandler) {
@@ -651,37 +652,15 @@ final class Router
    *
    * @param string $url The URL to redirect the client to.
    * @param int|null $statusCode The status code to be used for the redirect.
-   * @return never
+   * @return void
    * @throws HttpException If the HTTP status code could not be set.
    */
-  public static function redirectTo(string $url, ?int $statusCode = null): never
+  public static function redirectTo(string $url, ?int $statusCode = null): void
   {
-    $status = $statusCode ?? 302;
-
-    if (false === http_response_code($status)) {
-      throw new HttpException("Failed to set HTTP status code to $status");
-    }
-
-    if (!headers_sent()) {
-      header('Location: ' . $url, true, $status);
-      header('Content-Type: text/html');
-    }
-
-    $escapedUrl = htmlspecialchars($url, ENT_QUOTES | ENT_HTML5);
-
-    exit(<<<HTML
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0;url={$escapedUrl}">
-    <title>Redirecting...</title>
-  </head>
-  <body>
-    Redirecting to <a href="{$escapedUrl}">{$escapedUrl}</a>.
-  </body>
-</html>
-HTML);
+    $response = Response::current();
+    $response->reset();
+    $response->redirect($url, $statusCode ?? 302);
+    Responder::current()->respond($response);
   }
 
   /**
@@ -1374,7 +1353,7 @@ HTML);
 
     if ($requestMapperAttribute) {
       $response->applyStatus(
-        $this->getDefaultStatusForRequestMapper($requestMapperAttribute),
+        $this->getDefaultStatusForRequestMapper($requestMapperAttribute, $requestMethod),
         self::HANDLER_DEFAULT_STATUS_PRIORITY,
       );
 
@@ -1464,13 +1443,13 @@ HTML);
   private function attributeMatchesRequestMethod(ReflectionAttribute $attribute, RequestMethod $requestMethod): bool
   {
     return match ($requestMethod) {
-      RequestMethod::OPTIONS => $attribute->getName() === Options::class,
-      RequestMethod::GET => in_array($attribute->getName(), [Get::class, Sse::class], true),
-      RequestMethod::POST => $attribute->getName() === Post::class,
-      RequestMethod::PUT => $attribute->getName() === Put::class,
-      RequestMethod::PATCH => $attribute->getName() === Patch::class,
-      RequestMethod::DELETE => $attribute->getName() === Delete::class,
-      RequestMethod::HEAD => $attribute->getName() === Head::class,
+      RequestMethod::OPTIONS => in_array($attribute->getName(), [All::class, Options::class], true),
+      RequestMethod::GET => in_array($attribute->getName(), [All::class, Get::class, Sse::class], true),
+      RequestMethod::POST => in_array($attribute->getName(), [All::class, Post::class], true),
+      RequestMethod::PUT => in_array($attribute->getName(), [All::class, Put::class], true),
+      RequestMethod::PATCH => in_array($attribute->getName(), [All::class, Patch::class], true),
+      RequestMethod::DELETE => in_array($attribute->getName(), [All::class, Delete::class], true),
+      RequestMethod::HEAD => in_array($attribute->getName(), [All::class, Head::class], true),
     };
   }
 
@@ -1480,9 +1459,15 @@ HTML);
    * @param ReflectionAttribute $attribute
    * @return int
    */
-  private function getDefaultStatusForRequestMapper(ReflectionAttribute $attribute): int
+  private function getDefaultStatusForRequestMapper(
+    ReflectionAttribute $attribute,
+    RequestMethod $requestMethod = RequestMethod::GET,
+  ): int
   {
     return match ($attribute->getName()) {
+      All::class => $requestMethod === RequestMethod::POST
+        ? HttpStatus::Created()->code
+        : HttpStatus::OK()->code,
       Post::class => HttpStatus::Created()->code,
       default => HttpStatus::OK()->code,
     };
@@ -1531,10 +1516,8 @@ HTML);
     $controllerInterceptorCallHandlers = [];
 
     if ($this->globalInterceptors) {
-      $useInterceptorInstance = new UseInterceptors(interceptors: $this->globalInterceptors);
-
       $controllerInterceptorCallHandlers = $this->interceptorsConsumer->intercept(
-        interceptors: $useInterceptorInstance->interceptorsList,
+        interceptors: $this->globalInterceptors,
         context: $context
       );
     }
@@ -1611,7 +1594,9 @@ HTML);
    */
   private function isRootController(ReflectionClass $controllerReflection): bool
   {
-    return $controllerReflection->getName() === $this->controllerManager->getRootControllerClass();
+    $rootControllerClass = $this->controllerManager->getRootControllerClass();
+
+    return !is_null($rootControllerClass) && $controllerReflection->getName() === $rootControllerClass;
   }
 
   /**
@@ -1699,7 +1684,7 @@ HTML);
           return $request;
 
         case Res::class:
-          return Response::getInstance();
+          return Response::current();
 
         default:
           if (property_exists($paramAttributeInstance, 'value')) {

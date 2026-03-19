@@ -5,3 +5,4 @@
 /tests/Unit/src_test/assegai.json
 /tmp/
 /output/
+*.log

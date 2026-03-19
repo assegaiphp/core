@@ -132,12 +132,16 @@ class ControllerManager
   }
 
   /**
-   * Returns the root controller class.
+   * Returns the root controller class when the root module declares one.
    *
-   * @return string
+   * Root modules may also act purely as composition roots that only import feature modules.
+   * In that case there is no dedicated root controller and routing should continue through the
+   * imported module tree instead of throwing.
+   *
+   * @return string|null
    * @throws ReflectionException
    */
-  public function getRootControllerClass(): string
+  public function getRootControllerClass(): ?string
   {
     $rootModuleClass = $this->moduleManager->getRootModuleClass();
     $rootModuleReflection = new ReflectionClass($rootModuleClass);
@@ -153,7 +157,7 @@ class ControllerManager
     $rootControllersClasses = $moduleAttributeReflection->getArguments()['controllers'] ?? [];
 
     if (empty($rootControllersClasses)) {
-      throw new RuntimeException('Root module class must have at least one controller');
+      return null;
     }
 
     $rootControllerClass = '';

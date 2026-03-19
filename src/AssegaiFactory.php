@@ -2,6 +2,8 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Interfaces\HttpRuntimeInterface;
+use Assegai\Core\Runtimes\PhpHttpRuntime;
 use Assegai\Core\Routing\Router;
 
 final class AssegaiFactory
@@ -12,9 +14,10 @@ final class AssegaiFactory
 
   /**
    * @param string $moduleName
+   * @param HttpRuntimeInterface|null $runtime
    * @return App
    */
-  public static function create(string $moduleName): App
+  public static function create(string $moduleName, ?HttpRuntimeInterface $runtime = null): App
   {
     return new App(
       rootModuleClass: $moduleName,
@@ -22,6 +25,7 @@ final class AssegaiFactory
       controllerManager: ControllerManager::getInstance(),
       moduleManager: ModuleManager::getInstance(),
       injector: Injector::getInstance(),
+      runtime: $runtime ?? new PhpHttpRuntime(),
     );
   }
 }

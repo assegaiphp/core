@@ -3,7 +3,10 @@
 namespace Assegai\Core\Http;
 
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
+use Assegai\Core\Injector;
 use Assegai\Core\Interfaces\IHttpArgumentsHost;
 use Assegai\Core\Session;
 
@@ -44,21 +47,21 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   /**
    * Returns the HTTP request.
    *
-   * @return Request The HTTP request.
+   * @return RequestInterface The HTTP request.
    */
-  public function getRequest(): Request
+  public function getRequest(): RequestInterface
   {
-    return Request::getInstance();
+    return Injector::getInstance()->get(RequestInterface::class) ?? Request::current();
   }
 
   /**
    * Returns the response.
    *
-   * @return Response The response.
+   * @return ResponseInterface The response.
    */
-  public function getResponse(): Response
+  public function getResponse(): ResponseInterface
   {
-    return Response::getInstance();
+    return Injector::getInstance()->get(ResponseInterface::class) ?? Response::current();
   }
 
   /**
@@ -74,7 +77,7 @@ class HttpArgumentsHost implements IHttpArgumentsHost
   /**
    * The arguments passed to the handler. The arguments are the request, response, and next.
    *
-   * @return array{0: Request, 1: Response, 2: mixed} An array of arguments passed to the handler.
+   * @return array{0: RequestInterface, 1: ResponseInterface, 2: mixed} An array of arguments passed to the handler.
    */
   public function getArgs(): array
   {
@@ -86,6 +89,6 @@ class HttpArgumentsHost implements IHttpArgumentsHost
    */
   public function getSession(): Session
   {
-    return Session::getInstance();
+    return Injector::getInstance()->get(Session::class) ?? Session::getInstance();
   }
 }

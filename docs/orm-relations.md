@@ -1,6 +1,8 @@
 # ORM Relations
 
-This guide is the relation map for Assegai ORM.
+Relations are usually the first ORM topic that feels confusing.
+
+This guide focuses on the practical questions that matter most: where the foreign key lives, which side owns the write, and when related data appears on an entity.
 
 The mental model is intentionally close to TypeORM:
 

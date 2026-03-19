@@ -17,16 +17,16 @@ use Twig\Error\SyntaxError;
 interface ResponderInterface
 {
   /**
-   * * Send a response to the client and exit the script.
+   * * Normalize and emit a response through the active runtime emitter.
    * *
    * * @param mixed $response The response to send.
    * * @param HttpStatusCode|int|null $code The response code to send.
-   * * @return never
+   * * @return void
    * * @throws ReflectionException
    * * @throws RenderingException
    * * @throws LoaderError
    * * @throws RuntimeError
    * * @throws SyntaxError
  */
-  public function respond(mixed $response, HttpStatusCode|int|null $code = null): never;
+  public function respond(mixed $response, HttpStatusCode|int|null $code = null): void;
 }

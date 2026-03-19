@@ -87,7 +87,7 @@ abstract class AssegaiComponent implements ComponentInterface
     $selectedReflection = $moduleManager->getDeclaredReflections()[$selector];
 
     if (!$selectedAttribute || !$selectedReflection) {
-      die(new RenderingException("Invalid selector"));
+      throw new RenderingException("Invalid selector");
     }
 
     if (!$selectedAttribute->templateUrl) {

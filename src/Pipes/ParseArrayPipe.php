@@ -3,9 +3,7 @@
 namespace Assegai\Core\Pipes;
 
 use Assegai\Core\Exceptions\Http\BadRequestException;
-use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Interfaces\IPipeTransform;
-use PHPUnit\Exception;
 use stdClass;
 
 class ParseArrayPipe implements IPipeTransform
@@ -22,12 +20,10 @@ class ParseArrayPipe implements IPipeTransform
 
     if (is_string($value))
     {
-      try {
-        $array = json_decode($value, true);
-      }
-      catch (Exception)
-      {
-        Responder::getInstance()->respond(new BadRequestException("Invalid JSON string"));
+      $array = json_decode($value, true);
+
+      if (JSON_ERROR_NONE !== json_last_error()) {
+        throw new BadRequestException("Invalid JSON string");
       }
     }
     else if (is_iterable($value))

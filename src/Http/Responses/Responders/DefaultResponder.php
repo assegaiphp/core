@@ -4,32 +4,39 @@ namespace Assegai\Core\Http\Responses\Responders;
 
 use Assegai\Core\Exceptions\Http\InternalServerErrorException;
 use Assegai\Core\Http\HttpStatusCode;
+use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
 use Assegai\Core\Http\Responses\Interfaces;
-use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
 
 class DefaultResponder implements Interfaces\ResponderInterface
 {
+  public function __construct(
+    protected ResponseEmitterInterface $emitter = new PhpResponseEmitter(),
+    protected ?ResponseInterface $response = null,
+  )
+  {
+  }
+
   /**
    * @inheritDoc
    */
-  public function respond(mixed $response, int|HttpStatusCode|null $code = null): never
+  public function respond(mixed $response, int|HttpStatusCode|null $code = null): void
   {
-    if ($response instanceof Response) {
-      $response->sendHeaders();
-    } elseif (! headers_sent()) {
-      header('Content-Type: text/html');
-    }
-
-    if ($response instanceof Response) {
+    if ($response instanceof ResponseInterface) {
       $responseBody = $response->getBody();
 
       if (is_scalar($responseBody)) {
-        exit($responseBody);
+        $this->emitter->emit((string)$responseBody, $response);
+        return;
       }
     }
 
     if (is_scalar($response)) {
-      exit($response);
+      $emissionResponse = $this->response ?? \Assegai\Core\Http\Responses\Response::current();
+      $emissionResponse->setContentType(\Assegai\Core\Enumerations\Http\ContentType::HTML);
+      $this->emitter->emit((string)$response, $emissionResponse);
+      return;
     }
 
     throw new InternalServerErrorException('Invalid response type');

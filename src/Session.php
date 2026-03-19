@@ -2,6 +2,7 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Interfaces\ConfigInterface;
 use Assegai\Core\Interfaces\SingletonInterface;
 
@@ -10,6 +11,7 @@ use Assegai\Core\Interfaces\SingletonInterface;
  *
  * @package Assegai\Core
  */
+#[Injectable]
 class Session implements SingletonInterface, ConfigInterface
 {
   /**

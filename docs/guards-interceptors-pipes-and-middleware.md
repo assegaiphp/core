@@ -1,6 +1,8 @@
 # Guards, Interceptors, Pipes, and Middleware
 
-Assegai has several ways to apply cross-cutting behavior without pushing everything into controllers and services.
+These tools are for behavior that touches many requests at once.
+
+If that sounds abstract, think authentication checks, trimming input, wrapping responses, or low-level HTTP hooks that should not live inside every controller method.
 
 The main tools are:
 
@@ -9,7 +11,7 @@ The main tools are:
 - pipes for request transformation and validation
 - middleware as a lower-level HTTP concept
 
-The first three are clearly on the main request path in the current core runtime. Middleware has an API surface too, but it is a more cautious topic in the current codebase, so this guide treats it accordingly.
+The first three are the clearest day-to-day tools for request handling. Middleware has an API surface too, but it is still the more cautious topic, so this guide treats it accordingly.
 
 ## Generate the building blocks
 
@@ -245,7 +247,7 @@ That tells us the intended model:
 - middleware can be applied to routes
 - middleware runs at the HTTP layer
 
-At the same time, this part of the codebase looks less mature than guards, interceptors, and pipes. In this repo I did not verify a complete end-to-end middleware registration path with the same confidence as the other three tools.
+At the same time, middleware is still the least settled part of this group compared with guards, interceptors, and pipes.
 
 So the practical guidance today is:
 

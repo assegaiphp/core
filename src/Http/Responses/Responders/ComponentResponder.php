@@ -8,8 +8,10 @@ use Assegai\Core\Components\Interfaces\ComponentInterface;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Exceptions\Http\InternalServerErrorException;
 use Assegai\Core\Http\HttpStatusCode;
+use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
+use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
-use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
 use ReflectionClass;
 use ReflectionException;
@@ -25,8 +27,13 @@ class ComponentResponder implements ResponderInterface
    * Constructs a ComponentResponder.
    *
    * @param TemplateEngineInterface $templateEngine The template engine.
+   * @param ResponseEmitterInterface $emitter The response emitter.
    */
-  public function __construct(protected TemplateEngineInterface $templateEngine)
+  public function __construct(
+    protected TemplateEngineInterface $templateEngine,
+    protected ResponseEmitterInterface $emitter = new PhpResponseEmitter(),
+    protected ?ResponseInterface $response = null,
+  )
   {
   }
 
@@ -34,28 +41,35 @@ class ComponentResponder implements ResponderInterface
    * @inheritDoc
    * @throws InternalServerErrorException
    */
-  public function respond(mixed $response, int|HttpStatusCode|null $code = null): never
+  public function respond(mixed $response, int|HttpStatusCode|null $code = null): void
   {
-    if ($response instanceof Response) {
+    if ($response instanceof ResponseInterface) {
       $response->setContentType(ContentType::HTML);
-      $response->sendHeaders();
       $responseBody = $response->getBody();
 
       if ($this->isComponent($responseBody)) {
         /** @var ComponentInterface $responseBody */
-        exit($this
-          ->templateEngine
-          ->setRootComponent($responseBody)
-          ->render());
+        $this->emitter->emit(
+          $this->templateEngine
+            ->setRootComponent($responseBody)
+            ->render(),
+          $response
+        );
+        return;
       }
     }
 
     if ($this->isComponent($response)) {
       /** @var ComponentInterface $response */
-      exit($this
-        ->templateEngine
-        ->setRootComponent($response)
-        ->render());
+      $emissionResponse = $this->response ?? \Assegai\Core\Http\Responses\Response::current();
+      $emissionResponse->setContentType(ContentType::HTML);
+      $this->emitter->emit(
+        $this->templateEngine
+          ->setRootComponent($response)
+          ->render(),
+        $emissionResponse
+      );
+      return;
     }
 
     throw new InternalServerErrorException("Invalid response.");

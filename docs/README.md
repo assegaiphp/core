@@ -1,50 +1,42 @@
 # Assegai Guides
 
-These guides are written for AssegaiPHP as a whole, not just `assegaiphp/core`.
+Use these guides to go from a blank environment to a working Assegai app, then grow that app feature by feature.
 
-They are written for developers who want to install Assegai, scaffold a project, and build features in their own environment.
+They focus on the tasks most people need first:
 
-They are grounded in:
-
-- the current Assegai CLI workflow
-- a freshly scaffolded Assegai app
-- generated `resource` and `page` schematics
-- the current `assegaiphp/core`, `assegaiphp/orm`, and `assegaiphp/validation` package behavior
-- the official [Assegai guide](https://assegaiphp.com/guide), the [AssegaiPHP GitHub organization](https://github.com/assegaiphp), and the general architectural direction of [NestJS](https://docs.nestjs.com/)
-
-The goal is to show how Assegai helps you move quickly without giving up structure:
-
-- create a project from the CLI
-- serve it immediately
-- generate REST resources and pages
-- organize code with modules and providers
-- inject dependencies instead of wiring everything by hand
-- use the ORM when you want real persistence
-- move background work onto queues when a request should stay fast
+- installing the CLI
+- creating and serving a project
+- generating REST features and pages
+- organizing code with modules and providers
+- handling requests with DTOs and validation
+- rendering HTML with HTMX and Web Components
+- working with the ORM, queues, and API docs when the app grows
 
 ## Recommended reading order
 
 1. [Getting Started](./getting-started.md)
-2. [Building a Feature](./building-a-feature.md)
-3. [Architecture and Lifecycle](./architecture-and-lifecycle.md)
-4. [Modules and Providers](./modules-and-providers.md)
-5. [Controllers and Routing](./controllers-and-routing.md)
-6. [Request Data and Validation](./request-data-and-validation.md)
-7. [API Docs and Clients](./api-docs-and-clients.md)
-8. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
-9. [Data and ORM](./data-and-orm.md)
-10. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
-11. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
-12. [ORM Relations](./orm-relations.md)
-13. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
-14. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
-15. [Queues and Background Jobs](./queues-and-background-jobs.md)
+2. [Frontend with Web Components](./frontend-with-web-components.md)
+3. [Building a Feature](./building-a-feature.md)
+4. [Architecture and Lifecycle](./architecture-and-lifecycle.md)
+5. [Modules and Providers](./modules-and-providers.md)
+6. [Controllers and Routing](./controllers-and-routing.md)
+7. [Request Data and Validation](./request-data-and-validation.md)
+8. [API Docs and Clients](./api-docs-and-clients.md)
+9. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
+10. [Data and ORM](./data-and-orm.md)
+11. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
+12. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
+13. [ORM Relations](./orm-relations.md)
+14. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
+15. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
+16. [Queues and Background Jobs](./queues-and-background-jobs.md)
 
 ## Guide map
 
 ### Fundamentals
 
 - [Getting Started](./getting-started.md) introduces the CLI, the generated workspace, and the first running app.
+- [Frontend with Web Components](./frontend-with-web-components.md) shows where front-end code should live, how the first-party Web Components runtime works, and how to upgrade older `main.js` projects.
 - [Architecture and Lifecycle](./architecture-and-lifecycle.md) explains how requests move through modules, controllers, providers, and responders.
 - [Modules and Providers](./modules-and-providers.md) covers dependency injection, module boundaries, and configuration.
 - [Controllers and Routing](./controllers-and-routing.md) is the main HTTP guide, including params, bodies, headers, status codes, redirects, and host-based routing.
@@ -54,6 +46,7 @@ The goal is to show how Assegai helps you move quickly without giving up structu
 These guides are about working style and day-to-day delivery rather than one isolated framework surface.
 
 - [Building a Feature](./building-a-feature.md) shows the happy path from scaffolded resource to a real feature.
+- [Frontend with Web Components](./frontend-with-web-components.md) shows the supported front-end workflow for `.wc.ts` files, `serve --dev`, and legacy-project upgrades.
 - [Request Data and Validation](./request-data-and-validation.md) shows how to keep transport concerns at the edge with DTOs and pipes.
 - [API Docs and Clients](./api-docs-and-clients.md) covers `/docs`, `/openapi.json`, Postman export, and the TypeScript client generator.
 - [Pages, Components, HTMX, and Web Components](./pages-and-components.md) covers server-rendered UI patterns and the new Web Components workflow.
@@ -75,6 +68,7 @@ The shortest happy path looks like this:
 assegai new blog-api
 cd blog-api
 assegai serve
+assegai api:export openapi
 open http://localhost:5000/docs
 assegai g r posts
 assegai g pg about
@@ -83,7 +77,7 @@ assegai g pg about
 From there you already have:
 
 - a running app
-- generated API docs at `/docs`
+- an exported OpenAPI document plus a docs route once the spec is current
 - a root module
 - a home page
 - a generated CRUD-style `posts` feature
