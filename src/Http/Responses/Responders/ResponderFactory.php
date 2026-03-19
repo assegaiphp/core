@@ -3,6 +3,8 @@
 namespace Assegai\Core\Http\Responses\Responders;
 
 use Assegai\Core\Http\Responses\Enumerations\ResponderType;
+use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
+use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Engines\ViewEngine;
@@ -24,15 +26,17 @@ class ResponderFactory
      * @var TemplateEngineInterface $templateEngine The template engine.
      */
     $templateEngine = $data['templateEngine'] ?? new DefaultTemplateEngine();
+    /** @var ResponseEmitterInterface $emitter */
+    $emitter = $data['emitter'] ?? new PhpResponseEmitter();
 
     return match ($responder) {
       ResponderType::ARRAY,
       ResponderType::OBJECT,
-      ResponderType::JSON       => new JsonResponder(),
-      ResponderType::CLOSURE    => new ClosureResponder(),
-      ResponderType::COMPONENT  => new ComponentResponder($templateEngine),
-      ResponderType::VIEW       => new ViewResponder($viewEngine),
-      default                   => new DefaultResponder()
+      ResponderType::JSON       => new JsonResponder($emitter),
+      ResponderType::CLOSURE    => new ClosureResponder($emitter),
+      ResponderType::COMPONENT  => new ComponentResponder($templateEngine, $emitter),
+      ResponderType::VIEW       => new ViewResponder($viewEngine, $emitter),
+      default                   => new DefaultResponder($emitter)
     };
   }
 }

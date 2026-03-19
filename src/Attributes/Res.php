@@ -14,6 +14,6 @@ class Res
   public readonly mixed $value;
   public function __construct()
   {
-    $this->value = Response::getInstance();
+    $this->value = Response::current();
   }
 }

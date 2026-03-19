@@ -2,12 +2,14 @@
 
 namespace Assegai\Core\Rendering\Engines;
 
+use Assegai\Core\Config as FrameworkConfig;
 use Assegai\Core\ControllerManager;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\RenderingException;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Injector;
 use Assegai\Core\ModuleManager;
+use Assegai\Core\Rendering\ViewProperties;
 use Assegai\Core\WebComponents\WebComponentSupport;
 use Assegai\Core\Routing\Router;
 use Assegai\Util\Path;
@@ -183,7 +185,7 @@ class DefaultTemplateEngine extends TemplateEngine
     }
 
     if (!method_exists($ctx, 'getLang')) {
-      $ctx->addMethod('getLang', fn() => Request::getInstance()->getLang());
+      $ctx->addMethod('getLang', fn() => Request::current()->getLang());
     }
 
     if (!method_exists($ctx, 'webComponentProps')) {
@@ -213,47 +215,53 @@ class DefaultTemplateEngine extends TemplateEngine
     }
 
     if (!$this->title) {
-      $this->title = $title ?? $_ENV['DOCUMENT_TITLE'] ?? config('app.title', 'AssegaiPHP');
+      $this->title = $title ?? $_ENV['DOCUMENT_TITLE'] ?? $this->getAppDocumentConfigValue('title', 'AssegaiPHP');
     }
 
     if (!$this->description) {
-      $this->description = $description ?? $_ENV['DOCUMENT_DESCRIPTION'] ?? config('app.description', 'AssegaiPHP Application');
+      $this->description = $description ?? $_ENV['DOCUMENT_DESCRIPTION'] ?? $this->getAppDocumentConfigValue('description', 'AssegaiPHP Application');
     }
 
     if (!$this->keywords) {
-      $this->keywords = $keywords ?? $_ENV['DOCUMENT_KEYWORDS'] ?? config('app.keywords', 'AssegaiPHP, PHP, Framework');
+      $this->keywords = $keywords ?? $_ENV['DOCUMENT_KEYWORDS'] ?? $this->getAppDocumentConfigValue('keywords', 'AssegaiPHP, PHP, Framework');
     }
 
     if (!$this->author) {
-      $this->author = $charset ?? $_ENV['DOCUMENT_AUTHOR'] ?? config('app.author', '');
+      $this->author = $author ?? $_ENV['DOCUMENT_AUTHOR'] ?? $this->getAppDocumentConfigValue('author', '');
     }
 
-    # Unwrap view Properties
-    $lang ??= Request::getInstance()->getLang();
-    $props ??= <<<PROPS
-<link href="/css/style.css" rel="stylesheet" />
-<script src="/js/main.js"></script>
-PROPS;
+    $documentProps = ViewProperties::fromArray(is_array($props ?? null) ? $props : []);
+    $lang ??= $documentProps->lang ?: Request::current()->getLang();
+    $headAssets = $documentProps->generateHeadAssetTags();
+
+    if (is_string($props ?? null) && trim($props) !== '') {
+      $headAssets .= trim($props) . PHP_EOL;
+    }
 
     # Render template
-    $props .= $this->loadStyles();
-    $props .= $this->loadScripts();
+    $headAssets .= $this->loadStyles();
+    $headAssets .= $this->loadScripts();
     $output = $template->render([...$this->data]);
     $charSet = $this->meta['charset'] ?? 'UTF-8';
+    $documentMetaTags = $this->renderDocumentMetaTags();
+    $bodyScripts = $documentProps->generateBodyScriptTags() . $documentProps->generateBodyScriptImportTags();
     $webComponentBundleTag = $this->loadWebComponentBundle();
+    $escapedTitle = htmlspecialchars($this->title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
     return <<<START
 <!DOCTYPE html>
 <html lang="$lang">
   <head>
-    <title>$this->title</title>
+    <title>$escapedTitle</title>
     <meta charset="$charSet">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {$props}
+    {$documentMetaTags}
+    {$headAssets}
   </head>
   <body>\n
     $output
+    $bodyScripts
     $webComponentBundleTag
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   </body>
@@ -379,5 +387,44 @@ START;
     }
 
     return preg_replace('/\/\s*\*.*\*\s*\//', '', $output);
+  }
+
+  /**
+   * @return array<string, mixed>
+   */
+  private function getAppDocumentConfig(): array
+  {
+    $config = FrameworkConfig::get('app');
+
+    return is_array($config) ? $config : [];
+  }
+
+  private function getAppDocumentConfigValue(string $key, mixed $default = null): mixed
+  {
+    $config = $this->getAppDocumentConfig();
+
+    return $config[$key] ?? $default;
+  }
+
+  private function renderDocumentMetaTags(): string
+  {
+    $tags = '';
+
+    if ($this->description !== '') {
+      $description = htmlspecialchars($this->description, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+      $tags .= "    <meta name=\"description\" content=\"$description\">" . PHP_EOL;
+    }
+
+    if ($this->keywords !== '') {
+      $keywords = htmlspecialchars($this->keywords, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+      $tags .= "    <meta name=\"keywords\" content=\"$keywords\">" . PHP_EOL;
+    }
+
+    if ($this->author !== '') {
+      $author = htmlspecialchars($this->author, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+      $tags .= "    <meta name=\"author\" content=\"$author\">" . PHP_EOL;
+    }
+
+    return $tags;
   }
 }

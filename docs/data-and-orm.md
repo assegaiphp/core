@@ -1,5 +1,7 @@
 # Data and ORM
 
+Think of the ORM as the part of the stack that maps PHP classes to database tables and gives your services repositories instead of hand-written SQL everywhere.
+
 Assegai's ORM story is intentionally familiar to teams coming from NestJS and TypeORM:
 
 - entities describe persistence shape

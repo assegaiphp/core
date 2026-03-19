@@ -26,9 +26,9 @@ class Log
     $logDir = dirname(DEFAULT_LOG_FILE);
     $errorDir = dirname(DEFAULT_ERROR_LOG);
 
-    if (!file_exists($logDir))
+    if (!is_dir($logDir))
     {
-      if (! mkdir($logDir, 0777, true))
+      if (!@mkdir($logDir, 0777, true) && !is_dir($logDir))
       {
         throw new RuntimeException('Failed to create the log directory.');
       }
@@ -36,15 +36,15 @@ class Log
 
     if (! file_exists(DEFAULT_LOG_FILE))
     {
-      if (! touch(DEFAULT_LOG_FILE))
+      if (!@touch(DEFAULT_LOG_FILE) && !file_exists(DEFAULT_LOG_FILE))
       {
         throw new RuntimeException('Failed to create the log file.');
       }
     }
 
-    if (!file_exists($errorDir))
+    if (!is_dir($errorDir))
     {
-      if (! mkdir($errorDir, 0777, true))
+      if (!@mkdir($errorDir, 0777, true) && !is_dir($errorDir))
       {
         throw new RuntimeException('Failed to create the log directory.');
       }
@@ -52,7 +52,7 @@ class Log
 
     if (! file_exists(DEFAULT_ERROR_LOG))
     {
-      if (! touch(DEFAULT_ERROR_LOG))
+      if (!@touch(DEFAULT_ERROR_LOG) && !file_exists(DEFAULT_ERROR_LOG))
       {
         throw new RuntimeException('Failed to create the log file.');
       }

@@ -1,6 +1,6 @@
 # ORM Migrations and Database Workflows
 
-Once your entities stop changing every few minutes, schema changes need a workflow.
+Once more than one environment depends on your schema, database changes need a workflow you can repeat safely.
 
 In Assegai, that usually means:
 

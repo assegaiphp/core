@@ -23,13 +23,20 @@ use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
+use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
+use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
 use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\AppInterface;
+use Assegai\Core\Interfaces\HttpRuntimeInterface;
 use Assegai\Core\Interfaces\IAssegaiInterceptor;
 use Assegai\Core\Interfaces\IPipeTransform;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
+use Assegai\Core\Runtimes\PhpHttpRuntime;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Paths;
@@ -151,6 +158,9 @@ class App implements AppInterface
    */
   protected array $profileResults = [];
   protected int $profilePrecision = 4;
+  protected bool $sessionStartedForRequest = false;
+  protected HttpRuntimeInterface $runtime;
+  protected ResponseEmitterInterface $responseEmitter;
 
   /**
    * Constructs an App instance.
@@ -160,15 +170,18 @@ class App implements AppInterface
    * @param ControllerManager $controllerManager The controller manager.
    * @param ModuleManager $moduleManager The module manager.
    * @param Injector $injector The injector.
+   * @param HttpRuntimeInterface|null $runtime The HTTP runtime adapter.
    */
   public function __construct(
     protected readonly string $rootModuleClass,
     protected readonly Router $router,
     protected readonly ControllerManager $controllerManager,
     protected readonly ModuleManager $moduleManager,
-    protected readonly Injector $injector
+    protected readonly Injector $injector,
+    ?HttpRuntimeInterface $runtime = null,
   )
   {
+    $this->runtime = $runtime ?? new PhpHttpRuntime();
     broadcast(EventChannel::APP_INIT_START, new Event());
     $this->initializeErrorAndExceptionHandlers();
     $this->initializeAppProperties();
@@ -266,10 +279,45 @@ class App implements AppInterface
   }
 
   /**
+   * Replaces the current HTTP runtime.
+   *
+   * @param HttpRuntimeInterface $runtime
+   * @return static
+   */
+  public function useRuntime(HttpRuntimeInterface $runtime): static
+  {
+    $this->runtime = $runtime;
+    return $this;
+  }
+
+  /**
+   * Returns the active HTTP runtime.
+   *
+   * @return HttpRuntimeInterface
+   */
+  public function getRuntime(): HttpRuntimeInterface
+  {
+    return $this->runtime;
+  }
+
+  /**
    * @inheritDoc
    */
   public function run(): void
   {
+    $this->runtime->run($this, function (): void {
+      $this->runDefaultHttpLifecycle();
+    });
+  }
+
+  /**
+   * Runs the default PHP request lifecycle.
+   *
+   * @return void
+   */
+  protected function runDefaultHttpLifecycle(): void
+  {
+    $this->refreshRequestScope();
     broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
     try {
       $resourcePath = Paths::getPublicPath($_SERVER['REQUEST_URI']);
@@ -280,23 +328,7 @@ class App implements AppInterface
         header("Content-Type: $mimeType");
         require_once($resourcePath);
       } else {
-        $sessionLimiter = $this->appConfig->get('session.limit', null);
-        if (! in_array($sessionLimiter, [null, 'public', 'private_no_expire', 'private', 'nocache'])) {
-          $sessionLimiter = null;
-        }
-
-        $sessionExpire = $this->appConfig->get('session.expire', null);
-        if (!is_numeric($sessionExpire)) {
-          $sessionExpire = null;
-        } else {
-          $sessionExpire = (int)$sessionExpire;
-        }
-
-        session_cache_limiter($sessionLimiter);
-        session_cache_expire($sessionExpire);
-
-        session_start();
-        broadcast(EventChannel::SESSION_START, new Event());
+        $this->startSessionForCurrentRequest();
 
         $this->profileResults = [];
         if ($this->withProfiling) {
@@ -334,6 +366,7 @@ class App implements AppInterface
         $this->handleRequest();
       }
     } catch (Throwable $exception) {
+      $this->closeSessionForCurrentRequest();
       foreach ($this->exceptionFilters as $type => $exceptionFilter) {
         if (is_a($exception, $type)) {
           foreach ($exceptionFilter as $filter) {
@@ -458,6 +491,7 @@ class App implements AppInterface
       $this->profileResults['Total Time'] = microtime(true) - $this->startupTime;
       $this->tabulate('Profile Results', ['Stage', 'Duration (in seconds)'], $this->profileResults);
     }
+    $this->closeSessionForCurrentRequest();
     $this->responder->respond(response: $this->response);
   }
 
@@ -516,11 +550,12 @@ class App implements AppInterface
     }
 
     $document = $this->describeApi();
-    $response = Response::getInstance();
+    $response = $this->response;
     $response->reset();
 
     if ($requestPath === 'openapi.json') {
       $response->jsonRaw($document);
+      $this->closeSessionForCurrentRequest();
       $this->responder->respond($response);
     }
 
@@ -532,6 +567,7 @@ class App implements AppInterface
         title: ($document['info']['title'] ?? 'Assegai API') . ' Docs',
       )
     );
+    $this->closeSessionForCurrentRequest();
     $this->responder->respond($response);
   }
 
@@ -645,26 +681,44 @@ class App implements AppInterface
       'injector' => $this->injector,
     ]);
     Log::init();
-
-    $this->request = $this->host->switchToHttp()->getRequest();
-    $this->request->setApp($this);
-    $this->response = $this->host->switchToHttp()->getResponse();
-
+    $this->responseEmitter = new PhpResponseEmitter();
     $this->responder = Responder::getInstance();
     $this->responder->setTemplateEngine($this->templateEngine);
+    $this->responder->setEmitter($this->responseEmitter);
     $this->moduleManager->setRootModuleClass($this->rootModuleClass);
-    $this->registerFrameworkDependencies();
+    $this->registerApplicationDependencies();
+    $this->refreshRequestScope();
 
     $this->isDebug = env('DEBUG_MODE', false);
     $this->withProfiling = env('PROFILING', false);
   }
 
   /**
-   * Registers framework-owned services so they can always be injected.
+   * Refreshes request-scoped services for the current request cycle.
    *
    * @return void
    */
-  protected function registerFrameworkDependencies(): void
+  protected function refreshRequestScope(): void
+  {
+    $this->closeSessionForCurrentRequest();
+    $this->request = Request::createFromGlobals();
+    $this->request->setApp($this);
+    Request::setInstance($this->request);
+
+    $this->response = Response::create();
+    Response::setInstance($this->response);
+
+    $this->resetRequestScopedDependencies();
+    $this->registerRequestScopedDependencies();
+    $this->sessionStartedForRequest = false;
+  }
+
+  /**
+   * Registers application-scoped framework services so they can always be injected.
+   *
+   * @return void
+   */
+  protected function registerApplicationDependencies(): void
   {
     $dependencies = [
       self::class => $this,
@@ -672,10 +726,11 @@ class App implements AppInterface
       AppConfig::class => $this->appConfig,
       ComposerConfig::class => $this->composerConfig,
       ProjectConfig::class => $this->projectConfig,
+      Session::class => Session::getInstance(),
       ArgumentsHost::class => $this->host,
-      Request::class => $this->request,
-      Response::class => $this->response,
       Responder::class => $this->responder,
+      ResponderInterface::class => $this->responder,
+      ResponseEmitterInterface::class => $this->responseEmitter,
       Router::class => $this->router,
       ControllerManager::class => $this->controllerManager,
       ModuleManager::class => $this->moduleManager,
@@ -693,6 +748,101 @@ class App implements AppInterface
         $this->injector->add($entryId, $dependency);
       }
     }
+  }
+
+  /**
+   * Registers request-scoped framework services for the active request.
+   *
+   * @return void
+   */
+  protected function registerRequestScopedDependencies(): void
+  {
+    $this->injector->add(Request::class, $this->request);
+    $this->injector->add(Response::class, $this->response);
+    $this->injector->add(RequestInterface::class, $this->request);
+    $this->injector->add(ResponseInterface::class, $this->response);
+  }
+
+  /**
+   * Clears request-scoped resolved services while retaining application-scoped framework services.
+   *
+   * @return void
+   */
+  protected function resetRequestScopedDependencies(): void
+  {
+    $this->injector->retain([
+      self::class,
+      AppInterface::class,
+      AppConfig::class,
+      ComposerConfig::class,
+      ProjectConfig::class,
+      Session::class,
+      ArgumentsHost::class,
+      Responder::class,
+      ResponderInterface::class,
+      ResponseEmitterInterface::class,
+      Router::class,
+      ControllerManager::class,
+      ModuleManager::class,
+      Injector::class,
+      TemplateEngineInterface::class,
+      LoggerInterface::class,
+      DefaultTemplateEngine::class,
+    ]);
+  }
+
+  /**
+   * Starts the session for the current request when needed.
+   *
+   * @return void
+   */
+  protected function startSessionForCurrentRequest(): void
+  {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+      return;
+    }
+
+    if (session_status() === PHP_SESSION_DISABLED) {
+      return;
+    }
+
+    $sessionLimiter = $this->appConfig->get('session.limit', null);
+
+    if (!in_array($sessionLimiter, [null, 'public', 'private_no_expire', 'private', 'nocache'], true)) {
+      $sessionLimiter = null;
+    }
+
+    $sessionExpire = $this->appConfig->get('session.expire', null);
+
+    if (!is_numeric($sessionExpire)) {
+      $sessionExpire = null;
+    } else {
+      $sessionExpire = (int)$sessionExpire;
+    }
+
+    session_cache_limiter($sessionLimiter);
+    session_cache_expire($sessionExpire);
+
+    if (session_start()) {
+      $this->sessionStartedForRequest = true;
+      broadcast(EventChannel::SESSION_START, new Event());
+    }
+  }
+
+  /**
+   * Closes the active session for the current request so locks do not leak across requests.
+   *
+   * @return void
+   */
+  protected function closeSessionForCurrentRequest(): void
+  {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+      $this->sessionStartedForRequest = false;
+      return;
+    }
+
+    session_write_close();
+    $this->sessionStartedForRequest = false;
   }
 
   /**

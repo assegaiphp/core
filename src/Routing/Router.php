@@ -38,6 +38,7 @@ use Assegai\Core\ExecutionContext;
 use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Injector;
 use Assegai\Core\Interceptors\InterceptorsConsumer;
 use Assegai\Core\Interfaces\IOnGuard;
@@ -143,7 +144,7 @@ final class Router
    */
   public function getRequest(): Request
   {
-    return Request::getInstance();
+    return Request::current();
   }
 
   /**
@@ -348,7 +349,7 @@ final class Router
   {
     $handlers = $this->getControllerHandlers(controller: $controller);
     $activatedHandler = $this->getActivatedHandler(handlers: $handlers, controller: $controller, request: $request);
-    $response = Response::getInstance();
+    $response = Response::current();
     $response->reset();
 
     if (!$activatedHandler) {
@@ -651,37 +652,15 @@ final class Router
    *
    * @param string $url The URL to redirect the client to.
    * @param int|null $statusCode The status code to be used for the redirect.
-   * @return never
+   * @return void
    * @throws HttpException If the HTTP status code could not be set.
    */
-  public static function redirectTo(string $url, ?int $statusCode = null): never
+  public static function redirectTo(string $url, ?int $statusCode = null): void
   {
-    $status = $statusCode ?? 302;
-
-    if (false === http_response_code($status)) {
-      throw new HttpException("Failed to set HTTP status code to $status");
-    }
-
-    if (!headers_sent()) {
-      header('Location: ' . $url, true, $status);
-      header('Content-Type: text/html');
-    }
-
-    $escapedUrl = htmlspecialchars($url, ENT_QUOTES | ENT_HTML5);
-
-    exit(<<<HTML
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0;url={$escapedUrl}">
-    <title>Redirecting...</title>
-  </head>
-  <body>
-    Redirecting to <a href="{$escapedUrl}">{$escapedUrl}</a>.
-  </body>
-</html>
-HTML);
+    $response = Response::current();
+    $response->reset();
+    $response->redirect($url, $statusCode ?? 302);
+    Responder::getInstance()->respond($response);
   }
 
   /**
@@ -1531,10 +1510,8 @@ HTML);
     $controllerInterceptorCallHandlers = [];
 
     if ($this->globalInterceptors) {
-      $useInterceptorInstance = new UseInterceptors(interceptors: $this->globalInterceptors);
-
       $controllerInterceptorCallHandlers = $this->interceptorsConsumer->intercept(
-        interceptors: $useInterceptorInstance->interceptorsList,
+        interceptors: $this->globalInterceptors,
         context: $context
       );
     }
@@ -1699,7 +1676,7 @@ HTML);
           return $request;
 
         case Res::class:
-          return Response::getInstance();
+          return Response::current();
 
         default:
           if (property_exists($paramAttributeInstance, 'value')) {

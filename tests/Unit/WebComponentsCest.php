@@ -2,7 +2,9 @@
 
 namespace Unit;
 
+use Assegai\Core\Config as FrameworkConfig;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
+use Assegai\Core\Rendering\ViewProperties;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use Tests\Support\UnitTester;
@@ -25,11 +27,31 @@ class WebComponentsCest
     mkdir($this->workspace . '/public/js', 0777, true);
     mkdir($this->workspace . '/public/.assegai', 0777, true);
     mkdir($this->workspace . '/public/assets', 0777, true);
+    mkdir($this->workspace . '/config', 0777, true);
     mkdir($this->workspace . '/src', 0777, true);
 
     file_put_contents(
       $this->workspace . '/assegai.json',
       json_encode(['webComponents' => ['enabled' => true]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+    );
+    file_put_contents(
+      $this->workspace . '/config/default.php',
+      <<<'PHP'
+<?php
+
+return [
+  'app' => [
+    'title' => 'Configured App Title',
+    'description' => 'Configured app description',
+    'author' => 'Assegai Tests',
+    'lang' => 'fr',
+    'links' => ['/css/site.css'],
+    'headScriptUrls' => ['/js/runtime.js'],
+    'bodyScriptUrls' => ['/js/body.js'],
+    'favicon' => ['/assets/favicon.svg', 'image/svg+xml'],
+  ],
+];
+PHP
     );
     file_put_contents($this->workspace . '/public/js/assegai-components.min.js', 'console.log("wc bundle");');
     file_put_contents($this->workspace . '/public/assets/components.js', 'console.log("alt wc bundle");');
@@ -65,11 +87,14 @@ TWIG
 
     require_once $this->workspace . '/src/' . $componentFilename;
     chdir($this->workspace);
+    unset($GLOBALS['config']);
+    FrameworkConfig::hydrate($this->workspace);
   }
 
   public function _after(UnitTester $I): void
   {
     chdir($this->originalWorkingDirectory);
+    unset($GLOBALS['config']);
     $this->deleteDirectory($this->workspace);
   }
 
@@ -160,6 +185,42 @@ TWIG
       '<script type="module" src="/js/assegai-components.min.js"></script>',
       $html
     );
+  }
+
+  public function testViewPropertiesMergeGlobalDocumentConfigWithPerViewOverrides(UnitTester $I): void
+  {
+    $props = ViewProperties::fromArray([
+      'title' => 'Posts',
+      'headScriptUrls' => ['/js/page.js'],
+      'bodyScriptUrls' => ['/js/page-body.js'],
+      'favicon' => ['/custom.ico', 'image/x-icon'],
+    ]);
+
+    $I->assertSame('Posts', $props->title);
+    $I->assertSame('fr', $props->lang);
+    $I->assertSame(['/css/site.css'], $props->links);
+    $I->assertSame(['/js/runtime.js', '/js/page.js'], $props->headScriptUrls);
+    $I->assertSame(['/js/body.js', '/js/page-body.js'], $props->bodyScriptUrls);
+    $I->assertSame(['/custom.ico', 'image/x-icon'], $props->favicon);
+  }
+
+  public function testTheDefaultTemplateEngineUsesGlobalDocumentConfig(UnitTester $I): void
+  {
+    $componentClass = $this->componentClass;
+    $component = new $componentClass();
+    $engine = new DefaultTemplateEngine();
+
+    $html = $engine
+      ->setRootComponent($component)
+      ->render();
+
+    $I->assertStringContainsString('<meta name="description" content="Configured app description">', $html);
+    $I->assertStringContainsString('<meta name="author" content="Assegai Tests">', $html);
+    $I->assertStringContainsString("<link rel='shortcut icon' href='/assets/favicon.svg' type='image/svg+xml' />", $html);
+    $I->assertStringContainsString("<link rel='stylesheet' href='/css/site.css' />", $html);
+    $I->assertStringContainsString("<script defer src='/js/runtime.js'></script>", $html);
+    $I->assertStringContainsString("<script src='/js/body.js' defer></script>", $html);
+    $I->assertStringContainsString('<html lang="fr">', $html);
   }
 
   /**

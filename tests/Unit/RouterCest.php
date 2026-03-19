@@ -26,6 +26,7 @@ use Mocks\NestedApiController;
 use Mocks\NestedAppModule;
 use Mocks\NestedFeaturesController;
 use Mocks\NestedRootController;
+use Mocks\RequestAwarePipelineAppModule;
 use Mocks\ResponseMetadataAppModule;
 use Mocks\UnknownConstraintAppModule;
 use Mocks\WildcardControllerAppModule;
@@ -667,6 +668,21 @@ class RouterCest
     $I->assertTrue($result['response']->isRedirect());
     $I->assertSame('/manual-target', $result['response']->getRedirectUrl());
     $I->assertSame(303, $result['response']->getStatusCode());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testClassStringGuardsAndInterceptorsResolveThroughRequestScope(UnitTester $I): void
+  {
+    $result = $this->dispatch('/pipeline/request-aware', RequestAwarePipelineAppModule::class);
+
+    $I->assertSame('request-aware', $result['response']->getBody());
+    $I->assertSame('pipeline/request-aware', $result['response']->getHeader('X-Request-Path'));
   }
 
   /**

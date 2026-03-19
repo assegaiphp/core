@@ -17,6 +17,12 @@ use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Container\ResolveException;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
+use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
+use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
+use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
@@ -248,6 +254,23 @@ final class Injector implements ITokenStoreOwner, IContainer
   }
 
   /**
+   * Retains only the provided dependency IDs in the container store.
+   *
+   * @param string[] $entryIds
+   * @return void
+   */
+  public function retain(array $entryIds): void
+  {
+    $allowed = array_fill_keys($entryIds, true);
+
+    foreach (array_keys($this->store) as $entryId) {
+      if (!isset($allowed[$entryId])) {
+        unset($this->store[$entryId]);
+      }
+    }
+  }
+
+  /**
    * Determines if a class is injectable.
    *
    * @param ReflectionClass $reflectionClass The class to inspect.
@@ -342,6 +365,22 @@ final class Injector implements ITokenStoreOwner, IContainer
       }
 
       $typeName = $paramType->getName();
+      $frameworkDependency = match ($typeName) {
+        RequestInterface::class => Request::current(),
+        ResponseInterface::class => Response::current(),
+        ResponseEmitterInterface::class => $this->get(ResponseEmitterInterface::class) ?? new PhpResponseEmitter(),
+        ResponderInterface::class => $this->get(ResponderInterface::class) ?? Responder::getInstance(),
+        default => null,
+      };
+
+      if (null !== $frameworkDependency) {
+        if (!$this->has($typeName)) {
+          $this->add($typeName, $frameworkDependency);
+        }
+
+        return $frameworkDependency;
+      }
+
       $dependency = $this->get($typeName);
 
       if (null !== $dependency) {
@@ -443,7 +482,7 @@ final class Injector implements ITokenStoreOwner, IContainer
           return $request;
 
         case Res::class:
-          return Response::getInstance();
+          return Response::current();
 
         default:
           if (property_exists($paramAttributeInstance, 'value')) {

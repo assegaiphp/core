@@ -5,8 +5,6 @@ namespace Assegai\Core\Attributes;
 use Assegai\Core\Exceptions\InterceptorException;
 use Assegai\Core\Interfaces\IAssegaiInterceptor;
 use Attribute;
-use ReflectionClass;
-use ReflectionException;
 
 /**
  * An attribute that specifies which interceptors to run during the request/response lifecycle.
@@ -16,46 +14,43 @@ use ReflectionException;
 #[Attribute]
 readonly class UseInterceptors
 {
-  /** @var IAssegaiInterceptor[] $interceptorsList */
+  /** @var array<int, IAssegaiInterceptor|string> $interceptorsList */
   public array $interceptorsList;
 
   /**
    * The constructor for the UseInterceptors attribute.
    *
    * @param IAssegaiInterceptor[]|string[]|IAssegaiInterceptor|string $interceptors
-   * @throws InterceptorException If the interceptor is not instantiable.
-   * @throws ReflectionException If the reflection class is not found.
+   * @throws InterceptorException
    */
   public function __construct(protected array|string|IAssegaiInterceptor $interceptors)
   {
+    $this->interceptorsList = $this->normalizeInterceptors($this->interceptors);
+  }
+
+  /**
+   * @param IAssegaiInterceptor[]|string[]|IAssegaiInterceptor|string $interceptors
+   * @return array<int, IAssegaiInterceptor|string>
+   * @throws InterceptorException
+   */
+  private function normalizeInterceptors(array|string|IAssegaiInterceptor $interceptors): array
+  {
+    if (!is_array($interceptors)) {
+      return [$interceptors];
+    }
+
     $interceptorsList = [];
 
-    if ($this->interceptors instanceof IAssegaiInterceptor) {
-      $interceptorsList[] = $this->interceptors;
-    } else if (is_string($this->interceptors)) {
-      $reflectionClass = new ReflectionClass($this->interceptors);
-
-      if (! $reflectionClass->isInstantiable() ) {
+    foreach ($interceptors as $interceptor) {
+      if (is_array($interceptor)) {
+        $interceptorsList = [...$interceptorsList, ...$this->normalizeInterceptors($interceptor)];
+      } elseif ($interceptor instanceof IAssegaiInterceptor || is_string($interceptor)) {
+        $interceptorsList[] = $interceptor;
+      } else {
         throw new InterceptorException(isRequestError: false);
-      }
-
-      $interceptorsList[] = $reflectionClass->newInstance();
-    } else {
-      foreach ($this->interceptors as $interceptor) {
-        if ($interceptor instanceof IAssegaiInterceptor) {
-          $interceptorsList[] = $interceptor;
-        } else if (is_string($interceptor)) {
-          $reflectionClass = new ReflectionClass($interceptor);
-
-          if (! $reflectionClass->isInstantiable() ) {
-            throw new InterceptorException(isRequestError: false);
-          }
-
-          $interceptorsList[] = $reflectionClass->newInstance();
-        }
       }
     }
 
-    $this->interceptorsList = $interceptorsList;
+    return $interceptorsList;
   }
 }

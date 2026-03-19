@@ -7,12 +7,18 @@ use Assegai\Core\AssegaiFactory;
 use Assegai\Core\Config\ProjectConfig;
 use Assegai\Core\ControllerManager;
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Routing\Router;
+use Assegai\Core\Session;
 use Mocks\FrameworkAwareAppModule;
+use Mocks\FrameworkAwareContractsService;
 use Mocks\FrameworkAwareService;
 use ReflectionException;
 use ReflectionProperty;
@@ -30,6 +36,7 @@ class InjectorCest
   private array $previousGet = [];
   private array $previousPost = [];
   private array $previousFiles = [];
+  private string $previousSessionSavePath = '';
 
   public function _before(): void
   {
@@ -44,6 +51,7 @@ class InjectorCest
     $this->previousGet = $_GET;
     $this->previousPost = $_POST;
     $this->previousFiles = $_FILES;
+    $this->previousSessionSavePath = session_save_path();
     chdir(dirname(__DIR__) . '/Unit/src_test');
     $this->composerConfigFilename = getcwd() . '/composer.json';
     $this->sourceDirectory = getcwd() . '/src';
@@ -78,6 +86,11 @@ class InjectorCest
     $_GET['path'] = '/';
     $_POST = [];
     $_FILES = [];
+    $_SESSION = [];
+    session_save_path('/tmp/assegaiphp-core-session-tests');
+    if (!is_dir(session_save_path())) {
+      mkdir(session_save_path(), 0777, true);
+    }
 
     $this->resetSingleton(Injector::class);
     $this->resetSingleton(ModuleManager::class);
@@ -105,6 +118,11 @@ class InjectorCest
     $_GET = $this->previousGet;
     $_POST = $this->previousPost;
     $_FILES = $this->previousFiles;
+    $_SESSION = [];
+    if (session_status() === PHP_SESSION_ACTIVE) {
+      session_write_close();
+    }
+    session_save_path($this->previousSessionSavePath);
 
     $logFilename = $this->logsDirectory . '/assegai.log';
     if (is_file($logFilename)) {
@@ -133,7 +151,11 @@ class InjectorCest
     $I->assertInstanceOf(FrameworkAwareService::class, $service);
     $I->assertSame(Request::getInstance(), $service->request);
     $I->assertSame(Response::getInstance(), $service->response);
+    $I->assertSame(Request::current(), $service->request);
+    $I->assertSame(Response::current(), $service->response);
     $I->assertInstanceOf(ProjectConfig::class, $service->projectConfig);
+    $I->assertInstanceOf(Session::class, $service->session);
+    $I->assertSame(Session::getInstance(), $service->session);
     $I->assertSame($service->projectConfig, Injector::getInstance()->get(ProjectConfig::class));
   }
 
@@ -147,7 +169,12 @@ class InjectorCest
     $I->assertSame($app, $injector->get(AppInterface::class));
     $I->assertSame(Request::getInstance(), $injector->get(Request::class));
     $I->assertSame(Response::getInstance(), $injector->get(Response::class));
+    $I->assertSame(Request::getInstance(), $injector->get(RequestInterface::class));
+    $I->assertSame(Response::getInstance(), $injector->get(ResponseInterface::class));
+    $I->assertSame(Request::current(), $injector->get(Request::class));
+    $I->assertSame(Response::current(), $injector->get(Response::class));
     $I->assertInstanceOf(ProjectConfig::class, $injector->get(ProjectConfig::class));
+    $I->assertSame(Session::getInstance(), $injector->get(Session::class));
   }
 
   public function testModulesCanInjectProjectConfigWithoutListingItAsAProvider(UnitTester $I): void
@@ -165,6 +192,71 @@ class InjectorCest
     $I->assertSame(Request::getInstance(), $service->request);
     $I->assertSame(Response::getInstance(), $service->response);
     $I->assertInstanceOf(ProjectConfig::class, $service->projectConfig);
+    $I->assertSame(Session::getInstance(), $service->session);
+  }
+
+  public function testRefreshingRequestScopeRebindsRequestScopedServices(UnitTester $I): void
+  {
+    $_SERVER['REQUEST_URI'] = '/first';
+    $_GET['path'] = '/first';
+
+    $app = AssegaiFactory::create(FrameworkAwareAppModule::class);
+    $injector = Injector::getInstance();
+    $firstService = $injector->resolve(FrameworkAwareService::class);
+
+    $_SERVER['REQUEST_URI'] = '/second';
+    $_GET['path'] = '/second';
+
+    $refreshRequestScope = new \ReflectionMethod($app, 'refreshRequestScope');
+    $refreshRequestScope->invoke($app);
+
+    $secondService = $injector->resolve(FrameworkAwareService::class);
+    $currentRequest = Request::getInstance();
+    $currentResponse = Response::getInstance();
+
+    $I->assertNotSame($firstService, $secondService);
+    $I->assertNotSame($firstService->request, $secondService->request);
+    $I->assertSame($currentRequest, $injector->get(Request::class));
+    $I->assertSame($currentResponse, $injector->get(Response::class));
+    $I->assertSame(Request::current(), $currentRequest);
+    $I->assertSame(Response::current(), $currentResponse);
+    $I->assertSame($currentRequest, $secondService->request);
+    $I->assertSame($currentResponse, $secondService->response);
+    $I->assertSame('second', trim($currentRequest->getPath(), '/'));
+  }
+
+  public function testFrameworkContractsResolveToRequestScopedBindings(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(FrameworkAwareAppModule::class);
+    $service = Injector::getInstance()->resolve(FrameworkAwareContractsService::class);
+
+    $I->assertInstanceOf(App::class, $app);
+    $I->assertInstanceOf(FrameworkAwareContractsService::class, $service);
+    $I->assertSame(Request::current(), $service->request);
+    $I->assertSame(Response::current(), $service->response);
+    $I->assertSame($service->request, Injector::getInstance()->get(RequestInterface::class));
+    $I->assertSame($service->response, Injector::getInstance()->get(ResponseInterface::class));
+    $I->assertInstanceOf(ResponseEmitterInterface::class, $service->emitter);
+    $I->assertInstanceOf(ResponderInterface::class, $service->responder);
+  }
+
+  public function testSessionLifecycleStartsAndClosesPerRequest(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(FrameworkAwareAppModule::class);
+
+    $startSession = new \ReflectionMethod($app, 'startSessionForCurrentRequest');
+    $closeSession = new \ReflectionMethod($app, 'closeSessionForCurrentRequest');
+
+    $I->assertSame(PHP_SESSION_NONE, session_status());
+
+    $startSession->invoke($app);
+    $I->assertSame(PHP_SESSION_ACTIVE, session_status());
+
+    $startSession->invoke($app);
+    $I->assertSame(PHP_SESSION_ACTIVE, session_status());
+
+    $closeSession->invoke($app);
+    $I->assertSame(PHP_SESSION_NONE, session_status());
   }
 
   /**
@@ -174,6 +266,6 @@ class InjectorCest
   private function resetSingleton(string $className): void
   {
     $instanceProperty = new ReflectionProperty($className, 'instance');
-    $instanceProperty->setValue(null);
+    $instanceProperty->setValue(null, null);
   }
 }

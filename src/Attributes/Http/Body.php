@@ -45,7 +45,7 @@ class Body
     public readonly array|IPipeTransform|string|null $pipes = null
   )
   {
-    $request = Request::getInstance();
+    $request = Request::current();
     $value = $request->getBody();
 
     if ($this->pipes) {

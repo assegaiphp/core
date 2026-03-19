@@ -1,6 +1,8 @@
 # ORM Entities, Repositories, and Results
 
-This guide covers the everyday ORM work:
+Use this guide once you have a resource and want to persist real data.
+
+It covers the everyday ORM work:
 
 - modeling entities
 - injecting repositories

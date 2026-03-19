@@ -2,8 +2,8 @@
 
 namespace Assegai\Core\Interfaces;
 
-use Assegai\Core\Http\Requests\Request;
-use Assegai\Core\Http\Responses\Response;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
+use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
 use Assegai\Core\Session;
 
 /**
@@ -17,13 +17,13 @@ interface IHttpArgumentsHost
    * Returns the in-flight `request` object.
    * @return Request The in-flight `request` object.
    */
-  public function getRequest(): Request;
+  public function getRequest(): RequestInterface;
 
   /**
    * Returns the in-flight `response` object
    * @return Response The in-flight `response` object
    */
-  public function getResponse(): Response;
+  public function getResponse(): ResponseInterface;
 
   /**
    * Returns the next callable in the chain.

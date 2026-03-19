@@ -1,5 +1,7 @@
 # Architecture and Lifecycle
 
+This guide explains the main words you will keep seeing in an Assegai app so the structure feels familiar instead of mysterious.
+
 Assegai is heavily inspired by NestJS, but expressed through modern PHP attributes, a CLI-first workflow, and an ecosystem that includes the core runtime, validation, forms, ORM, and queue integrations.
 
 ## The mental model

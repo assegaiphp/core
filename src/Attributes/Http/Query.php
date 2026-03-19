@@ -22,7 +22,7 @@ class Query
    */
   public function __construct(public readonly ?string $key = null)
   {
-    $request = Request::getInstance();
+    $request = Request::current();
     $this->value = $request->getQuery();
 
     if ($this->key)

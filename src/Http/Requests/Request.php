@@ -10,6 +10,8 @@ use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotImplementedException;
+use Assegai\Core\Injector;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Forms\Enumerations\HttpMethod;
 use Assegai\Forms\Exceptions\FormException;
@@ -22,7 +24,7 @@ use stdClass;
  * the request query string, parameters, HTTP headers, and body
  */
 #[Injectable]
-class Request
+class Request implements RequestInterface
 {
   /**
    * @var null|stdClass
@@ -151,10 +153,54 @@ class Request
   public static function getInstance(): Request
   {
     if (!Request::$instance) {
-      Request::$instance = new Request;
+      Request::$instance = self::createFromGlobals();
     }
 
     return Request::$instance;
+  }
+
+  /**
+   * Returns the request bound to the active request scope when available.
+   *
+   * @return Request
+   */
+  public static function current(): Request
+  {
+    $injector = Injector::getInstance();
+    $request = $injector->get(self::class);
+
+    if ($request instanceof self) {
+      return $request;
+    }
+
+    $request = $injector->get(RequestInterface::class);
+
+    if ($request instanceof self) {
+      return $request;
+    }
+
+    return self::getInstance();
+  }
+
+  /**
+   * Creates a fresh request object from the current PHP superglobals.
+   *
+   * @return Request
+   */
+  public static function createFromGlobals(): Request
+  {
+    return new Request();
+  }
+
+  /**
+   * Replaces the current in-flight request instance.
+   *
+   * @param Request|null $instance
+   * @return void
+   */
+  public static function setInstance(?Request $instance): void
+  {
+    self::$instance = $instance;
   }
 
   /**

@@ -40,7 +40,7 @@ class Param
     public readonly array|IPipeTransform|string|null $pipes = null
   )
   {
-    $request = Request::getInstance();
+    $request = Request::current();
     $params = $request->getParams();
     $value = ( !empty($this->key) ) ? ($params[$this->key] ?? $params) : json_decode(json_encode($params));
 

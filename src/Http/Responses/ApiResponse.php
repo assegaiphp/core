@@ -34,7 +34,7 @@ class ApiResponse
     ?Request $request = null
   )
   {
-    $this->request = $request ?? Request::getInstance();
+    $this->request = $request ?? Request::current();
     $this->isResultObject = is_object($data) && method_exists($data, 'getData');
   }
 

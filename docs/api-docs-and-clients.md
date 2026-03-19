@@ -1,10 +1,15 @@
 # API Docs and Clients
 
-Assegai can now treat API description as a built-in capability rather than a separate setup task.
+Assegai can treat API description as part of normal application code instead of a separate documentation project.
 
 If your controllers and DTOs already describe request handling, the framework can derive a usable API contract from that metadata automatically.
 
 ## Runtime docs vs exported files
+
+There are two related but different ideas here:
+
+- runtime docs, which your app serves at routes like `/docs`
+- exported files, which the CLI writes to disk
 
 When you run:
 
@@ -18,6 +23,35 @@ your app can expose:
 - `/docs` for a Swagger UI view of that document
 
 Those runtime endpoints do not require an exported file on disk.
+
+## Configure the feature per project
+
+API docs are configurable from `assegai.json`.
+
+If you want the runtime routes available, keep `enabled` set to `true`:
+
+```json
+{
+  "apiDocs": {
+    "enabled": true
+  }
+}
+```
+
+If a project does not need runtime docs at all, disable them:
+
+```json
+{
+  "apiDocs": {
+    "enabled": false
+  }
+}
+```
+
+That turns off both:
+
+- `/docs`
+- `/openapi.json`
 
 The export commands are separate on purpose:
 
@@ -39,6 +73,12 @@ If you want `assegai serve` to refresh `generated/openapi.json` automatically, a
 ```
 
 Set `exportOnServe` to `false` if you prefer to keep exports manual.
+
+So the three settings to remember are:
+
+- `enabled` controls whether `/docs` and `/openapi.json` exist at runtime
+- `exportOnServe` controls whether `assegai serve` refreshes the exported file for you
+- `exportPath` controls where that exported file is written
 
 That means a route like this:
 
@@ -158,7 +198,7 @@ Default output:
 generated/assegai-api-client.ts
 ```
 
-The current generator focuses on the common case:
+The generator focuses on the common case:
 
 - named interfaces for reflected DTO schemas
 - typed path and query input objects

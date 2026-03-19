@@ -37,14 +37,15 @@ readonly class FileInterceptor implements IAssegaiInterceptor
       $options = $this->options ?? new FileInterceptorOptions();
     }
 
-    $requestBody = Request::getInstance()->getBody();
+    $request = $context->switchToHttp()->getRequest();
+    $requestBody = $request->getBody();
     $key = $this->fieldName;
     $file = $requestBody->$key;
     $file['target_dir'] = $options->dest;
     $file['target_path'] = $options->dest . '/' . $file['name'];
     $file['extension'] = strtolower(pathinfo($file['target_path'], PATHINFO_EXTENSION));
 
-    Request::getInstance()->setFile($file);
+    $request->setFile($file);
 
     return null;
   }
