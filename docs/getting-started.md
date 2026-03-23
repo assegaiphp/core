@@ -19,9 +19,13 @@ That gives you the commands you will use most often:
 - `assegai new`
 - `assegai serve`
 - `assegai generate`
+- `assegai schematic:init`
+- `assegai schematic:list`
 - `assegai test`
 - `assegai database:*`
 - `assegai migration:*`
+
+If you later want `assegai generate` to understand your own company-specific feature scaffolds, start with [Custom CLI Schematics](./custom-cli-schematics.md). If you want the full manifest and token reference after that, continue with [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md).
 
 ## Create a new project
 
