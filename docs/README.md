@@ -6,40 +6,45 @@ They focus on the tasks most people need first:
 
 - installing the CLI
 - creating and serving a project
+- learning the main workflow through a full tutorial
 - generating REST features and pages
 - organizing code with modules and providers
 - handling requests with DTOs and validation
 - rendering HTML with HTMX and Web Components
-- working with events, the ORM, queues, and API docs when the app grows
+- working with authentication, events, the ORM, queues, and API docs when the app grows
 
 ## Recommended reading order
 
 1. [Getting Started](./getting-started.md)
-2. [Custom CLI Schematics](./custom-cli-schematics.md)
-3. [Events and Domain Events](./events-and-domain-events.md)
-4. [Frontend with Web Components](./frontend-with-web-components.md)
-5. [Building a Feature](./building-a-feature.md)
-6. [Architecture and Lifecycle](./architecture-and-lifecycle.md)
-7. [Modules and Providers](./modules-and-providers.md)
-8. [Controllers and Routing](./controllers-and-routing.md)
-9. [Request Data and Validation](./request-data-and-validation.md)
-10. [API Docs and Clients](./api-docs-and-clients.md)
-11. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
-12. [Data and ORM](./data-and-orm.md)
-13. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
-14. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
-15. [ORM Relations](./orm-relations.md)
-16. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
-17. [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md)
-18. [Events In Depth](./events-and-domain-events-in-depth.md)
-19. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
-20. [Queues and Background Jobs](./queues-and-background-jobs.md)
+2. [Authentication](./authentication.md)
+3. [Build a Kitchen Orders API](./tutorial-build-a-kitchen-orders-api.md)
+4. [Custom CLI Schematics](./custom-cli-schematics.md)
+5. [Events and Domain Events](./events-and-domain-events.md)
+6. [Frontend with Web Components](./frontend-with-web-components.md)
+7. [Building a Feature](./building-a-feature.md)
+8. [Architecture and Lifecycle](./architecture-and-lifecycle.md)
+9. [Modules and Providers](./modules-and-providers.md)
+10. [Controllers and Routing](./controllers-and-routing.md)
+11. [Request Data and Validation](./request-data-and-validation.md)
+12. [Authentication and OAuth In Depth](./authentication-and-oauth.md)
+13. [API Docs and Clients](./api-docs-and-clients.md)
+14. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
+15. [Data and ORM](./data-and-orm.md)
+16. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
+17. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
+18. [ORM Relations](./orm-relations.md)
+19. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
+20. [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md)
+21. [Events In Depth](./events-and-domain-events-in-depth.md)
+22. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
+23. [Queues and Background Jobs](./queues-and-background-jobs.md)
 
 ## Guide map
 
 ### Fundamentals
 
 - [Getting Started](./getting-started.md) introduces the CLI, the generated workspace, and the first running app.
+- [Authentication](./authentication.md) introduces session auth, JWT auth, and the current OAuth flow without assuming you already know which one your app needs.
 - [Custom CLI Schematics](./custom-cli-schematics.md) shows how to teach `assegai generate` about company-specific scaffolds.
 - [Events and Domain Events](./events-and-domain-events.md) shows how to publish events, listen with `#[OnEvent(...)]`, and keep feature code decoupled without moving straight to queues.
 - [Frontend with Web Components](./frontend-with-web-components.md) shows where front-end code should live, how the first-party Web Components runtime works, and how to upgrade older `main.js` projects.
@@ -49,14 +54,16 @@ They focus on the tasks most people need first:
 
 ### Techniques
 
-These guides are about working style and day-to-day delivery rather than one isolated framework surface.
+This section is about working style and day-to-day delivery rather than one isolated framework surface.
 
+- [Build a Kitchen Orders API](./tutorial-build-a-kitchen-orders-api.md) is the first end-to-end tutorial and teaches the primary Assegai workflow in one pass.
 - [Building a Feature](./building-a-feature.md) shows the happy path from scaffolded resource to a real feature.
 - [Custom CLI Schematics](./custom-cli-schematics.md) shows how to create local and package-backed generators for your own domain.
 - [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md) goes deeper into manifest design, token usage, combined tokens, and non-PHP outputs.
 - [Events In Depth](./events-and-domain-events-in-depth.md) goes deeper into wildcard behavior, readiness, naming, and the boundary between events and queues.
 - [Frontend with Web Components](./frontend-with-web-components.md) shows the supported front-end workflow for `.wc.ts` files, `serve --dev`, and legacy-project upgrades.
 - [Request Data and Validation](./request-data-and-validation.md) shows how to keep transport concerns at the edge with DTOs and pipes.
+- [Authentication and OAuth In Depth](./authentication-and-oauth.md) goes deeper into strategy selection, route ownership, and provider-backed login flows.
 - [API Docs and Clients](./api-docs-and-clients.md) covers `/docs`, `/openapi.json`, Postman export, and the TypeScript client generator.
 - [Pages, Components, HTMX, and Web Components](./pages-and-components.md) covers server-rendered UI patterns and the new Web Components workflow.
 - [Data and ORM](./data-and-orm.md) is the ORM map, including the practical techniques that keep data-heavy features maintainable.
@@ -112,7 +119,7 @@ Assegai is more than one package. The current public organization and guide surf
 
 - `assegaiphp/console` for project scaffolding and day-to-day CLI workflows
 - `assegaiphp/core` for modules, controllers, providers, routing, rendering, guards, interceptors, and pipes
-- `assegaiphp/auth` for session and JWT authentication strategies that you can wire into your own login flow
+- `assegaiphp/auth` for session, JWT, and provider-backed OAuth authentication strategies that you can wire into your own login flow
 - `assegaiphp/events` for in-process domain events and listener registration
 - `assegaiphp/orm` for entity mapping and repository-backed data access
 - `assegaiphp/validation` for DTO validation attributes
@@ -132,4 +139,4 @@ If your app is data-backed, the ORM reading path is:
 
 ## Notes on accuracy
 
-These docs intentionally prefer verified behavior over broad claims. Where a feature is scaffolded but still benefits from a manual follow-up step, the guide says so directly.
+The writing here intentionally prefers verified behavior over broad claims. Where a feature is scaffolded but still benefits from a manual follow-up step, the guide says so directly.

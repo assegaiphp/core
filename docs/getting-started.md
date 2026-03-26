@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide assumes you are new to Assegai.
+Start here if you are new to Assegai.
 
 If you can install a Composer package and run a PHP command, you can follow along. The goal is to get you to a running project first, then explain the pieces as they appear.
 

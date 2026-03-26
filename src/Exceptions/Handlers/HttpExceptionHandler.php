@@ -51,17 +51,21 @@ class HttpExceptionHandler implements ExceptionHandlerInterface
     $isProduction = Config::environment() === EnvironmentType::PRODUCTION;
 
     $heading = match ($statusCode) {
+      403 => 'Forbidden',
+      404 => 'Page not found',
       405 => 'Method not allowed',
       500 => 'Internal server error',
-      default => 'Page not found',
+      default => HttpStatus::fromInt($statusCode)->name,
     };
 
     $message = match ($statusCode) {
-      405 => 'The request reached the right route, but this HTTP method is not allowed there.',
-      500 => 'Something went wrong while processing this request. Try again in a moment.',
-      default => $isProduction
+      403 => 'You do not have permission to access this page.',
+      404 => $isProduction
         ? 'The requested page could not be found.'
         : ($message !== '' ? $message : 'The requested page could not be found.'),
+      405 => 'The request reached the right route, but this HTTP method is not allowed there.',
+      500 => 'Something went wrong while processing this request. Try again in a moment.',
+      default => $message !== '' ? $message : 'An unexpected HTTP error occurred.',
     };
 
     $statusName = HttpStatus::fromInt($statusCode)->name;

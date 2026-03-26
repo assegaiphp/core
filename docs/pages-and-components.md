@@ -1,6 +1,6 @@
 # Pages and Components
 
-This guide is about the HTML side of Assegai.
+This page covers the HTML side of Assegai.
 
 You do not need a SPA or a lot of browser code to build useful pages. The same app can render HTML on the server, add HTMX where it helps, and hydrate custom elements only when a piece of UI needs browser-side behavior.
 
