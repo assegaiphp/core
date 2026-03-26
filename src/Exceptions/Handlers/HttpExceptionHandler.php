@@ -2,8 +2,11 @@
 
 namespace Assegai\Core\Exceptions\Handlers;
 
+use Assegai\Core\Config;
+use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
+use Assegai\Core\Exceptions\Handlers\Support\FrameworkErrorPageRenderer;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
 use Assegai\Core\Http\HttpStatus;
@@ -34,54 +37,38 @@ class HttpExceptionHandler implements ExceptionHandlerInterface
   public function handle(Throwable $exception): void
   {
     $statusCode = 500;
+    $message = 'Something went wrong while processing this request.';
 
     if ($exception instanceof HttpException) {
       $statusCode = $exception->getStatus()->code;
+      $message = $exception->getMessage();
 
       error_log($exception->getMessage() . ' in ' . $exception->getFile() . ' on line ' . $exception->getLine() . PHP_EOL . $exception->getTraceAsString() . PHP_EOL . PHP_EOL, 0);
     }
 
     $this->logger->error($exception->getMessage());
 
-    $content = match ($statusCode) {
-      405 => <<<CONTENT
-  <h1>Error 405 - Method Not Allowed</h1>
-  <p>Sorry, the method you are trying to use is not allowed on this server.</p>
-CONTENT,
-      500 => <<<CONTENT
-  <h1>500 - Internal Server Error</h1>
-  <p>Sorry, something went wrong. Please try again later.</p>
-CONTENT,
-      default => <<<CONTENT
-  <h1>404 - Page Not Found</h1>
-  <p>{$exception->getMessage()}</p>
-CONTENT,
+    $isProduction = Config::environment() === EnvironmentType::PRODUCTION;
+
+    $heading = match ($statusCode) {
+      405 => 'Method not allowed',
+      500 => 'Internal server error',
+      default => 'Page not found',
+    };
+
+    $message = match ($statusCode) {
+      405 => 'The request reached the right route, but this HTTP method is not allowed there.',
+      500 => 'Something went wrong while processing this request. Try again in a moment.',
+      default => $isProduction
+        ? 'The requested page could not be found.'
+        : ($message !== '' ? $message : 'The requested page could not be found.'),
     };
 
     $statusName = HttpStatus::fromInt($statusCode)->name;
-    $body = <<<HTML
-  <head>
-      <title>Error $statusCode - $statusName</title>
-  </head>
-  <style>
-      body {
-          background-color: #110e1e;
-          color: white;
-          font-family: Arial, sans-serif;
-          text-align: center;
-          padding: 50px;
-      }
-      h1 {
-          font-size: 3em;
-          color: #92509f;
-      }
-      img {
-          width: 200px;
-      }
-  </style>
-  <img src="/images/logo.png" alt="Logo" width="200">
-  $content
-HTML;
+    $details = $isProduction || $statusCode === 404
+      ? null
+      : basename($exception->getFile()) . ':' . $exception->getLine();
+    $body = FrameworkErrorPageRenderer::render($statusCode, $statusName, $heading, $message, $details);
 
     $this->emitErrorResponse($body, ContentType::HTML, $statusCode);
   }

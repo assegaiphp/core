@@ -88,8 +88,8 @@ class DocumentProperties
      * @param array<int, string|array<int, string>> $links
      * @param array<int, string> $headScripts
      * @param array<int, string> $bodyScripts
-     * @param array<int, string> $headScriptUrls
-     * @param array<int, string> $bodyScriptUrls
+     * @param array<int, string|array<string, bool|int|float|string|null>> $headScriptUrls
+     * @param array<int, string|array<string, bool|int|float|string|null>> $bodyScriptUrls
      * @param string $base
      * @param string $lang The site's language
      * @param array<int, string> $favicon The link to the site's favicon
@@ -137,8 +137,25 @@ class DocumentProperties
             base: array_key_exists('base', $props) ? (string)$props['base'] : (string)($documentConfig['base'] ?? static::DEFAULT_BASE),
             lang: array_key_exists('lang', $props) ? (string)$props['lang'] : (string)($documentConfig['lang'] ?? static::DEFAULT_LANG),
             favicon: static::resolveFavicon($documentConfig, $props),
-            htmxLink: array_key_exists('htmxLink', $props) ? (string)$props['htmxLink'] : (string)($documentConfig['htmxLink'] ?? ''),
+            htmxLink: static::resolveHtmxLink($documentConfig, $props),
         );
+    }
+
+    /**
+     * @param array<string, mixed> $documentConfig
+     * @param array<string, mixed> $props
+     */
+    protected static function resolveHtmxLink(array $documentConfig, array $props): string
+    {
+        if (array_key_exists('htmxLink', $props)) {
+            return (string)$props['htmxLink'];
+        }
+
+        if (array_key_exists('htmxLink', $documentConfig)) {
+            return (string)$documentConfig['htmxLink'];
+        }
+
+        return self::DEFAULT_HTMX_LINK . self::HTMX_VERSION;
     }
 
     /**
@@ -359,8 +376,8 @@ class DocumentProperties
     {
         $html = '';
 
-        foreach ($this->headScriptUrls as $url) {
-            $html .= $this->getIndent(2) . "<script defer src='$url'></script>" . PHP_EOL;
+        foreach ($this->headScriptUrls as $scriptDefinition) {
+            $html .= $this->renderExternalScriptTag($scriptDefinition, 2, true);
         }
 
         return $html;
@@ -407,10 +424,117 @@ class DocumentProperties
     {
         $html = '';
 
-        foreach ($this->bodyScriptUrls as $url) {
-            $html .= "<script src='$url' defer></script>";
+        foreach ($this->bodyScriptUrls as $scriptDefinition) {
+            $html .= $this->renderExternalScriptTag($scriptDefinition);
         }
 
         return $html;
+    }
+
+    /**
+     * @param mixed $scriptDefinition
+     */
+    private function renderExternalScriptTag(mixed $scriptDefinition, int $indentLevel = 0, bool $deferFirst = false): string
+    {
+        $attributes = $this->normalizeScriptAttributes($scriptDefinition);
+
+        if ($attributes === null) {
+            return '';
+        }
+
+        if (!array_key_exists('defer', $attributes) && !array_key_exists('async', $attributes)) {
+            if ($deferFirst) {
+                $attributes = ['defer' => true, ...$attributes];
+            } else {
+                $attributes['defer'] = true;
+            }
+        }
+
+        $renderedAttributes = '';
+
+        foreach ($attributes as $name => $value) {
+            $attributeName = $this->sanitizeAttributeName($name);
+
+            if ($attributeName === null || $value === null || $value === false) {
+                continue;
+            }
+
+            if (!is_bool($value) && !is_int($value) && !is_float($value) && !is_string($value) && $value !== null) {
+                continue;
+            }
+
+            if ($value === true) {
+                $renderedAttributes .= ' ' . $attributeName;
+                continue;
+            }
+
+            $escapedValue = htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $renderedAttributes .= " $attributeName='$escapedValue'";
+        }
+
+        if (trim($renderedAttributes) === '') {
+            return '';
+        }
+
+        $indent = $indentLevel > 0 ? $this->getIndent($indentLevel) : '';
+        $lineEnding = $indentLevel > 0 ? PHP_EOL : '';
+
+        return $indent . "<script$renderedAttributes></script>" . $lineEnding;
+    }
+
+    /**
+     * @param mixed $scriptDefinition
+     * @return array<string, bool|int|float|string|null>|null
+     */
+    private function normalizeScriptAttributes(mixed $scriptDefinition): ?array
+    {
+        if (is_string($scriptDefinition)) {
+            $src = trim($scriptDefinition);
+
+            return $src === '' ? null : ['src' => $src];
+        }
+
+        if (!is_array($scriptDefinition)) {
+            return null;
+        }
+
+        $attributes = [];
+
+        foreach ($scriptDefinition as $name => $value) {
+            if (!is_string($name)) {
+                continue;
+            }
+
+            $attributes[$name] = $value;
+        }
+
+        if (!array_key_exists('src', $attributes)) {
+            return null;
+        }
+
+        $src = trim((string)$attributes['src']);
+
+        if ($src === '') {
+            return null;
+        }
+
+        $attributes['src'] = $src;
+
+        return $attributes;
+    }
+
+    private function sanitizeAttributeName(mixed $name): ?string
+    {
+        if (!is_string($name)) {
+            return null;
+        }
+
+        $trimmed = trim($name);
+
+        if ($trimmed === '' || !preg_match('/^[a-zA-Z_:][a-zA-Z0-9_:\.-]*$/', $trimmed)) {
+            return null;
+        }
+
+        return $trimmed;
     }
 }

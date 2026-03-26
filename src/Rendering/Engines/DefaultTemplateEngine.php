@@ -248,6 +248,9 @@ class DefaultTemplateEngine extends TemplateEngine
     $webComponentBundleTag = $this->loadWebComponentBundle();
     $escapedTitle = htmlspecialchars($this->title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $htmxLink ??= $documentProps->htmxLink ?? '';
+    $htmxScriptTag = is_string($htmxLink) && trim($htmxLink) !== ''
+      ? '<script src="' . htmlspecialchars(trim($htmxLink), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"></script>'
+      : '';
 
     return <<<START
 <!DOCTYPE html>
@@ -264,7 +267,7 @@ class DefaultTemplateEngine extends TemplateEngine
     $output
     $bodyScripts
     $webComponentBundleTag
-    <script src="{$htmxLink}"></script>
+    {$htmxScriptTag}
   </body>
 </html>
 START;

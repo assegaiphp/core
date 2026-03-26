@@ -13,6 +13,7 @@ use Assegai\Core\Exceptions\Http\NotImplementedException;
 use Assegai\Core\Injector;
 use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Interfaces\AppInterface;
+use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Forms\Enumerations\HttpMethod;
 use Assegai\Forms\Exceptions\FormException;
 use Assegai\Forms\Exceptions\InvalidFormException;
@@ -34,6 +35,27 @@ class Request implements RequestInterface
    * @var array
    */
   protected array $allHeaders = [];
+  /**
+   * @var array<string, mixed>
+   */
+  protected array $serverData = [];
+  /**
+   * @var array<string, mixed>
+   */
+  protected array $queryData = [];
+  /**
+   * @var array<string, mixed>
+   */
+  protected array $postData = [];
+  /**
+   * @var array<string, mixed>
+   */
+  protected array $cookieData = [];
+  /**
+   * @var array<string, mixed>
+   */
+  protected array $fileData = [];
+  protected ?string $rawBody = null;
   /**
    * @var null|AppInterface
    */
@@ -98,9 +120,18 @@ class Request implements RequestInterface
    * @throws HttpException
    * @throws InvalidFormException
    */
-  private final function __construct()
+  private final function __construct(?RuntimeRequestContext $context = null)
   {
-    $this->uri = $_GET['path'] ?? '';
+    $context ??= RuntimeRequestContext::fromGlobals();
+    $this->serverData = $context->server;
+    $this->queryData = $context->query;
+    $this->postData = $context->post;
+    $this->cookieData = $context->cookies;
+    $this->fileData = $context->files;
+    $this->rawBody = $context->rawBody;
+
+    $requestUri = (string) ($this->serverData['REQUEST_URI'] ?? '/');
+    $this->uri = (string) ($this->queryData['path'] ?? $requestUri);
     $parsedUrl = parse_url($this->uri);
 
     $scheme = null;
@@ -112,18 +143,20 @@ class Request implements RequestInterface
       extract($parsedUrl);
     }
 
-    $this->scheme = $scheme ?? ($_SERVER['REQUEST_SCHEME'] ?? 'http');
+    $this->scheme = $scheme ?? ((string) ($this->serverData['REQUEST_SCHEME'] ?? 'http'));
     $this->host = $this->resolveHostName($host);
     $this->path = $path;
-    $this->query = new RequestQuery();
+    $queryData = $this->queryData;
+    unset($queryData['path']);
+    $this->query = new RequestQuery((string) ($this->serverData['QUERY_STRING'] ?? ''), $queryData);
     $this->body = new stdClass();
-    $this->contentType = ContentType::tryFrom($_SERVER['CONTENT_TYPE'] ?? '') ?? match(true) {
+    $this->contentType = ContentType::tryFrom((string) ($this->serverData['CONTENT_TYPE'] ?? '')) ?? match(true) {
       ContentType::isURLEncodedForm() => ContentType::FORM_URL_ENCODED,
       ContentType::isMultipartForm() => ContentType::FORM_DATA,
       default => ContentType::HTML
     };
 
-    $this->requestMethod = match ($_SERVER['REQUEST_METHOD'] ?? '') {
+    $this->requestMethod = match ((string) ($this->serverData['REQUEST_METHOD'] ?? '')) {
       'POST'    => RequestMethod::POST,
       'PUT'     => RequestMethod::PUT,
       'PATCH'   => RequestMethod::PATCH,
@@ -140,7 +173,7 @@ class Request implements RequestInterface
       unset($this->body->path);
     }
 
-    foreach ($_SERVER as $key => $value) {
+    foreach ($this->serverData as $key => $value) {
       if (str_starts_with($key, 'HTTP_')) {
         $this->allHeaders[$key] = $value;
       }
@@ -166,6 +199,18 @@ class Request implements RequestInterface
    */
   public static function current(): Request
   {
+    $request = RuntimeContext::get(self::class);
+
+    if ($request instanceof self) {
+      return $request;
+    }
+
+    $request = RuntimeContext::get(RequestInterface::class);
+
+    if ($request instanceof self) {
+      return $request;
+    }
+
     $injector = Injector::getInstance();
     $request = $injector->get(self::class);
 
@@ -189,7 +234,18 @@ class Request implements RequestInterface
    */
   public static function createFromGlobals(): Request
   {
-    return new Request();
+    return new Request(RuntimeRequestContext::fromGlobals());
+  }
+
+  /**
+   * Creates a fresh request object from a runtime-provided request snapshot.
+   *
+   * @param RuntimeRequestContext $context
+   * @return Request
+   */
+  public static function createFromRuntimeContext(RuntimeRequestContext $context): Request
+  {
+    return new Request($context);
   }
 
   /**
@@ -272,6 +328,20 @@ class Request implements RequestInterface
    */
   public function header(string $name): string
   {
+    $normalizedName = strtoupper(str_replace('-', '_', $name));
+
+    if (isset($this->allHeaders["HTTP_$normalizedName"])) {
+      return (string) $this->allHeaders["HTTP_$normalizedName"];
+    }
+
+    if (isset($this->serverData["HTTP_$normalizedName"])) {
+      return (string) $this->serverData["HTTP_$normalizedName"];
+    }
+
+    if (isset($this->serverData[$normalizedName])) {
+      return (string) $this->serverData[$normalizedName];
+    }
+
     if (function_exists('apache_request_headers')) {
       $headers = apache_request_headers();
       if (isset($headers[$name])) {
@@ -313,7 +383,7 @@ class Request implements RequestInterface
    */
   public function getPath(): string
   {
-    return $this->path ?? $_SERVER['PATH_INFO'];
+    return $this->path ?? ($this->serverData['PATH_INFO'] ?? '/');
   }
 
   /**
@@ -322,7 +392,7 @@ class Request implements RequestInterface
    */
   public function path(): string
   {
-    return $_GET['path'] ?? '/';
+    return $this->uri !== '' ? $this->uri : '/';
   }
 
   /**
@@ -330,7 +400,7 @@ class Request implements RequestInterface
    */
   public function getLimit(): int
   {
-    $limit = $_GET['limit'] ?? Config::get('request')['DEFAULT_LIMIT'] ?? 10;
+    $limit = $this->query?->get('limit', Config::get('request')['DEFAULT_LIMIT'] ?? 10);
 
     return match(true) {
       is_int($limit) => $limit,
@@ -344,7 +414,7 @@ class Request implements RequestInterface
    */
   public function getSkip(): int
   {
-    $skip = $_GET['skip'] ?? Config::get('request')['DEFAULT_SKIP'] ?? 0;
+    $skip = $this->query?->get('skip', Config::get('request')['DEFAULT_SKIP'] ?? 0);
 
     return match (true) {
       is_int($skip) => $skip,
@@ -385,12 +455,12 @@ class Request implements RequestInterface
    */
   public function getCookies(?string $name = null): array|string
   {
-    return $_COOKIE[$name] ?? $_COOKIE;
+    return $name ? ($this->cookieData[$name] ?? '') : $this->cookieData;
   }
 
   public function getLang(): string
   {
-    return $_GET['lang'] ?? $_SESSION[App::LOCALE_ENV_KEY] ?? env(App::LOCALE_ENV_KEY) ?? App::getLocale();
+    return $this->query?->get('lang', $_SESSION[App::LOCALE_ENV_KEY] ?? env(App::LOCALE_ENV_KEY) ?? App::getLocale());
   }
 
   /**
@@ -422,7 +492,7 @@ class Request implements RequestInterface
    */
   public function getRemoteIp(): string
   {
-    return $_SERVER['REMOTE_ADDR'] ?? '::1';
+    return (string) ($this->serverData['REMOTE_ADDR'] ?? '::1');
   }
 
   /**
@@ -430,7 +500,7 @@ class Request implements RequestInterface
    */
   public function getProtocol(): string
   {
-    return $this->scheme ?? $_SERVER['REQUEST_SCHEME'];
+    return $this->scheme ?? ((string) ($this->serverData['REQUEST_SCHEME'] ?? 'http'));
   }
 
   /**
@@ -626,26 +696,26 @@ class Request implements RequestInterface
     # Check if content type is form
     if ($this->contentType === ContentType::FORM_DATA || $this->contentType === ContentType::FORM_URL_ENCODED) {
       $this->form = new Form(method: HttpMethod::tryFrom($this->getMethod()->value));
-      $hasFile = !empty($_FILES);
+      $hasFile = !empty($this->fileData);
 
       if ($hasFile) {
-        $this->setFile((object)$_FILES);
+        $this->setFile((object)$this->fileData);
       }
 
       $hasFormSubmission = $this->form->isSubmitted() || $hasFile;
 
       return (object) match(true) {
         $hasFormSubmission => $this->form->getData(),
-        default => $this->filterFormData(file_get_contents('php://input')),
+        default => $this->filterFormData($this->readRawBody()),
       };
     }
 
     $body = match ($this->getMethod()) {
-      RequestMethod::GET      => $_GET,
-      RequestMethod::POST     => !empty($_POST) ? $_POST : file_get_contents('php://input'),
+      RequestMethod::GET      => $this->queryData,
+      RequestMethod::POST     => !empty($this->postData) ? $this->postData : $this->readRawBody(),
       RequestMethod::PUT,
-      RequestMethod::PATCH    => file_get_contents('php://input'),
-      RequestMethod::DELETE   => !empty($_GET) ? $_GET : file_get_contents('php://input'),
+      RequestMethod::PATCH    => $this->readRawBody(),
+      RequestMethod::DELETE   => !empty($this->queryData) ? $this->queryData : $this->readRawBody(),
       RequestMethod::HEAD,
       RequestMethod::OPTIONS  => NULL,
     };
@@ -662,6 +732,20 @@ class Request implements RequestInterface
   }
 
   /**
+   * Returns the request body payload captured by the active runtime.
+   *
+   * @return string|false
+   */
+  private function readRawBody(): string|false
+  {
+    if (null !== $this->rawBody) {
+      return $this->rawBody;
+    }
+
+    return file_get_contents('php://input');
+  }
+
+  /**
    * Resolves the current request host from URL and proxy/server metadata.
    *
    * @param string|null $host
@@ -671,10 +755,10 @@ class Request implements RequestInterface
   {
     $candidates = [
       $host,
-      $_SERVER['HTTP_X_FORWARDED_HOST'] ?? null,
-      $_SERVER['HTTP_HOST'] ?? null,
-      $_SERVER['SERVER_NAME'] ?? null,
-      $_SERVER['REMOTE_HOST'] ?? null,
+      $this->serverData['HTTP_X_FORWARDED_HOST'] ?? null,
+      $this->serverData['HTTP_HOST'] ?? null,
+      $this->serverData['SERVER_NAME'] ?? null,
+      $this->serverData['REMOTE_HOST'] ?? null,
       'localhost',
     ];
 

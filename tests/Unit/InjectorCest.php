@@ -16,11 +16,14 @@ use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\ModuleManager;
+use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Session;
+use Mocks\ExplicitRequestScopedService;
 use Mocks\FrameworkAwareAppModule;
 use Mocks\FrameworkAwareContractsService;
 use Mocks\FrameworkAwareService;
+use Mocks\RequestCapturingService;
 use ReflectionException;
 use ReflectionProperty;
 use Tests\Support\UnitTester;
@@ -31,8 +34,14 @@ class InjectorCest
   private string $composerConfigFilename = '';
   private string $sourceDirectory = '';
   private string $logsDirectory = '';
+  private string $configDirectory = '';
+  private string $appConfigFilename = '';
+  private string $projectConfigFilename = '';
   private bool $createdComposerConfig = false;
   private bool $createdSourceDirectory = false;
+  private bool $createdConfigDirectory = false;
+  private bool $createdAppConfig = false;
+  private bool $createdProjectConfig = false;
   private array $previousServer = [];
   private array $previousGet = [];
   private array $previousPost = [];
@@ -53,10 +62,18 @@ class InjectorCest
     $this->previousPost = $_POST;
     $this->previousFiles = $_FILES;
     $this->previousSessionSavePath = session_save_path();
-    chdir(dirname(__DIR__) . '/Unit/src_test');
+    $workspace = dirname(__DIR__) . '/Unit/src_test';
+    if (!is_dir($workspace)) {
+      mkdir($workspace, 0777, true);
+    }
+
+    chdir($workspace);
     $this->composerConfigFilename = getcwd() . '/composer.json';
     $this->sourceDirectory = getcwd() . '/src';
     $this->logsDirectory = getcwd() . '/logs';
+    $this->configDirectory = getcwd() . '/config';
+    $this->appConfigFilename = $this->configDirectory . '/default.php';
+    $this->projectConfigFilename = getcwd() . '/assegai.json';
     $this->createdComposerConfig = false;
     $this->createdSourceDirectory = false;
 
@@ -76,6 +93,17 @@ class InjectorCest
       mkdir($this->sourceDirectory, 0777, true);
       $this->createdSourceDirectory = true;
     }
+
+    if (!is_dir($this->configDirectory)) {
+      mkdir($this->configDirectory, 0777, true);
+      $this->createdConfigDirectory = true;
+    }
+
+    file_put_contents($this->appConfigFilename, "<?php\n\nreturn [];\n");
+    $this->createdAppConfig = true;
+
+    file_put_contents($this->projectConfigFilename, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $this->createdProjectConfig = true;
 
     $_SERVER['REQUEST_URI'] = '/';
     $_SERVER['REQUEST_METHOD'] = 'GET';
@@ -99,6 +127,8 @@ class InjectorCest
     $this->resetSingleton(Router::class);
     $this->resetSingleton(Request::class);
     $this->resetSingleton(Response::class);
+    $this->resetSingleton(Responder::class);
+    RuntimeContext::flush();
 
     header_remove();
     http_response_code(200);
@@ -112,6 +142,8 @@ class InjectorCest
     $this->resetSingleton(Router::class);
     $this->resetSingleton(Request::class);
     $this->resetSingleton(Response::class);
+    $this->resetSingleton(Responder::class);
+    RuntimeContext::flush();
 
     header_remove();
     http_response_code(200);
@@ -138,8 +170,20 @@ class InjectorCest
       unlink($this->composerConfigFilename);
     }
 
+    if ($this->createdAppConfig && is_file($this->appConfigFilename)) {
+      unlink($this->appConfigFilename);
+    }
+
+    if ($this->createdProjectConfig && is_file($this->projectConfigFilename)) {
+      unlink($this->projectConfigFilename);
+    }
+
     if ($this->createdSourceDirectory && is_dir($this->sourceDirectory)) {
       rmdir($this->sourceDirectory);
+    }
+
+    if ($this->createdConfigDirectory && is_dir($this->configDirectory)) {
+      rmdir($this->configDirectory);
     }
 
     chdir($this->previousWorkingDirectory);
@@ -150,8 +194,6 @@ class InjectorCest
     $service = Injector::getInstance()->resolve(FrameworkAwareService::class);
 
     $I->assertInstanceOf(FrameworkAwareService::class, $service);
-    $I->assertSame(Request::getInstance(), $service->request);
-    $I->assertSame(Response::getInstance(), $service->response);
     $I->assertSame(Request::current(), $service->request);
     $I->assertSame(Response::current(), $service->response);
     $I->assertInstanceOf(ProjectConfig::class, $service->projectConfig);
@@ -168,14 +210,12 @@ class InjectorCest
     $I->assertInstanceOf(App::class, $app);
     $I->assertSame($app, $injector->get(App::class));
     $I->assertSame($app, $injector->get(AppInterface::class));
-    $I->assertSame(Request::getInstance(), $injector->get(Request::class));
-    $I->assertSame(Response::getInstance(), $injector->get(Response::class));
-    $I->assertSame(Request::getInstance(), $injector->get(RequestInterface::class));
-    $I->assertSame(Response::getInstance(), $injector->get(ResponseInterface::class));
-    $I->assertSame($injector->get(Responder::class), Responder::current());
-    $I->assertSame($injector->get(ResponderInterface::class), Responder::current());
-    $I->assertSame(Request::current(), $injector->get(Request::class));
-    $I->assertSame(Response::current(), $injector->get(Response::class));
+    $I->assertSame(Request::current(), RuntimeContext::get(Request::class));
+    $I->assertSame(Response::current(), RuntimeContext::get(Response::class));
+    $I->assertSame(Request::current(), RuntimeContext::get(RequestInterface::class));
+    $I->assertSame(Response::current(), RuntimeContext::get(ResponseInterface::class));
+    $I->assertSame(Responder::current(), RuntimeContext::get(Responder::class));
+    $I->assertSame(Responder::current(), RuntimeContext::get(ResponderInterface::class));
     $I->assertInstanceOf(ProjectConfig::class, $injector->get(ProjectConfig::class));
     $I->assertSame(Session::getInstance(), $injector->get(Session::class));
   }
@@ -187,13 +227,13 @@ class InjectorCest
     $moduleManager->buildModuleTokensList(FrameworkAwareAppModule::class);
     $moduleManager->buildProviderTokensList();
 
-    $service = Injector::getInstance()->get(FrameworkAwareService::class);
+    $service = Injector::getInstance()->resolve(FrameworkAwareService::class);
     $providerTokens = $moduleManager->getProviderTokens();
 
     $I->assertArrayNotHasKey(ProjectConfig::class, $providerTokens);
     $I->assertInstanceOf(FrameworkAwareService::class, $service);
-    $I->assertSame(Request::getInstance(), $service->request);
-    $I->assertSame(Response::getInstance(), $service->response);
+    $I->assertSame(Request::current(), $service->request);
+    $I->assertSame(Response::current(), $service->response);
     $I->assertInstanceOf(ProjectConfig::class, $service->projectConfig);
     $I->assertSame(Session::getInstance(), $service->session);
   }
@@ -214,15 +254,13 @@ class InjectorCest
     $refreshRequestScope->invoke($app);
 
     $secondService = $injector->resolve(FrameworkAwareService::class);
-    $currentRequest = Request::getInstance();
-    $currentResponse = Response::getInstance();
+    $currentRequest = Request::current();
+    $currentResponse = Response::current();
 
     $I->assertNotSame($firstService, $secondService);
     $I->assertNotSame($firstService->request, $secondService->request);
-    $I->assertSame($currentRequest, $injector->get(Request::class));
-    $I->assertSame($currentResponse, $injector->get(Response::class));
-    $I->assertSame(Request::current(), $currentRequest);
-    $I->assertSame(Response::current(), $currentResponse);
+    $I->assertSame($currentRequest, RuntimeContext::get(Request::class));
+    $I->assertSame($currentResponse, RuntimeContext::get(Response::class));
     $I->assertSame($currentRequest, $secondService->request);
     $I->assertSame($currentResponse, $secondService->response);
     $I->assertSame('second', trim($currentRequest->getPath(), '/'));
@@ -237,10 +275,35 @@ class InjectorCest
     $I->assertInstanceOf(FrameworkAwareContractsService::class, $service);
     $I->assertSame(Request::current(), $service->request);
     $I->assertSame(Response::current(), $service->response);
-    $I->assertSame($service->request, Injector::getInstance()->get(RequestInterface::class));
-    $I->assertSame($service->response, Injector::getInstance()->get(ResponseInterface::class));
+    $I->assertSame($service->request, RuntimeContext::get(RequestInterface::class));
+    $I->assertSame($service->response, RuntimeContext::get(ResponseInterface::class));
     $I->assertInstanceOf(ResponseEmitterInterface::class, $service->emitter);
     $I->assertInstanceOf(ResponderInterface::class, $service->responder);
+  }
+
+  public function testRequestCapturingServicesResolveAsRequestScoped(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(FrameworkAwareAppModule::class);
+    $injector = Injector::getInstance();
+
+    $firstService = $injector->resolve(RequestCapturingService::class);
+    $firstExplicitScoped = $injector->resolve(ExplicitRequestScopedService::class);
+
+    $_SERVER['REQUEST_URI'] = '/second';
+    $_GET['path'] = '/second';
+
+    $refreshRequestScope = new \ReflectionMethod($app, 'refreshRequestScope');
+    $refreshRequestScope->invoke($app);
+
+    $secondService = $injector->resolve(RequestCapturingService::class);
+    $secondExplicitScoped = $injector->resolve(ExplicitRequestScopedService::class);
+
+    $I->assertNotSame($firstService, $secondService);
+    $I->assertNotSame($firstExplicitScoped, $secondExplicitScoped);
+    $I->assertSame('second', trim($secondService->request->getPath(), '/'));
+    $I->assertSame(Request::current(), $secondExplicitScoped->request);
+    $I->assertNull($injector->get(RequestCapturingService::class));
+    $I->assertNull($injector->get(ExplicitRequestScopedService::class));
   }
 
   public function testSessionLifecycleStartsAndClosesPerRequest(UnitTester $I): void

@@ -13,6 +13,7 @@ use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Attributes\Param;
 use Assegai\Core\Attributes\Req;
 use Assegai\Core\Attributes\Res;
+use Assegai\Core\Enumerations\Scope;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Container\ResolveException;
@@ -28,6 +29,7 @@ use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
 use Assegai\Core\Queues\Attributes\InjectQueue;
+use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Util\TypeManager;
 use Codeception\Attribute\Skip;
 use Psr\Log\LoggerInterface;
@@ -65,6 +67,14 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   protected array $reflectionAttributesCache = ['injectable' => [], 'module' => [], 'component' => [], 'controller' => []];
   /**
+   * @var array<class-string, Scope>
+   */
+  protected array $scopeCache = [];
+  /**
+   * @var array<class-string, bool>
+   */
+  protected array $requestScopedDependencyCache = [];
+  /**
    * @var LoggerInterface The logger instance.
    */
   protected LoggerInterface $logger;
@@ -92,6 +102,17 @@ final class Injector implements ITokenStoreOwner, IContainer
   }
 
   /**
+   * Creates a fresh injector instance and promotes it to the active singleton for compatibility.
+   *
+   * @return Injector
+   */
+  public static function createFresh(): Injector
+  {
+    self::$instance = new Injector();
+    return self::$instance;
+  }
+
+  /**
    * Resolves a dependency.
    *
    * @param string $id The dependency ID.
@@ -101,6 +122,12 @@ final class Injector implements ITokenStoreOwner, IContainer
    */
   public function resolve(string $id, array $attributeReflections = []): mixed
   {
+    $scopedInstance = RuntimeContext::get($id);
+
+    if (null !== $scopedInstance) {
+      return $scopedInstance;
+    }
+
     if ($this->has($id)) {
       return $this->get($id);
     }
@@ -117,6 +144,13 @@ final class Injector implements ITokenStoreOwner, IContainer
           continue;
         }
 
+        $scopedInstance = RuntimeContext::get($currentId);
+
+        if (null !== $scopedInstance) {
+          $resolvedInstances[$currentId] = $scopedInstance;
+          continue;
+        }
+
         if ($this->has($currentId)) {
           $resolvedInstances[$currentId] = $this->get($currentId);
           continue;
@@ -127,6 +161,7 @@ final class Injector implements ITokenStoreOwner, IContainer
           $this->reflectionClassCache[$currentId] = new ReflectionClass($currentId);
         }
         $reflectionClass = $this->reflectionClassCache[$currentId];
+        $scope = $this->getDependencyScope($currentId, $reflectionClass);
 
         $attributeReflections = $reflectionClass->getAttributes();
 
@@ -150,14 +185,14 @@ final class Injector implements ITokenStoreOwner, IContainer
           if ($reflectionClass->hasMethod('getInstance')) {
             /** @noinspection PhpUndefinedMethodInspection */
             $resolvedInstances[$currentId] = $this->bindHandlerAttributes($currentId::getInstance(), $attributeReflections);
-            $this->add($currentId, $resolvedInstances[$currentId]);
+            $this->storeResolvedDependency($currentId, $resolvedInstances[$currentId], $scope);
             continue;
           }
 
           if ($reflectionClass->hasMethod('newInstance')) {
             /** @noinspection PhpUndefinedMethodInspection */
             $resolvedInstances[$currentId] = $this->bindHandlerAttributes($currentId::newInstance(), $attributeReflections);
-            $this->add($currentId, $resolvedInstances[$currentId]);
+            $this->storeResolvedDependency($currentId, $resolvedInstances[$currentId], $scope);
             continue;
           }
 
@@ -170,7 +205,7 @@ final class Injector implements ITokenStoreOwner, IContainer
         // No constructor -> instantiate directly
         if (!$constructor) {
           $resolvedInstances[$currentId] = $this->bindHandlerAttributes(new $currentId, $attributeReflections);
-          $this->add($currentId, $resolvedInstances[$currentId]);
+          $this->storeResolvedDependency($currentId, $resolvedInstances[$currentId], $scope);
           continue;
         }
 
@@ -179,14 +214,14 @@ final class Injector implements ITokenStoreOwner, IContainer
         // No dependencies -> instantiate directly
         if (empty($parameters)) {
           $resolvedInstances[$currentId] = $this->bindHandlerAttributes(new $currentId, $attributeReflections);
-          $this->add($currentId, $resolvedInstances[$currentId]);
+          $this->storeResolvedDependency($currentId, $resolvedInstances[$currentId], $scope);
           continue;
         }
 
         // Resolve dependencies iteratively
         $dependencies = $this->resolveDependencies(id: $currentId, parameters: $parameters);
         $resolvedInstances[$currentId] = $this->bindHandlerAttributes($reflectionClass->newInstanceArgs($dependencies), $attributeReflections);
-        $this->add($currentId, $resolvedInstances[$currentId]);
+        $this->storeResolvedDependency($currentId, $resolvedInstances[$currentId], $scope);
       }
 
       return $resolvedInstances[$id] ?? null;
@@ -366,15 +401,31 @@ final class Injector implements ITokenStoreOwner, IContainer
 
       $typeName = $paramType->getName();
       $frameworkDependency = match ($typeName) {
+        Request::class,
         RequestInterface::class => Request::current(),
+        Response::class,
         ResponseInterface::class => Response::current(),
-        ResponseEmitterInterface::class => $this->get(ResponseEmitterInterface::class) ?? new PhpResponseEmitter(),
-        ResponderInterface::class => $this->get(ResponderInterface::class) ?? Responder::current(),
+        ResponseEmitterInterface::class => RuntimeContext::get(ResponseEmitterInterface::class)
+          ?? $this->get(ResponseEmitterInterface::class)
+          ?? new PhpResponseEmitter(),
+        Responder::class,
+        ResponderInterface::class => Responder::current(),
         default => null,
       };
 
       if (null !== $frameworkDependency) {
-        if (!$this->has($typeName)) {
+        if (
+          !in_array($typeName, [
+            Request::class,
+            RequestInterface::class,
+            Response::class,
+            ResponseInterface::class,
+            Responder::class,
+            ResponderInterface::class,
+            ResponseEmitterInterface::class,
+          ], true)
+          && !$this->has($typeName)
+        ) {
           $this->add($typeName, $frameworkDependency);
         }
 
@@ -413,7 +464,10 @@ final class Injector implements ITokenStoreOwner, IContainer
         throw new ResolveException(id: $id, message: "$resolveErrorPrefix — Unable to resolve $typeName");
       }
 
-      if (!$this->has($typeName)) {
+      if (
+        !in_array($this->getDependencyScope($typeName), [Scope::REQUEST, Scope::TRANSIENT], true)
+        && !$this->has($typeName)
+      ) {
         $this->add($typeName, $dependency);
       }
 
@@ -515,6 +569,157 @@ final class Injector implements ITokenStoreOwner, IContainer
     }
 
     return $moduleAttributes[0];
+  }
+
+  /**
+   * Returns the effective lifetime scope for a dependency.
+   *
+   * Dependencies that explicitly opt into `REQUEST` or `TRANSIENT` keep that scope.
+   * For default-scoped injectables, Assegai automatically upgrades them to `REQUEST`
+   * when their constructor graph captures request-bound framework objects.
+   *
+   * @param class-string $id
+   * @param ReflectionClass|null $reflectionClass
+   * @return Scope
+   * @throws ReflectionException
+   */
+  public function getDependencyScope(string $id, ?ReflectionClass $reflectionClass = null): Scope
+  {
+    if (isset($this->scopeCache[$id])) {
+      return $this->scopeCache[$id];
+    }
+
+    $reflectionClass ??= $this->reflectionClassCache[$id] ?? new ReflectionClass($id);
+    $declaredScope = $this->getDeclaredScope($reflectionClass);
+
+    if ($declaredScope !== Scope::DEFAULT) {
+      return $this->scopeCache[$id] = $declaredScope;
+    }
+
+    if ($this->capturesRequestScopedDependencies($reflectionClass)) {
+      return $this->scopeCache[$id] = Scope::REQUEST;
+    }
+
+    return $this->scopeCache[$id] = Scope::DEFAULT;
+  }
+
+  /**
+   * Persists a resolved dependency according to its effective lifetime.
+   *
+   * @param string $id
+   * @param mixed $instance
+   * @param Scope $scope
+   * @return void
+   */
+  private function storeResolvedDependency(string $id, mixed $instance, Scope $scope): void
+  {
+    match ($scope) {
+      Scope::REQUEST => RuntimeContext::set($id, $instance),
+      Scope::TRANSIENT => null,
+      default => $this->add($id, $instance),
+    };
+  }
+
+  /**
+   * Returns the declared scope from the Injectable attribute options.
+   *
+   * @param ReflectionClass $reflectionClass
+   * @return Scope
+   */
+  private function getDeclaredScope(ReflectionClass $reflectionClass): Scope
+  {
+    $className = $reflectionClass->getName();
+
+    if (!isset($this->reflectionAttributesCache['injectable'][$className])) {
+      $this->isInjectable($reflectionClass);
+    }
+
+    $attributes = $this->reflectionAttributesCache['injectable'][$className] ?? [];
+
+    if ($attributes === []) {
+      return Scope::DEFAULT;
+    }
+
+    $attribute = $attributes[0]->newInstance();
+    $options = $attribute->options ?? null;
+
+    if ($options instanceof ScopeOptions) {
+      return $options->scope;
+    }
+
+    if (is_array($options) && isset($options['scope']) && $options['scope'] instanceof Scope) {
+      return $options['scope'];
+    }
+
+    return Scope::DEFAULT;
+  }
+
+  /**
+   * Detects whether a dependency graph captures request-scoped framework objects.
+   *
+   * @param ReflectionClass $reflectionClass
+   * @param array<int, string> $stack
+   * @return bool
+   * @throws ReflectionException
+   */
+  private function capturesRequestScopedDependencies(ReflectionClass $reflectionClass, array $stack = []): bool
+  {
+    $className = $reflectionClass->getName();
+
+    if (isset($this->requestScopedDependencyCache[$className])) {
+      return $this->requestScopedDependencyCache[$className];
+    }
+
+    if (in_array($className, $stack, true)) {
+      return false;
+    }
+
+    $constructor = $reflectionClass->getConstructor();
+
+    if (!$constructor || $constructor->getParameters() === []) {
+      return $this->requestScopedDependencyCache[$className] = false;
+    }
+
+    $nextStack = [...$stack, $className];
+
+    foreach ($constructor->getParameters() as $parameter) {
+      $type = $parameter->getType();
+
+      if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) {
+        continue;
+      }
+
+      $dependencyName = $type->getName();
+
+      if (in_array($dependencyName, [
+        Request::class,
+        RequestInterface::class,
+        Response::class,
+        ResponseInterface::class,
+        Responder::class,
+        ResponderInterface::class,
+        ResponseEmitterInterface::class,
+      ], true)) {
+        return $this->requestScopedDependencyCache[$className] = true;
+      }
+
+      if (!class_exists($dependencyName) && !interface_exists($dependencyName)) {
+        continue;
+      }
+
+      $dependencyReflection = $this->reflectionClassCache[$dependencyName] ?? new ReflectionClass($dependencyName);
+      $this->reflectionClassCache[$dependencyName] = $dependencyReflection;
+
+      if ($this->isInjectable($dependencyReflection) && $this->getDependencyScope($dependencyName, $dependencyReflection) === Scope::REQUEST) {
+        return $this->requestScopedDependencyCache[$className] = true;
+      }
+
+      if ($this->isInjectable($dependencyReflection) && $this->capturesRequestScopedDependencies($dependencyReflection, $nextStack)) {
+        return $this->requestScopedDependencyCache[$className] = true;
+      }
+    }
+
+    return $this->requestScopedDependencyCache[$className] = false;
   }
 
   /**

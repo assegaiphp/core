@@ -427,6 +427,19 @@ class RequestAwareInterceptor implements IAssegaiInterceptor
   }
 }
 
+#[Injectable]
+class RequestAwareService
+{
+  public function __construct(private readonly Request $request)
+  {
+  }
+
+  public function currentPath(): string
+  {
+    return trim($this->request->getPath(), '/');
+  }
+}
+
 #[Controller(path: 'pipeline')]
 class RequestAwarePipelineController
 {
@@ -436,6 +449,34 @@ class RequestAwarePipelineController
   public function requestAware(): string
   {
     return 'request-aware';
+  }
+}
+
+#[Controller(path: 'provider-pipeline')]
+class RequestAwareProviderController
+{
+  public function __construct(private readonly RequestAwareService $service)
+  {
+  }
+
+  #[Get(':slug<slug>')]
+  public function requestAware(): string
+  {
+    return $this->service->currentPath();
+  }
+}
+
+#[Controller(path: 'exported-provider-pipeline')]
+class ExportedRequestAwareProviderController
+{
+  public function __construct(private readonly RequestAwareService $service)
+  {
+  }
+
+  #[Get(':slug<slug>')]
+  public function requestAware(): string
+  {
+    return $this->service->currentPath();
   }
 }
 
@@ -507,6 +548,30 @@ class ResponseMetadataAppModule
   controllers: [RequestAwarePipelineController::class],
 )]
 class RequestAwarePipelineAppModule
+{
+}
+
+#[Module(
+  controllers: [RequestAwareProviderController::class],
+  providers: [RequestAwareService::class],
+)]
+class RequestAwareProviderAppModule
+{
+}
+
+#[Module(
+  providers: [RequestAwareService::class],
+  exports: [RequestAwareService::class],
+)]
+class ExportedRequestAwareProviderModule
+{
+}
+
+#[Module(
+  imports: [ExportedRequestAwareProviderModule::class],
+  controllers: [ExportedRequestAwareProviderController::class],
+)]
+class RequestAwareExportedProviderAppModule
 {
 }
 

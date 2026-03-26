@@ -74,6 +74,88 @@ Two habits are worth keeping:
 - put request validation in DTOs, not in entity classes
 - keep the entity close to the actual table shape
 
+## Use enums when the data has a fixed set of states
+
+Enums are a good fit for columns such as:
+
+- order status
+- user role
+- payment provider
+- publication state
+
+Start with a PHP enum:
+
+```php
+<?php
+
+namespace Assegaiphp\BlogApi\Posts\Enums;
+
+enum PostStatus: string
+{
+  case DRAFT = 'draft';
+  case REVIEW = 'review';
+  case PUBLISHED = 'published';
+}
+```
+
+Then store the enum's backed value in the entity column:
+
+```php
+<?php
+
+namespace Assegaiphp\BlogApi\Posts\Entities;
+
+use Assegai\Orm\Attributes\Columns\Column;
+use Assegai\Orm\Attributes\Columns\PrimaryGeneratedColumn;
+use Assegai\Orm\Attributes\Entity;
+use Assegai\Orm\Queries\Sql\ColumnType;
+use Assegai\Orm\Traits\ChangeRecorderTrait;
+use Assegaiphp\BlogApi\Posts\Enums\PostStatus;
+
+#[Entity(table: 'posts', database: 'blog')]
+class PostEntity
+{
+  use ChangeRecorderTrait;
+
+  #[PrimaryGeneratedColumn]
+  public ?int $id = null;
+
+  #[Column(type: ColumnType::VARCHAR, nullable: false)]
+  public string $title = '';
+
+  #[Column(type: ColumnType::VARCHAR, nullable: false)]
+  public string $status = PostStatus::DRAFT->value;
+}
+```
+
+That is the safest current pattern because the database stores plain strings, which are easy to query and easy to migrate.
+
+In your service or DTO mapping code, convert between the enum and the stored value explicitly:
+
+```php
+<?php
+
+use Assegaiphp\BlogApi\Posts\Enums\PostStatus;
+
+public function publish(int $id): void
+{
+  $this->postsRepository->update(
+    ['id' => $id],
+    ['status' => PostStatus::PUBLISHED->value],
+  );
+}
+
+public function getStatusLabel(array $post): string
+{
+  return PostStatus::from($post['status'])->name;
+}
+```
+
+Two practical rules help here:
+
+- keep the entity column as the backed scalar value, not the enum object itself
+- keep enum conversion close to your service or DTO boundary so the persistence format stays obvious
+
 ## Inject the repository into the service
 
 ```php

@@ -219,6 +219,38 @@ TWIG
     $I->assertSame(['/js/runtime.js', '/js/home.js'], $props->headScriptUrls);
   }
 
+  public function testDocumentPropertiesAllowScriptAttributeMaps(UnitTester $I): void
+  {
+    unset($_ENV['app']);
+    $GLOBALS['config']['app'] = [
+      'title' => 'Configured App Title',
+      'description' => 'Configured app description',
+      'author' => 'Assegai Tests',
+      'lang' => 'fr',
+      'links' => ['/css/site.css'],
+      'favicon' => ['/assets/favicon.svg', 'image/svg+xml'],
+      'headScriptUrls' => [
+        '/js/runtime.js',
+        ['src' => '/js/head-module.js', 'type' => 'module', 'data-app' => 'demo'],
+      ],
+      'bodyScriptUrls' => [
+        '/js/body.js',
+        ['src' => '/js/body-module.js', 'type' => 'module', 'crossorigin' => 'anonymous'],
+      ],
+      'htmxLink' => '',
+    ];
+
+    $props = DocumentProperties::fromArray([]);
+
+    $headScriptTags = $props->generateHeadAssetTags();
+    $bodyScriptTags = $props->generateBodyScriptImportTags();
+
+    $I->assertStringContainsString("<script defer src='/js/runtime.js'></script>", $headScriptTags);
+    $I->assertStringContainsString("<script defer src='/js/head-module.js' type='module' data-app='demo'></script>", $headScriptTags);
+    $I->assertStringContainsString("<script src='/js/body.js' defer></script>", $bodyScriptTags);
+    $I->assertStringContainsString("<script src='/js/body-module.js' type='module' crossorigin='anonymous' defer></script>", $bodyScriptTags);
+  }
+
   public function testTheDefaultTemplateEngineUsesGlobalDocumentConfig(UnitTester $I): void
   {
     $componentClass = $this->componentClass;
@@ -236,6 +268,33 @@ TWIG
     $I->assertStringContainsString("<script defer src='/js/runtime.js'></script>", $html);
     $I->assertStringContainsString("<script src='/js/body.js' defer></script>", $html);
     $I->assertStringContainsString('<html lang="fr">', $html);
+  }
+
+  public function testTheDefaultTemplateEngineSkipsEmptyConfiguredBodyScriptUrls(UnitTester $I): void
+  {
+    unset($_ENV['app']);
+    $GLOBALS['config']['app'] = [
+      'title' => 'Configured App Title',
+      'description' => 'Configured app description',
+      'author' => 'Assegai Tests',
+      'lang' => 'fr',
+      'links' => ['/css/site.css'],
+      'headScriptUrls' => ['/js/runtime.js'],
+      'bodyScriptUrls' => [''],
+      'htmxLink' => '',
+      'favicon' => ['/assets/favicon.svg', 'image/svg+xml'],
+    ];
+
+    $componentClass = $this->componentClass;
+    $component = new $componentClass();
+    $engine = new DefaultTemplateEngine();
+
+    $html = $engine
+      ->setRootComponent($component)
+      ->render();
+
+    $I->assertStringNotContainsString("<script src='' defer></script>", $html);
+    $I->assertStringNotContainsString('<script src=""></script>', $html);
   }
 
   /**
