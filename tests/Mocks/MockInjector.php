@@ -5,6 +5,7 @@ namespace Mocks;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Config\ProjectConfig;
+use Assegai\Core\Enumerations\Scope;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
@@ -39,8 +40,33 @@ class FrameworkAwareContractsService
   }
 }
 
+#[Injectable]
+class RequestCapturingService
+{
+  public function __construct(
+    public Request $request,
+  )
+  {
+  }
+}
+
+#[Injectable(options: ['scope' => Scope::REQUEST, 'durable' => false])]
+class ExplicitRequestScopedService
+{
+  public function __construct(
+    public Request $request,
+  )
+  {
+  }
+}
+
 #[Module(
-  providers: [FrameworkAwareService::class, FrameworkAwareContractsService::class],
+  providers: [
+    FrameworkAwareService::class,
+    FrameworkAwareContractsService::class,
+    RequestCapturingService::class,
+    ExplicitRequestScopedService::class,
+  ],
   controllers: [],
   imports: [],
 )]

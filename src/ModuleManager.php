@@ -6,6 +6,7 @@ use Assegai\Core\Attributes\Component;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Consumers\MiddlewareConsumer;
+use Assegai\Core\Enumerations\Scope;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
@@ -109,9 +110,9 @@ class ModuleManager implements SingletonInterface
   /**
    * Constructs a ModuleManager
    */
-  private final function __construct()
+  private final function __construct(?Injector $injector = null)
   {
-    $this->injector = Injector::getInstance();
+    $this->injector = $injector ?? Injector::getInstance();
     $this->logger = new ConsoleLogger(new ConsoleOutput());
   }
 
@@ -127,6 +128,18 @@ class ModuleManager implements SingletonInterface
       self::$instance = new ModuleManager();
     }
 
+    return self::$instance;
+  }
+
+  /**
+   * Creates a fresh module manager and promotes it to the active singleton for compatibility.
+   *
+   * @param Injector|null $injector
+   * @return ModuleManager
+   */
+  public static function createFresh(?Injector $injector = null): ModuleManager
+  {
+    self::$instance = new ModuleManager($injector);
     return self::$instance;
   }
 
@@ -234,12 +247,18 @@ class ModuleManager implements SingletonInterface
 
         // Process exports
         foreach ($args['exports'] ?? [] as $export) {
-          if (!isset($processedTokens[$export])) {
+          if ($this->isModuleClass($export)) {
+            if (!isset($processedTokens[$export])) {
+              $stack[] = $export;
+            }
+
+            continue;
+          }
+
+          if ($this->shouldCacheExportedDependency($export)) {
             $resolvedExport = $this->injector->resolve($export);
 
-            if ($resolvedExport instanceof Module) {
-              $stack[] = $export;
-            } else {
+            if (null !== $resolvedExport) {
               $this->injector->add($export, $resolvedExport);
             }
           }
@@ -390,10 +409,14 @@ class ModuleManager implements SingletonInterface
       foreach ($args['providers'] ?? [] as $tokenId) {
         if ($provider = $this->validateProvider($tokenId)) {
           $this->providerTokens[$tokenId] = $provider;
-          $instance = $this->injector->resolve($tokenId);
+          $scope = $this->injector->getDependencyScope($tokenId, $provider);
 
-          if ($instance) {
-            $this->injector->add($tokenId, $instance);
+          if ($scope === \Assegai\Core\Enumerations\Scope::DEFAULT) {
+            $instance = $this->injector->resolve($tokenId);
+
+            if ($instance) {
+              $this->injector->add($tokenId, $instance);
+            }
           }
         }
       }
@@ -428,6 +451,23 @@ class ModuleManager implements SingletonInterface
   }
 
   /**
+   * Determines whether the given class is decorated with #[Injectable].
+   *
+   * @param ReflectionClass $reflectionClass
+   * @return bool
+   */
+  private function isInjectable(ReflectionClass $reflectionClass): bool
+  {
+    $className = $reflectionClass->getName();
+
+    if (!isset($this->attributesCache['injectable'][$className])) {
+      $this->attributesCache['injectable'][$className] = $reflectionClass->getAttributes(Injectable::class);
+    }
+
+    return !empty($this->attributesCache['injectable'][$className]);
+  }
+
+  /**
    * Loads the module attributes.
    *
    * @param ReflectionClass $reflectionClass The reflection class.
@@ -436,6 +476,54 @@ class ModuleManager implements SingletonInterface
   private function loadModuleAttributes(ReflectionClass $reflectionClass): array
   {
     return $reflectionClass->getAttributes(Module::class);
+  }
+
+  /**
+   * Determines whether the exported token is a module class that should be traversed.
+   *
+   * @param string $tokenId
+   * @return bool
+   */
+  private function isModuleClass(string $tokenId): bool
+  {
+    try {
+      if (!isset($this->reflectionCache['rootToken'][$tokenId])) {
+        $this->reflectionCache['rootToken'][$tokenId] = new ReflectionClass($tokenId);
+      }
+
+      return !empty($this->loadModuleAttributes($this->reflectionCache['rootToken'][$tokenId]));
+    } catch (ReflectionException) {
+      return false;
+    }
+  }
+
+  /**
+   * Determines whether an exported dependency should be cached at the application level.
+   *
+   * Request-scoped and transient providers stay lazy so reusable workers do not pin
+   * request-bound dependencies into the long-lived application graph.
+   *
+   * @param string $tokenId
+   * @return bool
+   * @throws ReflectionException
+   */
+  private function shouldCacheExportedDependency(string $tokenId): bool
+  {
+    if (!class_exists($tokenId) && !interface_exists($tokenId)) {
+      return true;
+    }
+
+    if (!isset($this->reflectionCache[$tokenId])) {
+      $this->reflectionCache[$tokenId] = new ReflectionClass($tokenId);
+    }
+
+    $reflectionClass = $this->reflectionCache[$tokenId];
+
+    if (!$this->isInjectable($reflectionClass)) {
+      return true;
+    }
+
+    return $this->injector->getDependencyScope($tokenId, $reflectionClass) === Scope::DEFAULT;
   }
 
   /**

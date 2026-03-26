@@ -51,7 +51,23 @@ class Log
       return;
     }
 
-    if (!@mkdir($directory, 0777, true)) {
+    $mkdirResult = false;
+    set_error_handler(static function (int $errno, string $errstr) use ($directory): bool {
+      if ($errno === E_WARNING && str_contains($errstr, 'File exists')) {
+        clearstatcache(true, $directory);
+        return is_dir($directory);
+      }
+
+      return false;
+    });
+
+    try {
+      $mkdirResult = mkdir($directory, 0777, true);
+    } finally {
+      restore_error_handler();
+    }
+
+    if (!$mkdirResult) {
       clearstatcache(true, $directory);
 
       if (!is_dir($directory)) {

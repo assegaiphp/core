@@ -48,9 +48,9 @@ class ControllerManager
   /**
    * ControllerManager constructor.
    */
-  private final function __construct()
+  private final function __construct(?ModuleManager $moduleManager = null)
   {
-    $this->moduleManager = ModuleManager::getInstance();
+    $this->moduleManager = $moduleManager ?? ModuleManager::getInstance();
   }
 
   /**
@@ -64,6 +64,18 @@ class ControllerManager
       self::$instance = new ControllerManager();
     }
 
+    return self::$instance;
+  }
+
+  /**
+   * Creates a fresh controller manager and promotes it to the active singleton for compatibility.
+   *
+   * @param ModuleManager|null $moduleManager
+   * @return ControllerManager
+   */
+  public static function createFresh(?ModuleManager $moduleManager = null): ControllerManager
+  {
+    self::$instance = new ControllerManager($moduleManager);
     return self::$instance;
   }
 

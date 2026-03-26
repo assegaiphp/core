@@ -24,6 +24,7 @@ use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
+use Assegai\Core\Http\Requests\RuntimeRequestContext;
 use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
 use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
@@ -34,9 +35,12 @@ use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\HttpRuntimeInterface;
 use Assegai\Core\Interfaces\IAssegaiInterceptor;
 use Assegai\Core\Interfaces\IPipeTransform;
+use Assegai\Core\Interfaces\OnApplicationBootstrapInterface;
+use Assegai\Core\Interfaces\OnModuleInitInterface;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
 use Assegai\Core\Runtimes\PhpHttpRuntime;
+use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Paths;
@@ -159,6 +163,15 @@ class App implements AppInterface
   protected array $profileResults = [];
   protected int $profilePrecision = 4;
   protected bool $sessionStartedForRequest = false;
+  protected bool $applicationGraphPrepared = false;
+  protected bool $middlewarePrepared = false;
+  protected bool $moduleInitInvoked = false;
+  protected bool $applicationBootstrapInvoked = false;
+  protected int $applicationGraphBuildCount = 0;
+  protected int $middlewareBuildCount = 0;
+  protected ?array $lifecycleTargets = null;
+  protected ?RuntimeRequestContext $runtimeRequestContext = null;
+  protected ?ResponseEmitterInterface $runtimeResponseEmitter = null;
   protected HttpRuntimeInterface $runtime;
   protected ResponseEmitterInterface $responseEmitter;
 
@@ -222,6 +235,7 @@ class App implements AppInterface
 
     if ($config instanceof MiddlewareConsumer) {
       $this->middlewareConsumer = $config;
+      $this->invalidateMiddlewareGraph();
     }
 
     return $this;
@@ -301,6 +315,39 @@ class App implements AppInterface
   }
 
   /**
+   * Binds a runtime-provided request snapshot for the next request cycle.
+   *
+   * @param RuntimeRequestContext|null $context
+   * @return void
+   */
+  public function setRuntimeRequestContext(?RuntimeRequestContext $context): void
+  {
+    $this->runtimeRequestContext = $context;
+  }
+
+  /**
+   * Binds a runtime-specific response emitter for the next request cycle.
+   *
+   * @param ResponseEmitterInterface|null $emitter
+   * @return void
+   */
+  public function setRuntimeResponseEmitter(?ResponseEmitterInterface $emitter): void
+  {
+    $this->runtimeResponseEmitter = $emitter;
+  }
+
+  /**
+   * Clears any runtime overrides that were bound for an alternate HTTP adapter.
+   *
+   * @return void
+   */
+  public function clearRuntimeOverrides(): void
+  {
+    $this->runtimeRequestContext = null;
+    $this->runtimeResponseEmitter = null;
+  }
+
+  /**
    * @inheritDoc
    */
   public function run(): void
@@ -334,33 +381,19 @@ class App implements AppInterface
         if ($this->withProfiling) {
           $time = $this->startupTime;
           $this->profileResults['Startup'] = microtime(true) - $time;
-        }
-        $this->resolveModules();
-        if ($this->withProfiling) {
-          $this->profileResults['Module Resolution'] = microtime(true) - $time;
           $time = microtime(true);
         }
-        $this->resolveProviders();
+        $this->prepareApplicationGraph();
         if ($this->withProfiling) {
-          $this->profileResults['Provider Resolution'] = microtime(true) - $time;
-          $time = microtime(true);
-        }
-        $this->resolveDeclarations();
-        if ($this->withProfiling) {
-          $this->profileResults['Declaration Resolution'] = microtime(true) - $time;
-          $time = microtime(true);
-        }
-        $this->resolveControllers();
-        if ($this->withProfiling) {
-          $this->profileResults['Constroller Resolution'] = microtime(true) - $time;
+          $this->profileResults['Application Graph Preparation'] = microtime(true) - $time;
           $time = microtime(true);
         }
         if ($this->handleGeneratedApiDocsRequest()) {
           return;
         }
-        $this->resolveMiddleware();
+        $this->prepareMiddlewareGraph();
         if ($this->withProfiling) {
-          $this->profileResults['Middleware Resolution'] = microtime(true) - $time;
+          $this->profileResults['Middleware Preparation'] = microtime(true) - $time;
           $time = microtime(true);
         }
         $this->handleRequest();
@@ -379,6 +412,8 @@ class App implements AppInterface
       } else {
         $this->exceptionHandler->handle($exception);
       }
+    } finally {
+      $this->clearRequestScopedRuntimeContext();
     }
   }
 
@@ -502,7 +537,7 @@ class App implements AppInterface
    */
   public function describeApi(): array
   {
-    $this->ensureControllerGraphResolved();
+    $this->prepareApplicationGraph();
 
     $generator = new OpenApiGenerator(
       $this->controllerManager,
@@ -522,13 +557,205 @@ class App implements AppInterface
    */
   protected function ensureControllerGraphResolved(): void
   {
-    if ($this->moduleManager->getModuleTokens() === []) {
-      $this->resolveModules();
+    $this->prepareApplicationGraph();
+  }
+
+  /**
+   * Builds the reusable application graph once per app instance.
+   *
+   * This covers module, provider, declaration, and controller metadata. Request-bound
+   * state is still refreshed for every request cycle in {@see refreshRequestScope()}.
+   *
+   * @return void
+   * @throws EntryNotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  protected function prepareApplicationGraph(): void
+  {
+    if ($this->applicationGraphPrepared) {
+      return;
     }
 
-    if ($this->controllers === []) {
-      $this->resolveControllers();
+    $this->resolveModules();
+    $this->resolveProviders();
+    $this->resolveDeclarations();
+    $this->resolveControllers();
+    $this->invokeModuleInitHooks();
+    $this->invokeApplicationBootstrapHooks();
+    $this->applicationGraphPrepared = true;
+    $this->applicationGraphBuildCount++;
+  }
+
+  /**
+   * Invokes module initialization hooks once the reusable app graph is ready.
+   *
+   * @return void
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  protected function invokeModuleInitHooks(): void
+  {
+    if ($this->moduleInitInvoked) {
+      return;
     }
+
+    foreach ($this->resolveLifecycleTargets() as $target) {
+      if ($target instanceof OnModuleInitInterface) {
+        $target->onModuleInit();
+      }
+    }
+
+    $this->moduleInitInvoked = true;
+  }
+
+  /**
+   * Invokes application bootstrap hooks once the reusable app graph is ready.
+   *
+   * @return void
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  protected function invokeApplicationBootstrapHooks(): void
+  {
+    if ($this->applicationBootstrapInvoked) {
+      return;
+    }
+
+    foreach ($this->resolveLifecycleTargets() as $target) {
+      if ($target instanceof OnApplicationBootstrapInterface) {
+        $target->onApplicationBootstrap();
+      }
+    }
+
+    $this->applicationBootstrapInvoked = true;
+  }
+
+  /**
+   * Resolves the default-scoped modules and providers that participate in app bootstrap.
+   *
+   * @return array<int, object>
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  protected function resolveLifecycleTargets(): array
+  {
+    if (is_array($this->lifecycleTargets)) {
+      return $this->lifecycleTargets;
+    }
+
+    $instances = [];
+    $seen = [];
+
+    foreach (array_keys($this->moduleManager->getModuleTokens()) as $moduleClass) {
+      $instance = $this->instantiateLifecycleModule($moduleClass);
+      $key = $moduleClass . '#' . spl_object_id($instance);
+
+      if (!isset($seen[$key])) {
+        $instances[] = $instance;
+        $seen[$key] = true;
+      }
+    }
+
+    foreach (array_keys($this->moduleManager->getProviderTokens()) as $providerClass) {
+      if (!$this->shouldParticipateInBootstrap($providerClass)) {
+        continue;
+      }
+
+      $instance = $this->injector->resolve($providerClass);
+
+      if (!is_object($instance)) {
+        continue;
+      }
+
+      $key = $providerClass . '#' . spl_object_id($instance);
+
+      if (!isset($seen[$key])) {
+        $instances[] = $instance;
+        $seen[$key] = true;
+      }
+    }
+
+    return $this->lifecycleTargets = $instances;
+  }
+
+  /**
+   * Resolves a module instance using the same dependency rules as middleware configuration.
+   *
+   * @param class-string $moduleClass
+   * @return object
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  protected function instantiateLifecycleModule(string $moduleClass): object
+  {
+    $reflectionClass = new ReflectionClass($moduleClass);
+    $constructor = $reflectionClass->getConstructor();
+
+    if (!$constructor || !$constructor->getParameters()) {
+      return $reflectionClass->newInstance();
+    }
+
+    $dependencies = [];
+
+    foreach ($constructor->getParameters() as $parameter) {
+      $type = $parameter->getType();
+
+      if (!$type || $type instanceof \ReflectionUnionType || $type->isBuiltin()) {
+        $dependencies[] = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null;
+        continue;
+      }
+
+      $dependencies[] = $this->injector->resolve($type->getName());
+    }
+
+    return $reflectionClass->newInstanceArgs($dependencies);
+  }
+
+  /**
+   * Determines whether the given provider class should participate in bootstrap hooks.
+   *
+   * Request-scoped and transient providers stay out of application bootstrap because they
+   * are not safe to pin into the long-lived application graph.
+   *
+   * @param class-string $providerClass
+   * @return bool
+   * @throws ReflectionException
+   */
+  protected function shouldParticipateInBootstrap(string $providerClass): bool
+  {
+    $reflectionClass = new ReflectionClass($providerClass);
+
+    return $this->injector->getDependencyScope($providerClass, $reflectionClass) === \Assegai\Core\Enumerations\Scope::DEFAULT;
+  }
+
+  /**
+   * Builds module-configured middleware once the controller graph is available.
+   *
+   * @return void
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  protected function prepareMiddlewareGraph(): void
+  {
+    if ($this->middlewarePrepared) {
+      return;
+    }
+
+    $this->resolveMiddleware();
+    $this->middlewarePrepared = true;
+    $this->middlewareBuildCount++;
+  }
+
+  /**
+   * Invalidates the cached middleware graph so later requests rebuild it.
+   *
+   * @return void
+   */
+  protected function invalidateMiddlewareGraph(): void
+  {
+    $this->middlewarePrepared = false;
   }
 
   /**
@@ -703,7 +930,10 @@ class App implements AppInterface
   protected function refreshRequestScope(): void
   {
     $this->closeSessionForCurrentRequest();
-    $this->request = Request::createFromGlobals();
+    $this->clearRequestScopedRuntimeContext();
+    $this->request = $this->runtimeRequestContext instanceof RuntimeRequestContext
+      ? Request::createFromRuntimeContext($this->runtimeRequestContext)
+      : Request::createFromGlobals();
     $this->request->setApp($this);
     Request::setInstance($this->request);
 
@@ -712,6 +942,7 @@ class App implements AppInterface
 
     $this->resetRequestScopedDependencies();
     $this->registerRequestScopedDependencies();
+    $this->responder->setEmitter($this->getActiveResponseEmitter());
     $this->sessionStartedForRequest = false;
   }
 
@@ -730,9 +961,6 @@ class App implements AppInterface
       ProjectConfig::class => $this->projectConfig,
       Session::class => Session::getInstance(),
       ArgumentsHost::class => $this->host,
-      Responder::class => $this->responder,
-      ResponderInterface::class => $this->responder,
-      ResponseEmitterInterface::class => $this->responseEmitter,
       Router::class => $this->router,
       ControllerManager::class => $this->controllerManager,
       ModuleManager::class => $this->moduleManager,
@@ -759,10 +987,51 @@ class App implements AppInterface
    */
   protected function registerRequestScopedDependencies(): void
   {
-    $this->injector->add(Request::class, $this->request);
-    $this->injector->add(Response::class, $this->response);
-    $this->injector->add(RequestInterface::class, $this->request);
-    $this->injector->add(ResponseInterface::class, $this->response);
+    $this->responder = Responder::create();
+    $this->responder->setTemplateEngine($this->templateEngine);
+    $this->responder->setEmitter($this->getActiveResponseEmitter());
+
+    RuntimeContext::set(Request::class, $this->request);
+    RuntimeContext::set(RequestInterface::class, $this->request);
+    RuntimeContext::set(Response::class, $this->response);
+    RuntimeContext::set(ResponseInterface::class, $this->response);
+    RuntimeContext::set(ResponseEmitterInterface::class, $this->getActiveResponseEmitter());
+    RuntimeContext::set(Responder::class, $this->responder);
+    RuntimeContext::set(ResponderInterface::class, $this->responder);
+  }
+
+  /**
+   * Returns the response emitter for the active request cycle.
+   *
+   * @return ResponseEmitterInterface
+   */
+  protected function getActiveResponseEmitter(): ResponseEmitterInterface
+  {
+    if ($this->runtimeResponseEmitter instanceof ResponseEmitterInterface) {
+      return $this->runtimeResponseEmitter;
+    }
+
+    $registeredEmitter = $this->injector->get(ResponseEmitterInterface::class);
+
+    if ($registeredEmitter instanceof ResponseEmitterInterface && $registeredEmitter !== $this->responseEmitter) {
+      return $registeredEmitter;
+    }
+
+    return $this->responseEmitter;
+  }
+
+  /**
+   * Clears request-scoped runtime context entries after the request cycle completes.
+   *
+   * RuntimeContext is now the backing store for all request-scoped framework objects
+   * and request-scoped userland providers. Flushing the whole active context ensures
+   * long-lived runtimes do not leak dependencies across requests.
+   *
+   * @return void
+   */
+  protected function clearRequestScopedRuntimeContext(): void
+  {
+    RuntimeContext::flush();
   }
 
   /**

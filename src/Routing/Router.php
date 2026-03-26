@@ -123,13 +123,17 @@ final class Router
     private array $globalFilters = [];
     private ?MiddlewareConsumer $middlewareConsumer = null;
 
-    private final function __construct()
+    private final function __construct(
+        ?Injector $injector = null,
+        ?ControllerManager $controllerManager = null,
+        ?ModuleManager $moduleManager = null,
+    )
     {
-        $this->injector = Injector::getInstance();
+        $this->injector = $injector ?? Injector::getInstance();
         $this->interceptorsConsumer = InterceptorsConsumer::getInstance();
         $this->guardsConsumer = GuardsConsumer::getInstance();
-        $this->controllerManager = ControllerManager::getInstance();
-        $this->moduleManager = ModuleManager::getInstance();
+        $this->controllerManager = $controllerManager ?? ControllerManager::getInstance();
+        $this->moduleManager = $moduleManager ?? ModuleManager::getInstance();
     }
 
     /**
@@ -141,6 +145,24 @@ final class Router
             self::$instance = new Router();
         }
 
+        return self::$instance;
+    }
+
+    /**
+     * Creates a fresh router and promotes it to the active singleton for compatibility.
+     *
+     * @param Injector|null $injector
+     * @param ControllerManager|null $controllerManager
+     * @param ModuleManager|null $moduleManager
+     * @return Router
+     */
+    public static function createFresh(
+        ?Injector $injector = null,
+        ?ControllerManager $controllerManager = null,
+        ?ModuleManager $moduleManager = null,
+    ): Router
+    {
+        self::$instance = new Router($injector, $controllerManager, $moduleManager);
         return self::$instance;
     }
 

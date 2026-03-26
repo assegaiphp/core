@@ -16,6 +16,7 @@ use Assegai\Core\Injector;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Engines\ViewEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
+use Assegai\Core\Runtimes\RuntimeContext;
 
 /**
  * Contains useful methods for managing the Response object.
@@ -92,6 +93,18 @@ class Responder implements ResponderInterface
    */
   public static function current(): Responder
   {
+    $responder = RuntimeContext::get(self::class);
+
+    if ($responder instanceof self) {
+      return $responder;
+    }
+
+    $responder = RuntimeContext::get(ResponderInterface::class);
+
+    if ($responder instanceof self) {
+      return $responder;
+    }
+
     $injector = Injector::getInstance();
     $responder = $injector->get(self::class);
 

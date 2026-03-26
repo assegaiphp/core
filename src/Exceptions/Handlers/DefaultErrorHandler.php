@@ -6,6 +6,7 @@ use Assegai\Core\Config;
 use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
+use Assegai\Core\Exceptions\Handlers\Support\FrameworkErrorPageRenderer;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use Assegai\Core\Http\HttpStatus;
 use Error;
@@ -26,6 +27,30 @@ class DefaultErrorHandler implements ErrorHandlerInterface
   public function handle(int $errno, string $errstr, string $errfile, int $errline): void
   {
     $status = HttpStatus::fromInt(500);
+
+    if ($this->shouldRenderHtmlErrorPage()) {
+      $message = match (Config::environment()) {
+        EnvironmentType::PRODUCTION => 'The framework hit an internal error while processing this request.',
+        default => $errstr !== '' ? $errstr : 'A PHP runtime error occurred.',
+      };
+
+      $details = Config::environment() === EnvironmentType::PRODUCTION
+        ? null
+        : basename($errfile) . ':' . $errline;
+
+      $this->emitErrorResponse(
+        FrameworkErrorPageRenderer::render(
+          statusCode: $status->code,
+          statusName: $status->name,
+          heading: 'Internal server error',
+          message: $message,
+          details: $details,
+        ),
+        ContentType::HTML,
+        $status->code,
+      );
+      return;
+    }
 
     $response = match (Config::environment()) {
       EnvironmentType::PRODUCTION => [

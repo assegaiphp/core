@@ -9,6 +9,7 @@ use Assegai\Core\Http\HttpStatus;
 use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
 use Assegai\Core\Injector;
+use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Routing\Router;
 use JetBrains\PhpStorm\ArrayShape;
 use stdClass;
@@ -86,6 +87,18 @@ class Response implements Stringable, ResponseInterface
      */
     public static function current(): Response
     {
+        $response = RuntimeContext::get(self::class);
+
+        if ($response instanceof self) {
+            return $response;
+        }
+
+        $response = RuntimeContext::get(ResponseInterface::class);
+
+        if ($response instanceof self) {
+            return $response;
+        }
+
         $injector = Injector::getInstance();
         $response = $injector->get(self::class);
 
