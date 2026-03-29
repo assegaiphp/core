@@ -2,7 +2,7 @@
 
 Relations are usually the first ORM topic that feels confusing.
 
-This guide focuses on the practical questions that matter most: where the foreign key lives, which side owns the write, and when related data appears on an entity.
+This page focuses on the practical questions that matter most: where the foreign key lives, which side owns the write, and when related data appears on an entity.
 
 The mental model is intentionally close to TypeORM:
 
@@ -268,7 +268,7 @@ $author = $authorsRepository->findOne([
   'where' => ['id' => 1],
 ])->getData();
 
-$post = $postsRepository->create([
+$post = $postsRepository->create((object) [
   'title' => 'Inserted with author',
 ]);
 
@@ -281,6 +281,8 @@ $result = $postsRepository->save(
 ```
 
 The key idea is that the owner-side property is what the ORM can translate into the stored key.
+
+If the relation starts from a DTO or other plain object instead, the same rule still applies: pass the object into `create(...)`, then attach the related entity on the owner side before `save(...)`.
 
 For updates, the same pattern applies with `UpdateOptions`:
 

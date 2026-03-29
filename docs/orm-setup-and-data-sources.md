@@ -1,6 +1,6 @@
 # ORM Setup and Data Sources
 
-This guide helps you get from "I have a database" to "my feature can inject a repository" without hand-building database connections in every service.
+This page takes you from "I have a database" to "my feature can inject a repository" without hand-building database connections in every service.
 
 It is about wiring the ORM into an Assegai app cleanly:
 

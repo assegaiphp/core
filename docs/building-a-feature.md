@@ -1,6 +1,6 @@
 # Building a Feature
 
-You do not need to understand every Assegai term before you start. This guide introduces the moving pieces in the order a normal app needs them.
+You do not need to understand every Assegai term before you start. The pieces below show up in the order a normal app usually needs them.
 
 It walks through the kind of workflow that makes Assegai feel fast in practice:
 
@@ -11,7 +11,7 @@ It walks through the kind of workflow that makes Assegai feel fast in practice:
 5. generate a page
 6. grow the app by composing modules
 
-The point is not just to produce a `posts` endpoint. It is to show why the framework's design choices help once the app becomes more than a demo.
+This walkthrough does more than produce a `posts` endpoint. It shows why the framework's design choices help once the app becomes more than a demo.
 
 ## Start from a new app
 
@@ -240,10 +240,9 @@ namespace Assegaiphp\PublishingSuite\Posts;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Orm\Attributes\InjectRepository;
 use Assegai\Orm\Management\Repository;
-use Assegai\Orm\Queries\QueryBuilder\Results\FindResult;
-use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
 use Assegaiphp\PublishingSuite\Posts\DTOs\CreatePostDTO;
 use Assegaiphp\PublishingSuite\Posts\Entities\PostEntity;
+use RuntimeException;
 
 #[Injectable]
 class PostsService
@@ -254,23 +253,33 @@ class PostsService
   ) {
   }
 
-  public function findAll(): FindResult
+  public function findAll(): array
   {
     return $this->postsRepository->find([
       'order' => ['id' => 'DESC'],
       'limit' => 20,
       'skip' => 0,
-    ]);
+    ])->getData();
   }
 
-  public function create(CreatePostDTO $dto): InsertResult
+  public function findById(int $id): object
   {
-    $post = $this->postsRepository->create([
-      'title' => $dto->title,
-      'body' => $dto->body,
-    ]);
+    return $this->postsRepository->findOne([
+      'where' => ['id' => $id],
+    ])->getFirst();
+  }
 
-    return $this->postsRepository->insert($post);
+  public function create(CreatePostDTO $dto): object
+  {
+    $post = $this->postsRepository->create($dto);
+
+    $saveResult = $this->postsRepository->save($post);
+
+    if ($saveResult->isError()) {
+      throw new RuntimeException('Failed to create post.', previous: $saveResult->getErrors()[0]);
+    }
+
+    return $post;
   }
 }
 ```
@@ -280,9 +289,14 @@ Two design benefits show up here:
 - dependency injection keeps the service easy to test
 - the controller does not need to know anything about persistence details
 
+Two practical defaults matter too:
+
+- DTOs are already plain PHP objects, so `create($dto)` and `update(..., $dto)` are usually the cleanest starting point
+- `save()` is usually a better default than `insert()` because it stays comfortable once relations and richer entity state enter the picture
+
 ## Let the controller stay simple
 
-After that change, the controller can return ORM results directly:
+After that change, the controller can return plain objects and arrays without owning the repository details:
 
 ```php
 <?php
@@ -294,8 +308,6 @@ use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Post;
 use Assegai\Core\Attributes\Param;
-use Assegai\Orm\Queries\QueryBuilder\Results\FindResult;
-use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
 use Assegaiphp\PublishingSuite\Posts\DTOs\CreatePostDTO;
 
 #[Controller('posts')]
@@ -306,19 +318,19 @@ readonly class PostsController
   }
 
   #[Get]
-  public function findAll(): FindResult
+  public function findAll(): array
   {
     return $this->postsService->findAll();
   }
 
   #[Get(':id<int>')]
-  public function findById(#[Param('id')] int $id): FindResult
+  public function findById(#[Param('id')] int $id): object
   {
     return $this->postsService->findById($id);
   }
 
   #[Post]
-  public function create(#[Body] CreatePostDTO $dto): InsertResult
+  public function create(#[Body] CreatePostDTO $dto): object
   {
     return $this->postsService->create($dto);
   }

@@ -139,10 +139,14 @@ use Assegaiphp\BlogApi\Posts\Enums\PostStatus;
 
 public function publish(int $id): void
 {
-  $this->postsRepository->update(
+  $result = $this->postsRepository->update(
     ['id' => $id],
-    ['status' => PostStatus::PUBLISHED->value],
+    (object) ['status' => PostStatus::PUBLISHED->value],
   );
+
+  if ($result->isError()) {
+    throw new RuntimeException('Failed to publish post.', previous: $result->getErrors()[0]);
+  }
 }
 
 public function getStatusLabel(array $post): string
@@ -183,25 +187,36 @@ That repository is the main API for day-to-day data access.
 
 ## Create records
 
-`create()` builds an entity-shaped object. `insert()` persists it.
+`create()` can build an entity-shaped object directly from a DTO or any other plain PHP object. For most feature code, `save()` is the best default write path.
 
 ```php
 <?php
 
-use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
 use Assegaiphp\BlogApi\Posts\DTOs\CreatePostDTO;
+use RuntimeException;
 
-public function create(CreatePostDTO $dto): InsertResult
+public function create(CreatePostDTO $dto): object
 {
-  $post = $this->postsRepository->create([
-    'title' => $dto->title,
-    'body' => $dto->body,
-    'isPublished' => false,
-  ]);
+  $post = $this->postsRepository->create($dto);
+  $post->isPublished = false;
 
-  return $this->postsRepository->insert($post);
+  $saveResult = $this->postsRepository->save($post);
+
+  if ($saveResult->isError()) {
+    throw new RuntimeException('Failed to create post.', previous: $saveResult->getErrors()[0]);
+  }
+
+  return $post;
 }
 ```
+
+That is usually the most natural service code in Assegai apps:
+
+- pass the DTO straight into `create()`
+- set any extra fields the DTO should not control directly
+- persist the entity with `save()`
+
+`insert()` is still available, but `save()` is the smoother day-to-day choice for most use cases because it keeps the write path consistent as relations and entity state become more involved.
 
 If you are inserting an entity graph that includes owner-side relations, prefer `save()` with `InsertOptions`. The relation guide covers that in detail.
 
@@ -220,23 +235,21 @@ Example service methods:
 ```php
 <?php
 
-use Assegai\Orm\Queries\QueryBuilder\Results\FindResult;
-
-public function findAll(): FindResult
+public function findAll(): array
 {
   return $this->postsRepository->find([
     'where' => ['isPublished' => true],
     'order' => ['id' => 'DESC'],
     'skip' => 0,
     'limit' => 20,
-  ]);
+  ])->getData();
 }
 
-public function findById(int $id): FindResult
+public function findById(int $id): object
 {
   return $this->postsRepository->findOne([
     'where' => ['id' => $id],
-  ]);
+  ])->getFirst();
 }
 
 public function countPublished(): int
@@ -249,23 +262,28 @@ public function countPublished(): int
 
 ## Update records
 
-Use `update()` when you already know the criteria:
+Use `update()` when you already know the criteria. In most apps, you can pass the DTO itself instead of tediously copying fields into an array:
 
 ```php
 <?php
 
-use Assegai\Orm\Queries\QueryBuilder\Results\UpdateResult;
 use Assegaiphp\BlogApi\Posts\DTOs\UpdatePostDTO;
+use RuntimeException;
 
-public function updateById(int $id, UpdatePostDTO $dto): UpdateResult
+public function updateById(int $id, UpdatePostDTO $dto): object
 {
-  return $this->postsRepository->update(
+  $updateResult = $this->postsRepository->update(
     ['id' => $id],
-    [
-      'title' => $dto->title,
-      'body' => $dto->body,
-    ],
+    $dto,
   );
+
+  if ($updateResult->isError()) {
+    throw new RuntimeException('Failed to update post.', previous: $updateResult->getErrors()[0]);
+  }
+
+  return $this->postsRepository->findOne([
+    'where' => ['id' => $id],
+  ])->getFirst();
 }
 ```
 
@@ -273,22 +291,42 @@ Use `save()` when you are working with an entity object and want insert-versus-u
 
 ## Delete records
 
-For direct deletes:
+The recommended default is a soft delete, because entities already ship with `ChangeRecorderTrait` and the ORM supports that flow out of the box.
 
 ```php
 <?php
 
-public function deleteById(int $id)
+use Assegai\Orm\Management\Options\RemoveOptions;
+use RuntimeException;
+
+public function deleteById(int $id): object
 {
-  return $this->postsRepository->delete(['id' => $id]);
+  $post = $this->postsRepository->findOne([
+    'where' => ['id' => $id],
+  ])->getFirst();
+
+  $removeResult = $this->postsRepository->softRemove(
+    $post,
+    new RemoveOptions(),
+  );
+
+  if ($removeResult->isError()) {
+    throw new RuntimeException('Failed to delete post.', previous: $removeResult->getErrors()[0]);
+  }
+
+  return $post;
 }
 ```
 
-The repository also exposes `remove()`, `softRemove()`, and `restore()` when your workflow needs them.
+Use a hard delete only when you are sure the row should be physically removed. The repository also exposes `remove()`, `delete()`, and `restore()` when your workflow needs them.
 
 ## Understand the result objects
 
-The ORM returns specialized result types instead of raw arrays:
+The ORM returns specialized result types instead of raw arrays. Those result objects are most useful inside repositories and services, where you need access to things like errors, totals, and raw database metadata.
+
+At the application boundary, most services read more naturally if they unwrap those results and return plain objects or arrays.
+
+The main result types are:
 
 - `FindResult`
 - `InsertResult`
@@ -309,9 +347,9 @@ The most useful methods are:
 - `getTotal()` for the total record count
 - `isEmpty()` for an easy emptiness check
 
-## Returning ORM results from controllers
+## Unwrapping ORM results before controllers
 
-Controllers can stay very thin because core already knows how to serialize these results:
+Controllers can stay very thin because the service can unwrap repository results before they reach HTTP:
 
 ```php
 <?php
@@ -323,8 +361,6 @@ use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Post;
 use Assegai\Core\Attributes\Param;
-use Assegai\Orm\Queries\QueryBuilder\Results\FindResult;
-use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
 use Assegaiphp\BlogApi\Posts\DTOs\CreatePostDTO;
 
 #[Controller('posts')]
@@ -335,19 +371,19 @@ readonly class PostsController
   }
 
   #[Get]
-  public function findAll(): FindResult
+  public function findAll(): array
   {
     return $this->postsService->findAll();
   }
 
   #[Get(':id<int>')]
-  public function findById(#[Param('id')] int $id): FindResult
+  public function findById(#[Param('id')] int $id): object
   {
     return $this->postsService->findById($id);
   }
 
   #[Post]
-  public function create(#[Body] CreatePostDTO $dto): InsertResult
+  public function create(#[Body] CreatePostDTO $dto): object
   {
     return $this->postsService->create($dto);
   }

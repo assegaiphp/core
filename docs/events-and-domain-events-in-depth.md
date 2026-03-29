@@ -1,6 +1,6 @@
 # Events In Depth
 
-This guide continues from [Events and Domain Events](./events-and-domain-events.md).
+Continue here after [Events and Domain Events](./events-and-domain-events.md).
 
 The goal here is not to show the first happy path again. The goal is to help you design events that stay useful once an application grows.
 
@@ -200,6 +200,23 @@ public function handle(array $payload): void
 
 Use that carefully. If a side effect is truly important, it is often better to let the failure surface or move the work to a durable queue.
 
+If you want to observe listener failures for logging, metrics, or alerts, attach a failure hook:
+
+```php
+use Assegai\Events\EventListenerFailure;
+
+$events->onFailure(function (EventListenerFailure $failure): void {
+  logger()->error('Event listener failed.', [
+    'event' => $failure->eventName,
+    'listener' => $failure->listenerId,
+    'message' => $failure->throwable->getMessage(),
+    'suppressed' => $failure->suppressed,
+  ]);
+});
+```
+
+Failure hooks are observational. They do not replace the normal exception policy.
+
 ## Events vs queues
 
 This is the most important boundary to understand.
@@ -224,6 +241,112 @@ A common pattern is:
 
 That keeps the main feature code clean while still giving you durable background processing where it matters.
 
+## Outbox-first durable events
+
+If you need stronger guarantees than in-process events can provide, an outbox is the safest next step.
+
+The package still exposes a small generic abstraction:
+
+```php
+use Assegai\Events\Interfaces\DurableOutboxStoreInterface;
+use Assegai\Events\Outbox\OutboxMessage;
+use Assegai\Events\Outbox\OutboxRecorder;
+use DateTimeImmutable;
+use Throwable;
+
+final class DatabaseOutboxStore implements DurableOutboxStoreInterface
+{
+  public function append(OutboxMessage $message): void
+  {
+    // persist to a durable store
+  }
+
+  public function leasePending(int $limit = 100, ?DateTimeImmutable $now = null): array
+  {
+    return [];
+  }
+
+  public function markDispatched(string|int $id, ?DateTimeImmutable $dispatchedAt = null): void
+  {
+  }
+
+  public function markFailed(string|int $id, string|Throwable $error, ?DateTimeImmutable $retryAt = null): void
+  {
+  }
+}
+
+$outbox = new OutboxRecorder(new DatabaseOutboxStore());
+$outbox->record(
+  new OrderCreated(orderId: 42, customerEmail: 'orders@example.com', organizationId: 10),
+  headers: ['source' => 'checkout'],
+);
+```
+
+For Assegai projects there is now a ready-made bridge:
+
+- `EventsOutboxModule` adds the durable bridge providers
+- `OrmOutboxStore` persists messages into the `event_outbox` table
+- `AssegaiOutboxRelayService` leases pending rows and publishes them to the queue connection configured in `assegai.json`
+
+Example configuration:
+
+```json
+{
+  "events": {
+    "outbox": {
+      "queue": "rabbitmq.events",
+      "batchSize": 100,
+      "retryDelaySeconds": 60
+    }
+  }
+}
+```
+
+Example module import:
+
+```php
+use Assegai\Events\Assegai\Outbox\EventsOutboxModule;
+
+#[Module(
+  imports: [EventsOutboxModule::class],
+)]
+final class AppModule
+{
+}
+```
+
+Example relay usage:
+
+```php
+use Assegai\Core\Attributes\Injectable;
+use Assegai\Events\Assegai\Outbox\AssegaiOutboxRelayService;
+
+#[Injectable]
+final class OutboxDrainService
+{
+  public function __construct(
+    private readonly AssegaiOutboxRelayService $relay,
+  )
+  {
+  }
+
+  public function flush(): void
+  {
+    $this->relay->relayPending();
+  }
+}
+```
+
+That gives you a cleaner production story:
+
+1. write domain data
+2. append an outbox message in the same transaction
+3. let a worker publish or queue it later
+
+Use plain in-process events for decoupling inside one request. Use an outbox or queue when delivery guarantees matter.
+
+One important boundary: the ORM-backed store gives you a real durable table and relay flow, but strict one-transaction outbox guarantees still depend on how your application manages database transactions. If you need the domain write and outbox append to share the exact same transaction, build the store around a repository or manager that participates in that same unit of work.
+
 ## Package configuration in Assegai
 
 The Assegai bridge reads its config from `assegai.json` under `events`.
@@ -245,6 +368,9 @@ Current supported options are:
 - `wildcards`
 - `delimiter`
 - `maxListeners`
+- `outbox.queue`
+- `outbox.batchSize`
+- `outbox.retryDelaySeconds`
 
 If the section is missing, the package falls back to sensible defaults.
 

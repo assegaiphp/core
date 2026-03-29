@@ -44,9 +44,12 @@ These are the habits that keep Assegai ORM code predictable as the app grows:
 - Start from a generated resource. `assegai g r posts` gives you DTOs, an entity, a module, a service, and a controller that already fit the framework's conventions.
 - Prefer module-level `data_source` defaults. It usually gives the best balance between explicitness and repetition.
 - Keep DTOs and entities separate. DTOs describe request shape; entities describe persistence shape.
+- Pass DTOs straight into `create($dto)` and `update(..., $dto)` unless you have a real reason to reshape the data first.
+- Prefer `save()` as the default write path for new records. Reach for `insert()` when you specifically want the lower-level insert-style flow.
 - Load relations explicitly at the query boundary. Ask for the relation you need in `find()` or `findOne()` instead of assuming it will always be present.
 - Write through the owning side of a relation. The property with `#[JoinColumn]` or `#[JoinTable]` is the side that controls the stored key.
-- Let controllers stay thin. Returning `FindResult`, `InsertResult`, or `UpdateResult` directly is a normal and supported pattern.
+- Let controllers stay thin. Repository result objects are useful inside the data layer, but service methods will usually be easier to work with if they return plain objects or arrays.
+- Prefer `softRemove(...)` as the default delete path when your entity already carries `ChangeRecorderTrait`.
 
 ## ORM guide map
 
@@ -69,10 +72,9 @@ namespace Assegaiphp\BlogApi\Posts;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Orm\Attributes\InjectRepository;
 use Assegai\Orm\Management\Repository;
-use Assegai\Orm\Queries\QueryBuilder\Results\FindResult;
-use Assegai\Orm\Queries\QueryBuilder\Results\InsertResult;
 use Assegaiphp\BlogApi\Posts\DTOs\CreatePostDTO;
 use Assegaiphp\BlogApi\Posts\Entities\PostEntity;
+use RuntimeException;
 
 #[Injectable]
 class PostsService
@@ -83,23 +85,26 @@ class PostsService
   ) {
   }
 
-  public function findAll(): FindResult
+  public function findAll(): array
   {
     return $this->postsRepository->find([
       'order' => ['id' => 'DESC'],
       'limit' => 20,
       'skip' => 0,
-    ]);
+    ])->getData();
   }
 
-  public function create(CreatePostDTO $dto): InsertResult
+  public function create(CreatePostDTO $dto): object
   {
-    $post = $this->postsRepository->create([
-      'title' => $dto->title,
-      'body' => $dto->body,
-    ]);
+    $post = $this->postsRepository->create($dto);
 
-    return $this->postsRepository->insert($post);
+    $saveResult = $this->postsRepository->save($post);
+
+    if ($saveResult->isError()) {
+      throw new RuntimeException('Failed to create post.', previous: $saveResult->getErrors()[0]);
+    }
+
+    return $post;
   }
 }
 ```

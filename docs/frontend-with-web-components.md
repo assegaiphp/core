@@ -1,6 +1,6 @@
 # Frontend with Web Components
 
-This guide is for application developers who are deciding where front-end code should live in an Assegai project.
+This page helps you decide where front-end code should live in an Assegai project.
 
 If your question is "Where do I put my JavaScript without turning the app into a pile of browser scripts?", start here.
 

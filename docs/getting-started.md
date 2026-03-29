@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide assumes you are new to Assegai.
+Start here if you are new to Assegai.
 
 If you can install a Composer package and run a PHP command, you can follow along. The goal is to get you to a running project first, then explain the pieces as they appear.
 
@@ -26,6 +26,8 @@ That gives you the commands you will use most often:
 - `assegai migration:*`
 
 If you later want `assegai generate` to understand your own company-specific feature scaffolds, start with [Custom CLI Schematics](./custom-cli-schematics.md). If you want the full manifest and token reference after that, continue with [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md).
+
+If you specifically want to run Assegai on the alternate long-lived runtime, continue with [Serving with OpenSwoole](./serving-with-openswoole.md).
 
 ## Create a new project
 
@@ -180,6 +182,8 @@ You can override that when needed:
 ```bash
 assegai serve --host 0.0.0.0 --port 8080
 ```
+
+If you want to try the long-lived runtime path instead of the default PHP server, read [Serving with OpenSwoole](./serving-with-openswoole.md).
 
 ## Development errors are readable
 

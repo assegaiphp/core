@@ -2,10 +2,15 @@
 
 namespace Assegai\Core\Exceptions\Handlers;
 
+use Assegai\Core\Config;
+use Assegai\Core\Enumerations\EnvironmentType;
+use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
+use Assegai\Core\Exceptions\Handlers\Support\FrameworkErrorPageRenderer;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
+use Assegai\Core\Http\HttpStatus;
 use ErrorException;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -48,9 +53,14 @@ class WhoopsErrorHandler implements ErrorHandlerInterface
         ob_start();
         $renderedBody = $whoops->handleException($error);
         $bufferedBody = ob_get_clean() ?: '';
+        $body = is_string($renderedBody) && $renderedBody !== '' ? $renderedBody : $bufferedBody;
+
+        if ($body === '') {
+            $body = $this->buildFallbackBody($error);
+        }
 
         $this->emitErrorResponse(
-            body: is_string($renderedBody) && $renderedBody !== '' ? $renderedBody : $bufferedBody,
+            body: $body,
             contentType: $this->getResponseContentType(),
             statusCode: $error instanceof HttpException ? $error->getStatus()->code : 500,
         );
@@ -64,6 +74,7 @@ class WhoopsErrorHandler implements ErrorHandlerInterface
     protected function createWhoopsRun(): Run
     {
         $whoops = new Run();
+        $whoops->allowQuit(false);
         $whoops->pushHandler(match ($this->getResponseMode()) {
             'plain' => new PlainTextHandler(),
             'json' => new JsonResponseHandler(),
@@ -105,11 +116,49 @@ class WhoopsErrorHandler implements ErrorHandlerInterface
 
     protected function isCliContext(): bool
     {
-        return PHP_SAPI === 'cli';
+        return PHP_SAPI === 'cli' && !$this->hasActiveHttpRequestContext();
     }
 
     protected function isHtmlRequest(): bool
     {
-        return ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET';
+        if ($this->hasActiveHttpRequestContext()) {
+            return $this->resolveActiveRequest()->getMethod() === RequestMethod::GET;
+        }
+
+        return ($_SERVER['REQUEST_METHOD'] ?? '') === RequestMethod::GET->value;
+    }
+
+    protected function buildFallbackBody(Throwable $error): string
+    {
+        $status = HttpStatus::fromInt($error instanceof HttpException ? $error->getStatus()->code : 500);
+
+        return match ($this->getResponseMode()) {
+            'plain' => Config::environment() === EnvironmentType::PRODUCTION
+                ? $status->name
+                : ($error->getMessage() !== '' ? $error->getMessage() : $status->name),
+            'json' => json_encode(match (Config::environment()) {
+                EnvironmentType::PRODUCTION => [
+                    'statusCode' => $status->code,
+                    'message' => $status->name,
+                ],
+                default => [
+                    'statusCode' => $status->code,
+                    'message' => $error->getMessage() !== '' ? $error->getMessage() : $status->name,
+                    'error' => $status->name,
+                ],
+            }),
+            default => FrameworkErrorPageRenderer::render(
+                statusCode: $status->code,
+                statusName: $status->name,
+                heading: 'Internal server error',
+                message: match (Config::environment()) {
+                    EnvironmentType::PRODUCTION => 'The framework hit an internal error while processing this request.',
+                    default => $error->getMessage() !== '' ? $error->getMessage() : 'A PHP runtime error occurred.',
+                },
+                details: Config::environment() === EnvironmentType::PRODUCTION
+                    ? null
+                    : basename($error->getFile()) . ':' . $error->getLine(),
+            ),
+        };
     }
 }

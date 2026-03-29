@@ -4,7 +4,7 @@ namespace Tests\Runtime;
 
 use Assegai\Core\Attributes\Controller;
 use Assegai\Core\Attributes\Injectable;
-use Assegai\Core\Attributes\Get;
+use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\Enumerations\Scope;
@@ -12,6 +12,7 @@ use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\AssegaiModuleInterface;
 use Assegai\Core\Interfaces\OnApplicationBootstrapInterface;
+use Assegai\Core\Interfaces\OnApplicationShutdownInterface;
 use Assegai\Core\Interfaces\OnModuleInitInterface;
 
 #[Module]
@@ -60,18 +61,20 @@ final class LifecycleCounters
 {
   public static int $moduleInitCalls = 0;
   public static int $applicationBootstrapCalls = 0;
+  public static int $applicationShutdownCalls = 0;
   public static int $requestScopedBootstrapCalls = 0;
 
   public static function reset(): void
   {
     self::$moduleInitCalls = 0;
     self::$applicationBootstrapCalls = 0;
+    self::$applicationShutdownCalls = 0;
     self::$requestScopedBootstrapCalls = 0;
   }
 }
 
 #[Injectable]
-final class LifecycleAwareProvider implements OnModuleInitInterface, OnApplicationBootstrapInterface
+final class LifecycleAwareProvider implements OnModuleInitInterface, OnApplicationBootstrapInterface, OnApplicationShutdownInterface
 {
   public function onModuleInit(): void
   {
@@ -81,6 +84,11 @@ final class LifecycleAwareProvider implements OnModuleInitInterface, OnApplicati
   public function onApplicationBootstrap(): void
   {
     LifecycleCounters::$applicationBootstrapCalls++;
+  }
+
+  public function onApplicationShutdown(): void
+  {
+    LifecycleCounters::$applicationShutdownCalls++;
   }
 }
 
@@ -124,6 +132,8 @@ use Assegai\Core\Http\Responses\Response as HttpResponse;
 use Assegai\Core\Injector;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Runtimes\RuntimeContext;
+use Assegai\Core\Runtimes\OpenSwoole\Interfaces\OpenSwooleHttpServerInterface;
+use Assegai\Core\Runtimes\OpenSwoole\Interfaces\OpenSwooleServerFactoryInterface;
 use Assegai\Core\Runtimes\OpenSwooleHttpRuntime;
 use Assegai\Core\Runtimes\PhpHttpRuntime;
 use Assegai\Core\Routing\Router;
@@ -296,6 +306,54 @@ class RuntimeCest
     $I->assertInstanceOf(OpenSwooleHttpRuntime::class, AssegaiFactory::resolveRuntime('swoole'));
   }
 
+  public function testFactoryCanCreateFromProjectRuntimeConfig(UnitTester $I): void
+  {
+    file_put_contents($this->projectConfigFile, json_encode([
+      'development' => [
+        'server' => [
+          'runtime' => 'openswoole',
+          'host' => '127.0.0.1',
+          'port' => 9512,
+          'openswoole' => [
+            'workerNum' => 2,
+            'taskWorkerNum' => 1,
+            'maxRequest' => 250,
+            'enableCoroutine' => true,
+            'hookFlags' => 'all',
+          ],
+        ],
+      ],
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    $app = AssegaiFactory::createFromProject('Tests\\Runtime\\DummyAppModule', $this->workingDirectory);
+
+    $I->assertInstanceOf(OpenSwooleHttpRuntime::class, $app->getRuntime());
+    $I->assertSame('openswoole', $app->getRuntime()->getName());
+    $I->assertSame('127.0.0.1', $app->getRuntime()->getHost());
+    $I->assertSame(9512, $app->getRuntime()->getPort());
+    $I->assertSame(2, $app->getRuntime()->getSettings()['workerNum'] ?? null);
+    $I->assertSame(1, $app->getRuntime()->getSettings()['taskWorkerNum'] ?? null);
+    $I->assertSame(250, $app->getRuntime()->getSettings()['maxRequest'] ?? null);
+  }
+
+  public function testEnvironmentRuntimeOverridesTheDefaultFactoryPath(UnitTester $I): void
+  {
+    putenv('ASSEGAI_RUNTIME=openswoole');
+    putenv('ASSEGAI_HOST=127.0.0.1');
+    putenv('ASSEGAI_PORT=9513');
+
+    try {
+      $app = AssegaiFactory::create('Tests\\Runtime\\DummyAppModule');
+
+      $I->assertInstanceOf(OpenSwooleHttpRuntime::class, $app->getRuntime());
+      $I->assertSame('openswoole', $app->getRuntime()->getName());
+    } finally {
+      putenv('ASSEGAI_RUNTIME');
+      putenv('ASSEGAI_HOST');
+      putenv('ASSEGAI_PORT');
+    }
+  }
+
   public function testFactoryRejectsUnknownRuntimeNames(UnitTester $I): void
   {
     $I->expectThrowable(InvalidArgumentException::class, static function (): void {
@@ -433,6 +491,273 @@ class RuntimeCest
     $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$moduleInitCalls);
     $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$applicationBootstrapCalls);
     $I->assertSame(0, \Tests\Runtime\LifecycleCounters::$requestScopedBootstrapCalls);
+  }
+
+  public function testShutdownHooksRunOnce(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(\Tests\Runtime\LifecycleAwareAppModule::class);
+
+    $app->boot();
+    $app->shutdown();
+    $app->shutdown();
+
+    $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$applicationShutdownCalls);
+  }
+
+  public function testOpenSwooleRuntimeCanHandleAFullWorkerLifecycle(UnitTester $I): void
+  {
+    $request = new class {
+      public array $server = [
+        'request_method' => 'GET',
+        'request_uri' => '/lifecycle-probe',
+        'query_string' => '',
+        'remote_addr' => '10.20.30.40',
+        'server_protocol' => 'HTTP/1.1',
+      ];
+      public array $header = [
+        'host' => 'runtime.local',
+      ];
+      public array $get = [
+        'path' => '/lifecycle-probe',
+      ];
+      public array $post = [];
+      public array $cookie = [];
+      public array $files = [];
+
+      public function rawContent(): string
+      {
+        return '';
+      }
+    };
+
+    $response = new class {
+      public ?int $status = null;
+      /** @var array<string, string> */
+      public array $headers = [];
+      public string $body = '';
+      public bool $writable = true;
+
+      public function isWritable(): bool
+      {
+        return $this->writable;
+      }
+
+      public function status(int $status): void
+      {
+        $this->status = $status;
+      }
+
+      public function header(string $name, string $value): void
+      {
+        $this->headers[$name] = $value;
+      }
+
+      public function end(string $body): void
+      {
+        $this->body = $body;
+        $this->writable = false;
+      }
+    };
+
+    $server = new class($request, $response) implements OpenSwooleHttpServerInterface {
+      /** @var array<string, mixed> */
+      public array $settings = [];
+      /** @var array<string, callable> */
+      public array $handlers = [];
+
+      public function __construct(
+        private readonly object $request,
+        private readonly object $response,
+      )
+      {
+      }
+
+      public function set(array $settings): void
+      {
+        $this->settings = $settings;
+      }
+
+      public function on(string $event, callable $handler): void
+      {
+        $this->handlers[$event] = $handler;
+      }
+
+      public function start(): void
+      {
+        ($this->handlers['workerStart'])();
+        ($this->handlers['request'])($this->request, $this->response);
+        ($this->handlers['workerExit'])();
+      }
+    };
+
+    $factory = new class($server) implements OpenSwooleServerFactoryInterface {
+      public function __construct(
+        private readonly OpenSwooleHttpServerInterface $server,
+      )
+      {
+      }
+
+      public function create(string $host, int $port): OpenSwooleHttpServerInterface
+      {
+        return $this->server;
+      }
+    };
+
+    $runtime = new OpenSwooleHttpRuntime(
+      host: '127.0.0.1',
+      port: 9514,
+      settings: [
+        'workerNum' => 2,
+        'taskWorkerNum' => 1,
+        'maxRequest' => 50,
+        'enableCoroutine' => true,
+        'hookFlags' => 'all',
+      ],
+      serverFactory: $factory,
+    );
+
+    $app = AssegaiFactory::create(\Tests\Runtime\LifecycleAwareAppModule::class, $runtime);
+    $app->run();
+
+    $I->assertSame(2, $server->settings['worker_num'] ?? null);
+    $I->assertSame(1, $server->settings['task_worker_num'] ?? null);
+    $I->assertSame(50, $server->settings['max_request'] ?? null);
+    $I->assertTrue($server->settings['enable_coroutine'] ?? false);
+    $I->assertArrayHasKey('hook_flags', $server->settings);
+    $I->assertSame(200, $response->status);
+    $I->assertSame('application/json', $response->headers['Content-Type'] ?? null);
+    $I->assertSame(['ok' => true], json_decode($response->body, true));
+    $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$moduleInitCalls);
+    $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$applicationBootstrapCalls);
+    $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$applicationShutdownCalls);
+    $I->assertSame(0, \Tests\Runtime\LifecycleCounters::$requestScopedBootstrapCalls);
+    $I->assertSame(1, $this->readProtectedProperty($app, 'applicationGraphBuildCount'));
+    $I->assertSame(1, $this->readProtectedProperty($app, 'middlewareBuildCount'));
+    $I->assertNull(RuntimeContext::get(Request::class));
+    $I->assertNull(RuntimeContext::get(HttpResponse::class));
+    $I->assertNull(RuntimeContext::get(Responder::class));
+  }
+
+  public function testOpenSwooleRuntimeRoutesEscapedHandlerFailuresThroughFrameworkHandlers(UnitTester $I): void
+  {
+    $request = new class {
+      public array $server = [
+        'request_method' => 'GET',
+        'request_uri' => '/runtime-failure',
+        'query_string' => '',
+        'remote_addr' => '10.20.30.41',
+        'server_protocol' => 'HTTP/1.1',
+      ];
+      public array $header = [
+        'host' => 'runtime.local',
+      ];
+      public array $get = [
+        'path' => '/runtime-failure',
+      ];
+      public array $post = [];
+      public array $cookie = [];
+      public array $files = [];
+
+      public function rawContent(): string
+      {
+        return '';
+      }
+    };
+
+    $response = new class {
+      public ?int $status = null;
+      /** @var array<string, string> */
+      public array $headers = [];
+      public string $body = '';
+      public bool $writable = true;
+
+      public function isWritable(): bool
+      {
+        return $this->writable;
+      }
+
+      public function status(int $status): void
+      {
+        $this->status = $status;
+      }
+
+      public function header(string $name, string $value): void
+      {
+        $this->headers[$name] = $value;
+      }
+
+      public function end(string $body): void
+      {
+        $this->body = $body;
+        $this->writable = false;
+      }
+    };
+
+    $server = new class($request, $response) implements OpenSwooleHttpServerInterface {
+      /** @var array<string, mixed> */
+      public array $settings = [];
+      /** @var array<string, callable> */
+      public array $handlers = [];
+
+      public function __construct(
+        private readonly object $request,
+        private readonly object $response,
+      )
+      {
+      }
+
+      public function set(array $settings): void
+      {
+        $this->settings = $settings;
+      }
+
+      public function on(string $event, callable $handler): void
+      {
+        $this->handlers[$event] = $handler;
+      }
+
+      public function start(): void
+      {
+        ($this->handlers['request'])($this->request, $this->response);
+      }
+    };
+
+    $factory = new class($server) implements OpenSwooleServerFactoryInterface {
+      public function __construct(
+        private readonly OpenSwooleHttpServerInterface $server,
+      )
+      {
+      }
+
+      public function create(string $host, int $port): OpenSwooleHttpServerInterface
+      {
+        return $this->server;
+      }
+    };
+
+    $runtime = new OpenSwooleHttpRuntime(
+      host: '127.0.0.1',
+      port: 9515,
+      settings: [],
+      serverFactory: $factory,
+    );
+
+    $app = AssegaiFactory::create(\Tests\Runtime\DummyAppModule::class, $runtime);
+
+    $runtime->run($app, static function (): void {
+      throw new \RuntimeException('OpenSwoole failure');
+    });
+
+    $I->assertSame(500, $response->status);
+    $I->assertSame('text/html', $response->headers['Content-Type'] ?? null);
+    $I->assertNotSame('OpenSwoole failure', trim($response->body));
+    $I->assertTrue(
+      str_contains(strtolower($response->body), '<html')
+      || str_contains(strtolower($response->body), '<!doctype html')
+    );
+    $I->assertNull(RuntimeContext::get(Request::class));
+    $I->assertNull(RuntimeContext::get(HttpResponse::class));
+    $I->assertNull(RuntimeContext::get(Responder::class));
   }
 
   /**

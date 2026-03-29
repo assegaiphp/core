@@ -773,7 +773,7 @@ A good default controller style in Assegai looks like this:
 
 ## Notes on current behavior
 
-This guide prefers verified behavior over wishful API descriptions.
+The examples below prefer verified behavior over wishful API descriptions.
 
 A few accuracy notes are worth keeping in mind:
 

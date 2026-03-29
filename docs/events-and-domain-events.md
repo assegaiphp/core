@@ -29,7 +29,9 @@ Examples:
 - write an audit log after an admin changes a setting
 - update a read model after an order is placed
 
-Do not use in-process events when the work must survive process restarts or be retried later. For that, use a queue. See [Queues and Background Jobs](./queues-and-background-jobs.md).
+Do not use in-process events when the work must survive process restarts or be retried later. For that, record a durable event in an outbox or move the work onto a queue. See [Queues and Background Jobs](./queues-and-background-jobs.md).
+
+If you want a ready-made durable path in an Assegai app, import `EventsOutboxModule`, record messages with `OrmOutboxStore`, and relay them with `AssegaiOutboxRelayService`.
 
 ## Install the package
 
@@ -109,6 +111,8 @@ final class AppModule implements AssegaiModuleInterface
 ```
 
 Once the module is imported, Assegai can also auto-register listener methods marked with `#[OnEvent(...)]`.
+
+If you also want durable event recording and relay support, import `EventsOutboxModule` instead of just `EventsModule`. It includes `EventsModule` and adds the outbox bridge.
 
 ## Listening with `#[OnEvent(...)]`
 
@@ -265,6 +269,8 @@ final class StartupPublisher
 
 Most day-to-day feature code will not need this. It mainly matters for startup-time events.
 
+The bridge also protects you from duplicate declarative registrations if bootstrap logic runs more than once on the same app instance. A listener method on the same provider instance will only be registered once.
+
 ## A practical pattern
 
 The usual pattern looks like this:
@@ -316,7 +322,7 @@ It does not try to be:
 - an event store
 - a retry engine
 
-If you need durable background processing, move the work onto a queue after the event handler decides that it should happen.
+If you need durable background processing, record a durable event in an outbox or move the work onto a queue after the event handler decides that it should happen.
 
 ## Next step
 

@@ -30,10 +30,6 @@ class SwaggerUiRenderer
         displayRequestDuration: true,
         docExpansion: 'list',
         filter: true,
-        syntaxHighlight: {
-          activate: true,
-          theme: 'obsidian',
-        },
         presets: [
           SwaggerUIBundle.presets.apis,
           SwaggerUIStandalonePreset,

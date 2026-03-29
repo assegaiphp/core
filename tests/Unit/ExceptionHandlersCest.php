@@ -6,9 +6,14 @@ use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Exceptions\Handlers\DefaultExceptionHandler;
 use Assegai\Core\Exceptions\Handlers\HttpExceptionHandler;
 use Assegai\Core\Exceptions\Handlers\Support\FrameworkErrorPageRenderer;
+use Assegai\Core\Exceptions\Http\ForbiddenException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\Handlers\WhoopsErrorHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
+use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\RuntimeRequestContext;
+use Assegai\Core\Runtimes\RuntimeContext;
 use RuntimeException;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
@@ -22,12 +27,14 @@ class ExceptionHandlersCest
   {
     $this->previousServer = $_SERVER;
     $_ENV['ENV'] = 'DEV';
+    RuntimeContext::flush();
   }
 
   public function _after(): void
   {
     $_SERVER = $this->previousServer;
     $_ENV['ENV'] = 'DEV';
+    RuntimeContext::flush();
   }
 
   public function testWhoopsErrorHandlerChoosesHtmlForGetRequests(UnitTester $I): void
@@ -103,6 +110,37 @@ class ExceptionHandlersCest
     };
 
     $I->assertSame('json', $handler->exposeResponseMode());
+  }
+
+  public function testWhoopsExceptionHandlerTreatsActiveRuntimeRequestsAsHttpEvenInCli(UnitTester $I): void
+  {
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $logger = $this->createNullLogger();
+    RuntimeContext::set(RequestInterface::class, Request::createFromRuntimeContext(new RuntimeRequestContext(
+      server: [
+        'REQUEST_METHOD' => 'GET',
+        'REQUEST_URI' => '/runtime-error',
+        'QUERY_STRING' => '',
+        'REQUEST_SCHEME' => 'http',
+      ],
+      query: [
+        'path' => '/runtime-error',
+      ],
+    )));
+
+    $handler = new class($logger) extends WhoopsExceptionHandler {
+      public function __construct(LoggerInterface $logger)
+      {
+        parent::__construct($logger);
+      }
+
+      public function exposeResponseMode(): string
+      {
+        return $this->getResponseMode();
+      }
+    };
+
+    $I->assertSame('html', $handler->exposeResponseMode());
   }
 
   public function testWhoopsExceptionHandlerUsesTheResponseScopeEmitterHelper(UnitTester $I): void
@@ -222,6 +260,42 @@ class ExceptionHandlersCest
     $I->assertStringContainsString('The requested page could not be found.', $handler->emissions[0]['body']);
     $I->assertStringNotContainsString('blog/secret-page', $handler->emissions[0]['body']);
     $I->assertStringNotContainsString('Details', $handler->emissions[0]['body']);
+  }
+
+  public function testHttpExceptionHandlerShowsForbiddenFor403(UnitTester $I): void
+  {
+    $_ENV['ENV'] = 'PROD';
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $_SERVER['CONTENT_TYPE'] = '';
+    $_SERVER['HTTP_ACCEPT'] = 'text/html';
+
+    $logger = $this->createNullLogger();
+
+    $handler = new class($logger) extends HttpExceptionHandler {
+      public array $emissions = [];
+
+      public function __construct(LoggerInterface $logger)
+      {
+        parent::__construct($logger);
+      }
+
+      protected function emitErrorResponse(string $body, ContentType $contentType, int $statusCode): void
+      {
+        $this->emissions[] = [
+          'body' => $body,
+          'status' => $statusCode,
+          'content_type' => $contentType->value,
+        ];
+      }
+    };
+
+    $handler->handle(new ForbiddenException('admin area'));
+
+    $I->assertCount(1, $handler->emissions);
+    $I->assertSame(403, $handler->emissions[0]['status']);
+    $I->assertStringContainsString('Forbidden', $handler->emissions[0]['body']);
+    $I->assertStringContainsString('You do not have permission to access this page.', $handler->emissions[0]['body']);
+    $I->assertStringNotContainsString('Page not found', $handler->emissions[0]['body']);
   }
 
   private function createNullLogger(): LoggerInterface
