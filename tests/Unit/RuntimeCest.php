@@ -504,6 +504,55 @@ class RuntimeCest
     $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$applicationShutdownCalls);
   }
 
+  public function testAppRunInvokesShutdownHooksForNonOpenSwooleRuntimes(UnitTester $I): void
+  {
+    $capturingEmitter = new class implements ResponseEmitterInterface {
+      public string $body = '';
+      public ?ResponseInterface $response = null;
+
+      public function emit(string $body, ?ResponseInterface $response = null): void
+      {
+        $this->body = $body;
+        $this->response = $response;
+      }
+    };
+
+    $runtime = new class implements HttpRuntimeInterface {
+      public function getName(): string
+      {
+        return 'test-runtime';
+      }
+
+      public function run(AppInterface $app, callable $handler): void
+      {
+        $handler();
+      }
+    };
+
+    $app = AssegaiFactory::create(\Tests\Runtime\LifecycleAwareAppModule::class, $runtime);
+    $app->setRuntimeRequestContext(new RuntimeRequestContext(
+      server: [
+        'REQUEST_METHOD' => 'GET',
+        'REQUEST_URI' => '/lifecycle-probe',
+        'QUERY_STRING' => '',
+        'HTTP_HOST' => 'runtime.local',
+        'REQUEST_SCHEME' => 'http',
+      ],
+      query: [
+        'path' => '/lifecycle-probe',
+      ],
+    ));
+    $app->setRuntimeResponseEmitter($capturingEmitter);
+
+    $app->run();
+
+    $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$moduleInitCalls);
+    $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$applicationBootstrapCalls);
+    $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$applicationShutdownCalls);
+    $I->assertSame(200, $capturingEmitter->response?->getStatusCode());
+    $I->assertSame(['ok' => true], json_decode($capturingEmitter->body, true));
+  }
+
   public function testOpenSwooleRuntimeCanHandleAFullWorkerLifecycle(UnitTester $I): void
   {
     $request = new class {

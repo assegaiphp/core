@@ -624,9 +624,13 @@ class App implements AppInterface
      */
     public function run(): void
     {
-        $this->runtime->run($this, function (): void {
-            $this->runDefaultHttpLifecycle();
-        });
+        try {
+            $this->runtime->run($this, function (): void {
+                $this->runDefaultHttpLifecycle();
+            });
+        } finally {
+            $this->shutdown();
+        }
     }
 
     /**
