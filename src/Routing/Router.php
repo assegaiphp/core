@@ -823,7 +823,9 @@ final class Router
         $handlerPath = $this->getRequestMapperPath($requestMapperAttribute);
         $controllerParams = $this->matchRoutePath(route: $controllerPrefix, path: $path, allowPartial: true);
         $remainingPath = $this->getRemainingPath(path: $path, prefix: $controllerPrefix);
-        $handlerParams = $this->matchRoutePath(route: $handlerPath, path: $remainingPath);
+        $handlerParams = ($handlerPath === '' || $handlerPath === '/')
+            ? ($remainingPath === '/' ? [] : null)
+            : $this->matchRoutePath(route: $handlerPath, path: $remainingPath);
 
         $foundPathMatch = !is_null($controllerParams) && !is_null($handlerParams);
 

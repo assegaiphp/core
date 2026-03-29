@@ -292,7 +292,6 @@ class Response implements Stringable, ResponseInterface
      * @param HttpStatusCode|int $status
      * @param int $priority
      * @return $this
-     * @throws HttpException
      */
     public function applyRedirect(string $url, HttpStatusCode|int $status = 302, int $priority = 30): Response
     {

@@ -36,12 +36,7 @@ trait EmitsErrorResponses
 
   protected function shouldRenderHtmlErrorPage(): bool
   {
-    $request = RuntimeContext::get(RequestInterface::class)
-      ?? Injector::getInstance()->get(RequestInterface::class);
-
-    if (!$request instanceof RequestInterface) {
-      $request = Request::current();
-    }
+    $request = $this->resolveActiveRequest();
 
     $accept = strtolower($request->header('Accept'));
     $contentType = strtolower($request->header('Content-Type'));
@@ -49,6 +44,26 @@ trait EmitsErrorResponses
     return $request->getMethod() === RequestMethod::GET
       && !str_contains($accept, 'application/json')
       && !str_contains($contentType, 'application/json');
+  }
+
+  protected function hasActiveHttpRequestContext(): bool
+  {
+    $request = RuntimeContext::get(RequestInterface::class)
+      ?? Injector::getInstance()->get(RequestInterface::class);
+
+    return $request instanceof RequestInterface;
+  }
+
+  protected function resolveActiveRequest(): RequestInterface
+  {
+    $request = RuntimeContext::get(RequestInterface::class)
+      ?? Injector::getInstance()->get(RequestInterface::class);
+
+    if ($request instanceof RequestInterface) {
+      return $request;
+    }
+
+    return Request::current();
   }
 
   protected function statusName(int $statusCode): string

@@ -27,6 +27,8 @@ That gives you the commands you will use most often:
 
 If you later want `assegai generate` to understand your own company-specific feature scaffolds, start with [Custom CLI Schematics](./custom-cli-schematics.md). If you want the full manifest and token reference after that, continue with [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md).
 
+If you specifically want to run Assegai on the alternate long-lived runtime, continue with [Serving with OpenSwoole](./serving-with-openswoole.md).
+
 ## Create a new project
 
 Create a new app:
@@ -180,6 +182,8 @@ You can override that when needed:
 ```bash
 assegai serve --host 0.0.0.0 --port 8080
 ```
+
+If you want to try the long-lived runtime path instead of the default PHP server, read [Serving with OpenSwoole](./serving-with-openswoole.md).
 
 ## Development errors are readable
 

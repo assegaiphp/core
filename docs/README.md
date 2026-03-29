@@ -19,25 +19,27 @@ They focus on the tasks most people need first:
 2. [Authentication](./authentication.md)
 3. [Build a Kitchen Orders API](./tutorial-build-a-kitchen-orders-api.md)
 4. [Custom CLI Schematics](./custom-cli-schematics.md)
-5. [Events and Domain Events](./events-and-domain-events.md)
-6. [Frontend with Web Components](./frontend-with-web-components.md)
-7. [Building a Feature](./building-a-feature.md)
-8. [Architecture and Lifecycle](./architecture-and-lifecycle.md)
-9. [Modules and Providers](./modules-and-providers.md)
-10. [Controllers and Routing](./controllers-and-routing.md)
-11. [Request Data and Validation](./request-data-and-validation.md)
-12. [Authentication and OAuth In Depth](./authentication-and-oauth.md)
-13. [API Docs and Clients](./api-docs-and-clients.md)
-14. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
-15. [Data and ORM](./data-and-orm.md)
-16. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
-17. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
-18. [ORM Relations](./orm-relations.md)
-19. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
-20. [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md)
-21. [Events In Depth](./events-and-domain-events-in-depth.md)
-22. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
-23. [Queues and Background Jobs](./queues-and-background-jobs.md)
+5. [Serving with OpenSwoole](./serving-with-openswoole.md)
+6. [Events and Domain Events](./events-and-domain-events.md)
+7. [Frontend with Web Components](./frontend-with-web-components.md)
+8. [Building a Feature](./building-a-feature.md)
+9. [Architecture and Lifecycle](./architecture-and-lifecycle.md)
+10. [Modules and Providers](./modules-and-providers.md)
+11. [Controllers and Routing](./controllers-and-routing.md)
+12. [Request Data and Validation](./request-data-and-validation.md)
+13. [Authentication and OAuth In Depth](./authentication-and-oauth.md)
+14. [API Docs and Clients](./api-docs-and-clients.md)
+15. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
+16. [Data and ORM](./data-and-orm.md)
+17. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
+18. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
+19. [ORM Relations](./orm-relations.md)
+20. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
+21. [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md)
+22. [Events In Depth](./events-and-domain-events-in-depth.md)
+23. [OpenSwoole Runtime](./openswoole-runtime.md)
+24. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
+25. [Queues and Background Jobs](./queues-and-background-jobs.md)
 
 ## Guide map
 
@@ -46,6 +48,7 @@ They focus on the tasks most people need first:
 - [Getting Started](./getting-started.md) introduces the CLI, the generated workspace, and the first running app.
 - [Authentication](./authentication.md) introduces session auth, JWT auth, and the current OAuth flow without assuming you already know which one your app needs.
 - [Custom CLI Schematics](./custom-cli-schematics.md) shows how to teach `assegai generate` about company-specific scaffolds.
+- [Serving with OpenSwoole](./serving-with-openswoole.md) shows how to boot the alternate long-lived runtime and what requirements it has before you switch.
 - [Events and Domain Events](./events-and-domain-events.md) shows how to publish events, listen with `#[OnEvent(...)]`, and keep feature code decoupled without moving straight to queues.
 - [Frontend with Web Components](./frontend-with-web-components.md) shows where front-end code should live, how the first-party Web Components runtime works, and how to upgrade older `main.js` projects.
 - [Architecture and Lifecycle](./architecture-and-lifecycle.md) explains how requests move through modules, controllers, providers, and responders.
@@ -61,6 +64,7 @@ This section is about working style and day-to-day delivery rather than one isol
 - [Custom CLI Schematics](./custom-cli-schematics.md) shows how to create local and package-backed generators for your own domain.
 - [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md) goes deeper into manifest design, token usage, combined tokens, and non-PHP outputs.
 - [Events In Depth](./events-and-domain-events-in-depth.md) goes deeper into wildcard behavior, readiness, naming, and the boundary between events and queues.
+- [OpenSwoole Runtime](./openswoole-runtime.md) explains the current alternate runtime path, lifecycle behavior, config, and the remaining experimental boundary.
 - [Frontend with Web Components](./frontend-with-web-components.md) shows the supported front-end workflow for `.wc.ts` files, `serve --dev`, and legacy-project upgrades.
 - [Request Data and Validation](./request-data-and-validation.md) shows how to keep transport concerns at the edge with DTOs and pipes.
 - [Authentication and OAuth In Depth](./authentication-and-oauth.md) goes deeper into strategy selection, route ownership, and provider-backed login flows.

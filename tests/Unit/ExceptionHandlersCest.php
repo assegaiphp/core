@@ -10,6 +10,10 @@ use Assegai\Core\Exceptions\Http\ForbiddenException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\Handlers\WhoopsErrorHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
+use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Http\Requests\RuntimeRequestContext;
+use Assegai\Core\Runtimes\RuntimeContext;
 use RuntimeException;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
@@ -23,12 +27,14 @@ class ExceptionHandlersCest
   {
     $this->previousServer = $_SERVER;
     $_ENV['ENV'] = 'DEV';
+    RuntimeContext::flush();
   }
 
   public function _after(): void
   {
     $_SERVER = $this->previousServer;
     $_ENV['ENV'] = 'DEV';
+    RuntimeContext::flush();
   }
 
   public function testWhoopsErrorHandlerChoosesHtmlForGetRequests(UnitTester $I): void
@@ -104,6 +110,37 @@ class ExceptionHandlersCest
     };
 
     $I->assertSame('json', $handler->exposeResponseMode());
+  }
+
+  public function testWhoopsExceptionHandlerTreatsActiveRuntimeRequestsAsHttpEvenInCli(UnitTester $I): void
+  {
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $logger = $this->createNullLogger();
+    RuntimeContext::set(RequestInterface::class, Request::createFromRuntimeContext(new RuntimeRequestContext(
+      server: [
+        'REQUEST_METHOD' => 'GET',
+        'REQUEST_URI' => '/runtime-error',
+        'QUERY_STRING' => '',
+        'REQUEST_SCHEME' => 'http',
+      ],
+      query: [
+        'path' => '/runtime-error',
+      ],
+    )));
+
+    $handler = new class($logger) extends WhoopsExceptionHandler {
+      public function __construct(LoggerInterface $logger)
+      {
+        parent::__construct($logger);
+      }
+
+      public function exposeResponseMode(): string
+      {
+        return $this->getResponseMode();
+      }
+    };
+
+    $I->assertSame('html', $handler->exposeResponseMode());
   }
 
   public function testWhoopsExceptionHandlerUsesTheResponseScopeEmitterHelper(UnitTester $I): void
