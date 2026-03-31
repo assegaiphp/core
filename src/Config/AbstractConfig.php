@@ -3,6 +3,7 @@
 namespace Assegai\Core\Config;
 
 use Assegai\Core\Interfaces\ConfigInterface;
+use Assegai\Core\Util\Paths;
 use RuntimeException;
 
 /**
@@ -150,6 +151,6 @@ abstract class AbstractConfig implements ConfigInterface
    */
   public function getWorkingDirectory(): string
   {
-    return getcwd() ?: '.';
+    return Paths::getWorkingDirectory() ?: '.';
   }
 }

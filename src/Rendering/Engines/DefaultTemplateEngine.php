@@ -10,8 +10,8 @@ use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Injector;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Rendering\DocumentProperties;
-use Assegai\Core\WebComponents\WebComponentSupport;
 use Assegai\Core\Routing\Router;
+use Assegai\Core\WebComponents\WebComponentSupport;
 use Assegai\Util\Path;
 use DateInvalidTimeZoneException;
 use DateMalformedStringException;
@@ -37,222 +37,231 @@ use Twig\RuntimeLoader\RuntimeLoaderInterface;
  */
 class DefaultTemplateEngine extends TemplateEngine
 {
-  /**
-   * The Twig filesystem loader.
-   *
-   * @var FilesystemLoader
-   */
-  protected FilesystemLoader $loader;
-  /**
-   * The Twig environment.
-   *
-   * @var Environment
-   */
-  protected Environment $twig;
-  /**
-   * The templates directory.
-   *
-   * @var string
-   */
-  protected string $templatesDirectory = '';
-  /**
-   * The component filename.
-   *
-   * @var string
-   */
-  protected string $componentFilename = '';
+    /**
+     * The Twig filesystem loader.
+     *
+     * @var FilesystemLoader
+     */
+    protected FilesystemLoader $loader;
+    /**
+     * The Twig environment.
+     *
+     * @var Environment
+     */
+    protected Environment $twig;
+    /**
+     * The templates directory.
+     *
+     * @var string
+     */
+    protected string $templatesDirectory = '';
+    /**
+     * The component filename.
+     *
+     * @var string
+     */
+    protected string $componentFilename = '';
 
-  /**
-   * The module manager.
-   *
-   * @var ModuleManager
-   */
-  protected ModuleManager $moduleManager;
+    /**
+     * The module manager.
+     *
+     * @var ModuleManager
+     */
+    protected ModuleManager $moduleManager;
 
-  /**
-   * Constructs a DefaultTemplateEngine.
-   *
-   * @param array{
-   *   root_module_class: class-string|null,
-   *   router: Router|null,
-   *   module_manager: ModuleManager|null,
-   *   controller_manager: ControllerManager|null,
-   *   injector: Injector|null
-   * } $options The options.
-   */
-  public function __construct(protected array $options = [
-    'root_module_class' => null,
-    'router' => null,
-    'module_manager' => null,
-    'controller_manager' => null,
-    'injector' => null
-  ])
-  {
-    parent::__construct();
-    $this->templatesDirectory = Path::join(getcwd() ?: throw new RuntimeException('No current working directory'), 'src');
-    $this->loader = new FilesystemLoader($this->templatesDirectory);
-    $this->twig = new Environment($this->loader);
-    $this->twig->addExtension(new MarkdownExtension());
-    $this->twig->addRuntimeLoader(new class implements RuntimeLoaderInterface {
-      public function load($class): ?MarkdownRuntime
-      {
-        if (MarkdownRuntime::class === $class) {
-          return new MarkdownRuntime(new DefaultMarkdown());
+    /**
+     * Constructs a DefaultTemplateEngine.
+     *
+     * @param array{
+     *   root_module_class: class-string|null,
+     *   router: Router|null,
+     *   module_manager: ModuleManager|null,
+     *   controller_manager: ControllerManager|null,
+     *   injector: Injector|null
+     * } $options The options.
+     */
+    public function __construct(protected array $options = [
+        'root_module_class' => null,
+        'router' => null,
+        'module_manager' => null,
+        'controller_manager' => null,
+        'injector' => null
+    ])
+    {
+        parent::__construct();
+        $this->templatesDirectory = Path::join(getcwd() ?: throw new RuntimeException('No current working directory'), 'src');
+        $this->loader = new FilesystemLoader($this->templatesDirectory);
+        $this->twig = new Environment($this->loader);
+        $this->twig->addExtension(new MarkdownExtension());
+        $this->twig->addRuntimeLoader(new class implements RuntimeLoaderInterface {
+            public function load($class): ?MarkdownRuntime
+            {
+                if (MarkdownRuntime::class === $class) {
+                    return new MarkdownRuntime(new DefaultMarkdown());
+                }
+
+                return null;
+            }
+        });
+        $this->moduleManager = $this->options['module_manager'] ?? ModuleManager::getInstance();
+    }
+
+    /**
+     * @inheritDoc
+     *
+     * @return string
+     * @throws LoaderError
+     * @throws ReflectionException
+     * @throws RenderingException
+     * @throws RuntimeError
+     * @throws SyntaxError
+     * @throws DateInvalidTimeZoneException
+     * @throws DateMalformedStringException
+     */
+    public function render(): string
+    {
+        # Get component attribute instance
+        $props ??= [];
+        $componentAttributeInstance = $this->rootComponentAttributeInstance;
+        $componentReflection = new ReflectionClass($this->rootComponent);
+        $this->componentFilename = $componentReflection->getFileName();
+        $pathRelativeFromRoot = Path::relative($this->templatesDirectory, $this->componentFilename);
+        $resolveTemplateUrl = Path::join(dirname($pathRelativeFromRoot) ?: '', $componentAttributeInstance->templateUrl);
+        $this->setTemplate($componentAttributeInstance->template ?? '');
+        $this->meta = [...$this->meta, ...$componentAttributeInstance->meta];
+
+        # Load template
+        if (!$componentAttributeInstance->templateUrl) {
+            return $this->template;
         }
 
-        return null;
-      }
-    });
-    $this->moduleManager = $this->options['module_manager'] ?? ModuleManager::getInstance();
-  }
+        $template = $this->twig->load(Path::normalize($resolveTemplateUrl));
+        $data = [];
 
-  /**
-   * @inheritDoc
-   *
-   * @return string
-   * @throws LoaderError
-   * @throws ReflectionException
-   * @throws RenderingException
-   * @throws RuntimeError
-   * @throws SyntaxError
-   * @throws DateInvalidTimeZoneException
-   * @throws DateMalformedStringException
-   */
-  public function render(): string
-  {
-    # Get component attribute instance
-    $componentAttributeInstance = $this->rootComponentAttributeInstance;
-    $componentReflection = new ReflectionClass($this->rootComponent);
-    $this->componentFilename = $componentReflection->getFileName();
-    $pathRelativeFromRoot = Path::relative($this->templatesDirectory, $this->componentFilename);
-    $resolveTemplateUrl = Path::join(dirname($pathRelativeFromRoot) ?: '', $componentAttributeInstance->templateUrl);
-    $this->setTemplate($componentAttributeInstance->template ?? '');
-    $this->meta = [...$this->meta, ...$componentAttributeInstance->meta];
+        $ctx = new class {
+            private array $methods = [];
 
-    # Load template
-    if (!$componentAttributeInstance->templateUrl) {
-      return $this->template;
-    }
+            public function addMethod(string $name, callable $method): void
+            {
+                $this->methods[$name] = $method;
+            }
 
-    $template = $this->twig->load(Path::normalize($resolveTemplateUrl));
-    $data = [];
+            public function __call($name, $arguments)
+            {
+                if (isset($this->methods[$name])) {
+                    return call_user_func_array($this->methods[$name], $arguments);
+                }
+                throw new HttpException("Method $name does not exist.");
+            }
+        };
 
-    $ctx = new class {
-      private array $methods = [];
+        $methods = $componentReflection->getMethods(ReflectionMethod::IS_PUBLIC);
 
-      public function addMethod(string $name, callable $method): void {
-        $this->methods[$name] = $method;
-      }
+        foreach ($methods as $method) {
+            $methodName = $method->getName();
 
-      public function __call($name, $arguments) {
-        if (isset($this->methods[$name])) {
-          return call_user_func_array($this->methods[$name], $arguments);
+            if (str_starts_with($methodName, '__')) {
+                continue;
+            }
+
+            if (in_array($methodName, ['afterPropertiesBound', 'render', 'onInit', 'afterInit', 'getTemplatePathBySelector', 'getAttribute', 'getTemplateContentBySelector'])) {
+                continue;
+            }
+
+            $ctx->addMethod($methodName, fn(...$args) => $method->invoke($this->rootComponent, ...$args));
         }
-        throw new HttpException("Method $name does not exist.");
-      }
-    };
 
-    $methods = $componentReflection->getMethods(ReflectionMethod::IS_PUBLIC);
+        if (!method_exists($ctx, 'config')) {
+            $ctx->addMethod('config', fn(string $path, mixed $default = null, ?string $dirname = null) => config($path, $default, $dirname));
+        }
 
-    foreach ($methods as $method) {
-      $methodName = $method->getName();
+        if (!method_exists($ctx, 'translate')) {
+            $ctx->addMethod('translate', fn(string $id, array $parameters = [], string $domain = '', ?string $locale = null) => translate($id, $parameters, $domain, $locale));
+        }
 
-      if (str_starts_with($methodName, '__')) {
-        continue;
-      }
+        if (!method_exists($ctx, 'timeAgo')) {
+            $ctx->addMethod('timeAgo', fn(int|string|null $timestamp, ?string $timezone = null) => time_ago($timestamp, $timezone));
+        }
 
-      if (in_array($methodName, ['afterPropertiesBound', 'render', 'onInit', 'afterInit', 'getTemplatePathBySelector', 'getAttribute', 'getTemplateContentBySelector'])) {
-        continue;
-      }
+        if (!method_exists($ctx, 'env')) {
+            $ctx->addMethod('env', fn(string $key, mixed $default = null) => env($key, $default));
+        }
 
-      $ctx->addMethod($methodName, fn(...$args) => $method->invoke($this->rootComponent, ...$args));
-    }
+        if (!method_exists($ctx, 'getLang')) {
+            $ctx->addMethod('getLang', fn() => Request::current()->getLang());
+        }
 
-    if (!method_exists($ctx, 'config')) {
-      $ctx->addMethod('config', fn(string $path, mixed $default = null, ?string $dirname = null) => config($path, $default, $dirname));
-    }
+        $webComponentPropsMethod = fn(mixed $props = []) => new Markup(web_component_props($props), 'UTF-8');
 
-    if (!method_exists($ctx, 'translate')) {
-      $ctx->addMethod('translate', fn(string $id, array $parameters = [], string $domain = '', ?string $locale = null) => translate($id, $parameters, $domain, $locale));
-    }
+        if (!method_exists($ctx, 'webComponentProps')) {
+            $ctx->addMethod('webComponentProps', $webComponentPropsMethod);
+        }
 
-    if (!method_exists($ctx, 'timeAgo')) {
-      $ctx->addMethod('timeAgo', fn(int|string|null $timestamp, ?string $timezone = null) => time_ago($timestamp, $timezone));
-    }
+        if (!method_exists($ctx, 'wcProps')) {
+            $ctx->addMethod('wcProps', $webComponentPropsMethod);
+        }
 
-    if (!method_exists($ctx, 'env')) {
-      $ctx->addMethod('env', fn(string $key, mixed $default = null) => env($key, $default));
-    }
+        if (!method_exists($ctx, 'webComponentBundleUrl')) {
+            $ctx->addMethod('webComponentBundleUrl', fn() => web_component_bundle_url());
+        }
 
-    if (!method_exists($ctx, 'getLang')) {
-      $ctx->addMethod('getLang', fn() => Request::current()->getLang());
-    }
+        $data['ctx'] = $ctx;
 
-    if (!method_exists($ctx, 'webComponentProps')) {
-      $ctx->addMethod('webComponentProps', fn(mixed $props = []) => new Markup(web_component_props($props), 'UTF-8'));
-    }
+        foreach ($componentReflection->getProperties() as $reflectionProperty) {
+            $data[$reflectionProperty->getName()] = $reflectionProperty->getValue($this->rootComponent);
+        }
 
-    if (!method_exists($ctx, 'webComponentBundleUrl')) {
-      $ctx->addMethod('webComponentBundleUrl', fn() => web_component_bundle_url());
-    }
+        # Load data from declared components
+        foreach ($this->moduleManager->getDeclarations() ?? [] as $declaration) {
+            $declarationData = get_object_vars($declaration);
+            $data = [...$declarationData, ...$data];
+        }
 
-    $data['ctx'] = $ctx;
+        $this->setData($data);
 
-    foreach ($componentReflection->getProperties() as $reflectionProperty) {
-      $data[$reflectionProperty->getName()] = $reflectionProperty->getValue($this->rootComponent);
-    }
+        if ($this->meta) {
+            extract($this->meta);
+        }
 
-    # Load data from declared components
-    foreach ($this->moduleManager->getDeclarations() ?? [] as $declaration) {
-      $declarationData = get_object_vars($declaration);
-      $data = [...$declarationData, ...$data];
-    }
+        if (!$this->title) {
+            $this->title = $title ?? $_ENV['DOCUMENT_TITLE'] ?? $this->getAppDocumentConfigValue('title', 'AssegaiPHP');
+        }
 
-    $this->setData($data);
+        if (!$this->description) {
+            $this->description = $description ?? $_ENV['DOCUMENT_DESCRIPTION'] ?? $this->getAppDocumentConfigValue('description', 'AssegaiPHP Application');
+        }
 
-    if ($this->meta) {
-      extract($this->meta);
-    }
+        if (!$this->keywords) {
+            $this->keywords = $keywords ?? $_ENV['DOCUMENT_KEYWORDS'] ?? $this->getAppDocumentConfigValue('keywords', 'AssegaiPHP, PHP, Framework');
+        }
 
-    if (!$this->title) {
-      $this->title = $title ?? $_ENV['DOCUMENT_TITLE'] ?? $this->getAppDocumentConfigValue('title', 'AssegaiPHP');
-    }
+        if (!$this->author) {
+            $this->author = $author ?? $_ENV['DOCUMENT_AUTHOR'] ?? $this->getAppDocumentConfigValue('author', '');
+        }
 
-    if (!$this->description) {
-      $this->description = $description ?? $_ENV['DOCUMENT_DESCRIPTION'] ?? $this->getAppDocumentConfigValue('description', 'AssegaiPHP Application');
-    }
+        $documentProps = DocumentProperties::fromArray(is_array($props ?? null) ? $props : []);
+        $lang ??= $documentProps->lang ?: Request::current()->getLang();
+        $headAssets = $documentProps->generateHeadAssetTags();
 
-    if (!$this->keywords) {
-      $this->keywords = $keywords ?? $_ENV['DOCUMENT_KEYWORDS'] ?? $this->getAppDocumentConfigValue('keywords', 'AssegaiPHP, PHP, Framework');
-    }
+        if (is_string($props ?? null) && trim($props) !== '') {
+            $headAssets .= trim($props) . PHP_EOL;
+        }
 
-    if (!$this->author) {
-      $this->author = $author ?? $_ENV['DOCUMENT_AUTHOR'] ?? $this->getAppDocumentConfigValue('author', '');
-    }
+        # Render template
+        $headAssets .= $this->loadStyles();
+        $headAssets .= $this->loadScripts();
+        $output = $template->render([...$this->data]);
+        $charSet = $this->meta['charset'] ?? 'UTF-8';
+        $documentMetaTags = $this->renderDocumentMetaTags();
+        $bodyScripts = $documentProps->generateBodyScriptTags() . $documentProps->generateBodyScriptImportTags();
+        $webComponentBundleTag = $this->loadWebComponentBundle();
+        $escapedTitle = htmlspecialchars($this->title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $htmxLink ??= $documentProps->htmxLink ?? '';
+        $htmxScriptTag = is_string($htmxLink) && trim($htmxLink) !== ''
+            ? '<script src="' . htmlspecialchars(trim($htmxLink), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"></script>'
+            : '';
 
-    $documentProps = DocumentProperties::fromArray(is_array($props ?? null) ? $props : []);
-    $lang ??= $documentProps->lang ?: Request::current()->getLang();
-    $headAssets = $documentProps->generateHeadAssetTags();
-
-    if (is_string($props ?? null) && trim($props) !== '') {
-      $headAssets .= trim($props) . PHP_EOL;
-    }
-
-    # Render template
-    $headAssets .= $this->loadStyles();
-    $headAssets .= $this->loadScripts();
-    $output = $template->render([...$this->data]);
-    $charSet = $this->meta['charset'] ?? 'UTF-8';
-    $documentMetaTags = $this->renderDocumentMetaTags();
-    $bodyScripts = $documentProps->generateBodyScriptTags() . $documentProps->generateBodyScriptImportTags();
-    $webComponentBundleTag = $this->loadWebComponentBundle();
-    $escapedTitle = htmlspecialchars($this->title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    $htmxLink ??= $documentProps->htmxLink ?? '';
-    $htmxScriptTag = is_string($htmxLink) && trim($htmxLink) !== ''
-      ? '<script src="' . htmlspecialchars(trim($htmxLink), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"></script>'
-      : '';
-
-    return <<<START
+        return <<<START
 <!DOCTYPE html>
 <html lang="$lang">
   <head>
@@ -271,164 +280,164 @@ class DefaultTemplateEngine extends TemplateEngine
   </body>
 </html>
 START;
-  }
-
-  /**
-   * Load any inline or external stylesheets.
-   *
-   * @return string
-   * @throws RenderingException
-   */
-  private function loadStyles(): string
-  {
-    $styles = '';
-    $componentAttributeInstance = $this->rootComponent->getAttribute();
-
-    if ($this->getGlobalStyles()) {
-      $styles .= '<style>';
-      $styles .= $this->getGlobalStyles();
-      $styles .= '</style>';
     }
 
-    if ($componentAttributeInstance->styleUrls) {
-      $styles .= '<style>';
-      foreach ($componentAttributeInstance->styleUrls as $styleUrl) {
-        $stylesheetFilename =
-          Path::normalize(
-            Path::join(dirname($this->componentFilename), $styleUrl)
-          );
-        $styles .= file_get_contents($stylesheetFilename) ?: throw new RenderingException('Failed to read stylesheet file.')  ;
-      }
-      $styles .= '</style>';
+    private function getAppDocumentConfigValue(string $key, mixed $default = null): mixed
+    {
+        $config = $this->getAppDocumentConfig();
 
-      return $styles;
+        return $config[$key] ?? $default;
     }
 
-    if ($componentAttributeInstance->styles) {
-      $styles = '<style>';
-      $styles .= $componentAttributeInstance->styles;
-      $styles .= '</style>';
-    }
-    return $styles;
-  }
+    /**
+     * @return array<string, mixed>
+     */
+    private function getAppDocumentConfig(): array
+    {
+        $config = FrameworkConfig::get('app');
 
-  /**
-   * Load any inline or external scripts.
-   *
-   * @return string
-   * @throws RenderingException
-   */
-  private function loadScripts(): string
-  {
-    $scripts = '';
-    $componentAttributeInstance = $this->rootComponent->getAttribute();
-
-    // Load component script urls
-    if ($componentAttributeInstance->scriptUrls) {
-      foreach ($componentAttributeInstance->scriptUrls as $scriptUrl) {
-        $scriptFilename = Path::normalize(Path::join(dirname($this->componentFilename), $scriptUrl));
-        $scripts .= '<script>';
-        $scripts .= file_get_contents($scriptFilename) ?: throw new RenderingException('Failed to read script file.');
-        $scripts .= '</script>';
-      }
-
-      return $scripts;
+        return is_array($config) ? $config : [];
     }
 
-    // Load component scripts
-    if ($componentAttributeInstance->scripts) {
-      $scripts .= '<script>';
-      $scripts .= $componentAttributeInstance->scripts;
-      $scripts .= '</script>';
+    /**
+     * Load any inline or external stylesheets.
+     *
+     * @return string
+     * @throws RenderingException
+     */
+    private function loadStyles(): string
+    {
+        $styles = '';
+        $componentAttributeInstance = $this->rootComponent->getAttribute();
+
+        if ($this->getGlobalStyles()) {
+            $styles .= '<style>';
+            $styles .= $this->getGlobalStyles();
+            $styles .= '</style>';
+        }
+
+        if ($componentAttributeInstance->styleUrls) {
+            $styles .= '<style>';
+            foreach ($componentAttributeInstance->styleUrls as $styleUrl) {
+                $stylesheetFilename =
+                    Path::normalize(
+                        Path::join(dirname($this->componentFilename), $styleUrl)
+                    );
+                $styles .= file_get_contents($stylesheetFilename) ?: throw new RenderingException('Failed to read stylesheet file.');
+            }
+            $styles .= '</style>';
+
+            return $styles;
+        }
+
+        if ($componentAttributeInstance->styles) {
+            $styles = '<style>';
+            $styles .= $componentAttributeInstance->styles;
+            $styles .= '</style>';
+        }
+        return $styles;
     }
 
-    return $scripts;
-  }
+    /**
+     * Get the global styles.
+     *
+     * @return false|string The global styles.
+     */
+    private function getGlobalStyles(): false|string
+    {
+        // Get the global styles
+        $output = false;
 
-  /**
-   * Loads the Web Components bundle if one is configured for the workspace.
-   */
-  private function loadWebComponentBundle(): string
-  {
-    $scriptTag = WebComponentSupport::renderRuntimeTags(getcwd() ?: '.');
+        if ($this->style) {
+            $output = $this->style;
+        }
 
-    return $scriptTag ? $scriptTag . PHP_EOL : '';
-  }
+        if (!empty($this->moduleManager->getDeclaredStyles())) {
+            $output .= implode("\n", $this->moduleManager->getDeclaredStyles());
+        }
 
-  /**
-   * Returns the resolved template URL.
-   *
-   * @return string The resolved template URL.
-   * @throws ReflectionException
-   * @throws RenderingException
-   */
-  public function getResolvedTemplateURL(): string
-  {
-    $componentAttributeInstance = $this->rootComponentAttributeInstance ?? throw new RenderingException('Root component attribute instance is not set.');
-    $componentReflection = new ReflectionClass($this->rootComponent);
-    $componentFilename = $componentReflection->getFileName();
-    $pathRelativeFromRoot = Path::relative($this->templatesDirectory, $componentFilename);
-
-    return Path::join(dirname($pathRelativeFromRoot) ?: '', $componentAttributeInstance->templateUrl);
-  }
-
-  /**
-   * Get the global styles.
-   *
-   * @return false|string The global styles.
-   */
-  private function getGlobalStyles(): false|string
-  {
-    // Get the global styles
-    $output = false;
-
-    if ($this->style) {
-      $output = $this->style;
+        return preg_replace('/\/\s*\*.*\*\s*\//', '', $output);
     }
 
-    if (! empty($this->moduleManager->getDeclaredStyles()) ) {
-      $output .= implode("\n", $this->moduleManager->getDeclaredStyles());
+    /**
+     * Load any inline or external scripts.
+     *
+     * @return string
+     * @throws RenderingException
+     */
+    private function loadScripts(): string
+    {
+        $scripts = '';
+        $componentAttributeInstance = $this->rootComponent->getAttribute();
+
+        // Load component script urls
+        if ($componentAttributeInstance->scriptUrls) {
+            foreach ($componentAttributeInstance->scriptUrls as $scriptUrl) {
+                $scriptFilename = Path::normalize(Path::join(dirname($this->componentFilename), $scriptUrl));
+                $scripts .= '<script>';
+                $scripts .= file_get_contents($scriptFilename) ?: throw new RenderingException('Failed to read script file.');
+                $scripts .= '</script>';
+            }
+
+            return $scripts;
+        }
+
+        // Load component scripts
+        if ($componentAttributeInstance->scripts) {
+            $scripts .= '<script>';
+            $scripts .= $componentAttributeInstance->scripts;
+            $scripts .= '</script>';
+        }
+
+        return $scripts;
     }
 
-    return preg_replace('/\/\s*\*.*\*\s*\//', '', $output);
-  }
+    private function renderDocumentMetaTags(): string
+    {
+        $tags = '';
 
-  /**
-   * @return array<string, mixed>
-   */
-  private function getAppDocumentConfig(): array
-  {
-    $config = FrameworkConfig::get('app');
+        if ($this->description !== '') {
+            $description = htmlspecialchars($this->description, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $tags .= "    <meta name=\"description\" content=\"$description\">" . PHP_EOL;
+        }
 
-    return is_array($config) ? $config : [];
-  }
+        if ($this->keywords !== '') {
+            $keywords = htmlspecialchars($this->keywords, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $tags .= "    <meta name=\"keywords\" content=\"$keywords\">" . PHP_EOL;
+        }
 
-  private function getAppDocumentConfigValue(string $key, mixed $default = null): mixed
-  {
-    $config = $this->getAppDocumentConfig();
+        if ($this->author !== '') {
+            $author = htmlspecialchars($this->author, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $tags .= "    <meta name=\"author\" content=\"$author\">" . PHP_EOL;
+        }
 
-    return $config[$key] ?? $default;
-  }
-
-  private function renderDocumentMetaTags(): string
-  {
-    $tags = '';
-
-    if ($this->description !== '') {
-      $description = htmlspecialchars($this->description, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-      $tags .= "    <meta name=\"description\" content=\"$description\">" . PHP_EOL;
+        return $tags;
     }
 
-    if ($this->keywords !== '') {
-      $keywords = htmlspecialchars($this->keywords, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-      $tags .= "    <meta name=\"keywords\" content=\"$keywords\">" . PHP_EOL;
+    /**
+     * Loads the Web Components bundle if one is configured for the workspace.
+     */
+    private function loadWebComponentBundle(): string
+    {
+        $scriptTag = WebComponentSupport::renderRuntimeTags(getcwd() ?: '.');
+
+        return $scriptTag ? $scriptTag . PHP_EOL : '';
     }
 
-    if ($this->author !== '') {
-      $author = htmlspecialchars($this->author, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-      $tags .= "    <meta name=\"author\" content=\"$author\">" . PHP_EOL;
-    }
+    /**
+     * Returns the resolved template URL.
+     *
+     * @return string The resolved template URL.
+     * @throws ReflectionException
+     * @throws RenderingException
+     */
+    public function getResolvedTemplateURL(): string
+    {
+        $componentAttributeInstance = $this->rootComponentAttributeInstance ?? throw new RenderingException('Root component attribute instance is not set.');
+        $componentReflection = new ReflectionClass($this->rootComponent);
+        $componentFilename = $componentReflection->getFileName();
+        $pathRelativeFromRoot = Path::relative($this->templatesDirectory, $componentFilename);
 
-    return $tags;
-  }
+        return Path::join(dirname($pathRelativeFromRoot) ?: '', $componentAttributeInstance->templateUrl);
+    }
 }

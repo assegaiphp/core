@@ -77,6 +77,11 @@ class OpenApiGenerator
    */
   private array $inlineSchemaCache = [];
 
+  /**
+   * @var array<class-string, true>
+   */
+  private array $resolvingInlineSchemas = [];
+
   public function __construct(
     private readonly ControllerManager $controllerManager,
     private readonly ModuleManager $moduleManager,
@@ -95,6 +100,7 @@ class OpenApiGenerator
     $this->componentNameIndex = [];
     $this->componentSchemas = [];
     $this->inlineSchemaCache = [];
+    $this->resolvingInlineSchemas = [];
 
     $paths = [];
 
@@ -764,6 +770,10 @@ class OpenApiGenerator
     $componentName = $this->componentNameFor($className);
 
     if (!isset($this->componentSchemas[$componentName])) {
+      $this->componentSchemas[$componentName] = [
+        'type' => 'object',
+        'properties' => [],
+      ];
       $this->componentSchemas[$componentName] = $this->inlineSchemaForClass($className);
     }
 
@@ -785,41 +795,55 @@ class OpenApiGenerator
       return $this->inlineSchemaCache[$className];
     }
 
+    if (isset($this->resolvingInlineSchemas[$className])) {
+      return [
+        'type' => 'object',
+        'properties' => [],
+      ];
+    }
+
     if (enum_exists($className) || is_subclass_of($className, UnitEnum::class, true)) {
       $schema = $this->enumSchema($className);
       $this->inlineSchemaCache[$className] = $schema;
       return $schema;
     }
 
+    $this->resolvingInlineSchemas[$className] = true;
+
     $reflection = new ReflectionClass($className);
     $schema = [
       'type' => 'object',
       'properties' => [],
     ];
+    $this->inlineSchemaCache[$className] = $schema;
     $required = [];
     $example = [];
 
-    foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
-      $propertySchema = $this->schemaFromProperty($property);
-      $schema['properties'][$property->getName()] = $propertySchema;
-      $example[$property->getName()] = $this->buildSchemaExample($propertySchema);
+    try {
+      foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+        $propertySchema = $this->schemaFromProperty($property);
+        $schema['properties'][$property->getName()] = $propertySchema;
+        $example[$property->getName()] = $this->buildSchemaExample($propertySchema);
 
-      if ($this->isRequiredProperty($property, $reflection)) {
-        $required[] = $property->getName();
+        if ($this->isRequiredProperty($property, $reflection)) {
+          $required[] = $property->getName();
+        }
       }
+
+      if ($required !== []) {
+        $schema['required'] = $required;
+      }
+
+      if ($example !== []) {
+        $schema['example'] = $example;
+      }
+
+      $this->inlineSchemaCache[$className] = $schema;
+
+      return $schema;
+    } finally {
+      unset($this->resolvingInlineSchemas[$className]);
     }
-
-    if ($required !== []) {
-      $schema['required'] = $required;
-    }
-
-    if ($example !== []) {
-      $schema['example'] = $example;
-    }
-
-    $this->inlineSchemaCache[$className] = $schema;
-
-    return $schema;
   }
 
   /**

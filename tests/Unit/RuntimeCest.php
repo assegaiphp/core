@@ -361,6 +361,32 @@ class RuntimeCest
     });
   }
 
+  public function testOpenSwooleRuntimeRejectsUnsupportedSettings(UnitTester $I): void
+  {
+    $I->expectThrowable(InvalidArgumentException::class, static function (): void {
+      new OpenSwooleHttpRuntime(settings: [
+        'unsupportedThing' => true,
+      ]);
+    });
+  }
+
+  public function testOpenSwooleRuntimeRejectsInvalidBindingsAndNumericSettings(UnitTester $I): void
+  {
+    $I->expectThrowable(InvalidArgumentException::class, static function (): void {
+      new OpenSwooleHttpRuntime(host: ' ', port: 9501);
+    });
+
+    $I->expectThrowable(InvalidArgumentException::class, static function (): void {
+      new OpenSwooleHttpRuntime(host: '127.0.0.1', port: 0);
+    });
+
+    $I->expectThrowable(InvalidArgumentException::class, static function (): void {
+      new OpenSwooleHttpRuntime(settings: [
+        'workerNum' => 0,
+      ]);
+    });
+  }
+
   public function testAppCanHydrateRequestScopeFromRuntimeContext(UnitTester $I): void
   {
     $_GET = ['path' => '/wrong-source', 'limit' => '999'];
@@ -685,6 +711,128 @@ class RuntimeCest
     $I->assertNull(RuntimeContext::get(Request::class));
     $I->assertNull(RuntimeContext::get(HttpResponse::class));
     $I->assertNull(RuntimeContext::get(Responder::class));
+  }
+
+  public function testOpenSwooleRuntimeCanResolveHookFlagListsIntoBitmasks(UnitTester $I): void
+  {
+    if (!defined('SWOOLE_HOOK_FILE')) {
+      define('SWOOLE_HOOK_FILE', 4);
+    }
+
+    if (!defined('SWOOLE_HOOK_SLEEP')) {
+      define('SWOOLE_HOOK_SLEEP', 8);
+    }
+
+    $expectedHookFlags = constant('SWOOLE_HOOK_FILE') | constant('SWOOLE_HOOK_SLEEP');
+    $request = new class {
+      public array $server = [
+        'request_method' => 'GET',
+        'request_uri' => '/runtime-probe',
+        'query_string' => '',
+        'remote_addr' => '10.20.30.42',
+        'server_protocol' => 'HTTP/1.1',
+      ];
+      public array $header = [
+        'host' => 'runtime.local',
+      ];
+      public array $get = [
+        'path' => '/runtime-probe',
+      ];
+      public array $post = [];
+      public array $cookie = [];
+      public array $files = [];
+
+      public function rawContent(): string
+      {
+        return '';
+      }
+    };
+
+    $response = new class {
+      public ?int $status = null;
+      /** @var array<string, string> */
+      public array $headers = [];
+      public string $body = '';
+      public bool $writable = true;
+
+      public function isWritable(): bool
+      {
+        return $this->writable;
+      }
+
+      public function status(int $status): void
+      {
+        $this->status = $status;
+      }
+
+      public function header(string $name, string $value): void
+      {
+        $this->headers[$name] = $value;
+      }
+
+      public function end(string $body): void
+      {
+        $this->body = $body;
+        $this->writable = false;
+      }
+    };
+
+    $server = new class($request, $response) implements OpenSwooleHttpServerInterface {
+      /** @var array<string, mixed> */
+      public array $settings = [];
+      /** @var array<string, callable> */
+      public array $handlers = [];
+
+      public function __construct(
+        private readonly object $request,
+        private readonly object $response,
+      )
+      {
+      }
+
+      public function set(array $settings): void
+      {
+        $this->settings = $settings;
+      }
+
+      public function on(string $event, callable $handler): void
+      {
+        $this->handlers[$event] = $handler;
+      }
+
+      public function start(): void
+      {
+        ($this->handlers['request'])($this->request, $this->response);
+      }
+    };
+
+    $factory = new class($server) implements OpenSwooleServerFactoryInterface {
+      public function __construct(
+        private readonly OpenSwooleHttpServerInterface $server,
+      )
+      {
+      }
+
+      public function create(string $host, int $port): OpenSwooleHttpServerInterface
+      {
+        return $this->server;
+      }
+    };
+
+    $runtime = new OpenSwooleHttpRuntime(
+      host: '127.0.0.1',
+      port: 9516,
+      settings: [
+        'hookFlags' => ['file', 'sleep'],
+      ],
+      serverFactory: $factory,
+    );
+
+    $app = AssegaiFactory::create(RuntimeAwareAppModule::class, $runtime);
+    $app->run();
+
+    $I->assertSame($expectedHookFlags, $server->settings['hook_flags'] ?? null);
+    $I->assertSame(200, $response->status);
   }
 
   public function testOpenSwooleRuntimeRoutesEscapedHandlerFailuresThroughFrameworkHandlers(UnitTester $I): void

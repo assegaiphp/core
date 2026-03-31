@@ -33,6 +33,12 @@ final class Paths
    */
   public static function getWorkingDirectory(): string
   {
+    $workingDirectory = getenv('ASSEGAI_WORKING_DIR');
+
+    if (is_string($workingDirectory) && trim($workingDirectory) !== '') {
+      return $workingDirectory;
+    }
+
     return getcwd() ?: '';
   }
 

@@ -151,11 +151,11 @@ use Assegai\Core\AssegaiFactory;
 use Assegai\Core\Pipes\ValidationPipe;
 use Assegaiphp\PublishingSuite\AppModule;
 
-require './vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
 function bootstrap(): void
 {
-  $app = AssegaiFactory::create(AppModule::class);
+  $app = AssegaiFactory::createFromProject(AppModule::class, __DIR__);
   $app->useGlobalPipes(new ValidationPipe());
   $app->run();
 }

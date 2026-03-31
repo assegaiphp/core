@@ -78,11 +78,20 @@ assegai serve
 
 ## What the settings mean
 
+Assegai validates these settings before the runtime boots, so a typo like `workerNums` or an invalid value like `"workerNum": 0` fails early instead of leaving you with a vague server-start error.
+
 - `workerNum` controls how many HTTP workers the server starts
 - `taskWorkerNum` reserves task workers for short internal offloading work
 - `maxRequest` lets a worker restart after a fixed number of requests
 - `enableCoroutine` turns coroutine support on or off
 - `hookFlags` controls which coroutine hooks OpenSwoole enables
+
+`hookFlags` can be:
+
+- `"all"` to enable the standard full hook set
+- `"none"` to disable hook flags entirely
+- an integer bitmask if you already know the exact OpenSwoole constant combination you want
+- a list such as `["file", "sleep"]` when you want to be explicit about the hooks you are turning on
 
 For a first pass, the defaults are fine.
 

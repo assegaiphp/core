@@ -63,6 +63,7 @@ class ApiDocsCest
     $_SERVER['HTTP_HOST'] = 'localhost:5050';
     $_SERVER['REQUEST_URI'] = '/docs';
     $_GET['path'] = 'docs';
+    putenv('ASSEGAI_WORKING_DIR');
 
     $this->resetRequestSingleton();
   }
@@ -70,6 +71,7 @@ class ApiDocsCest
   public function _after(UnitTester $I): void
   {
     $this->resetRequestSingleton();
+    putenv('ASSEGAI_WORKING_DIR');
     chdir($this->originalWorkingDirectory);
 
     if (is_file($this->workspace . '/composer.json')) {
@@ -147,6 +149,16 @@ class ApiDocsCest
       'Rendered HTML response.',
       $document['paths']['/pages/home']['get']['responses']['200']['content']['text/html']['schema']['description']
     );
+    $I->assertArrayHasKey('/nodes/{id}', $document['paths']);
+    $I->assertSame(
+      '#/components/schemas/RecursiveNodeDTO',
+      $document['paths']['/nodes/{id}']['get']['responses']['200']['content']['application/json']['schema']['$ref']
+    );
+    $I->assertSame(
+      '#/components/schemas/RecursiveNodeDTO',
+      $document['components']['schemas']['RecursiveNodeDTO']['properties']['next']['$ref']
+    );
+    $I->assertTrue($document['components']['schemas']['RecursiveNodeDTO']['properties']['next']['nullable']);
     $I->assertArrayNotHasKey('View', $document['components']['schemas'] ?? []);
   }
 
@@ -228,6 +240,8 @@ class ApiDocsCest
 
     $refreshRequestScope = new \ReflectionMethod($app, 'refreshRequestScope');
     $refreshRequestScope->invoke($app);
+    $responder->setEmitter($capturingEmitter);
+    $responderProperty->setValue($app, $responder);
 
     $handleGeneratedApiDocsRequest = new \ReflectionMethod($app, 'handleGeneratedApiDocsRequest');
     $handled = $handleGeneratedApiDocsRequest->invoke($app);
@@ -235,6 +249,17 @@ class ApiDocsCest
     $I->assertTrue($handled);
     $I->assertCount(1, $capturingEmitter->emissions);
     $I->assertSame('3.1.0', json_decode($capturingEmitter->emissions[0]['body'], true)['openapi']);
+  }
+
+  public function testCreateFromProjectKeepsApiDocsBoundToTheExplicitWorkspace(UnitTester $I): void
+  {
+    chdir($this->originalWorkingDirectory);
+
+    $app = AssegaiFactory::createFromProject(ApiDocsAppModule::class, $this->workspace);
+    $document = $app->describeApi();
+
+    $I->assertSame('Test API API', $document['info']['title']);
+    $I->assertSame('0.1.0', $document['info']['version']);
   }
 
   private function resetRequestSingleton(): void

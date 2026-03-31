@@ -68,7 +68,7 @@ At a high level, the runtime looks like this:
 ```mermaid
 flowchart TD
   A["index.php"] --> B["bootstrap.php"]
-  B --> C["AssegaiFactory::create(AppModule::class)"]
+  B --> C["AssegaiFactory::createFromProject(AppModule::class, __DIR__)"]
   C --> D["App::run()"]
   D --> E["Session setup"]
   E --> F["Resolve modules"]

@@ -252,7 +252,7 @@ class App implements AppInterface
      */
     protected function initializeAppProperties(): void
     {
-        $dotEnv = Dotenv::createImmutable(getcwd());
+        $dotEnv = Dotenv::createImmutable(Paths::getWorkingDirectory());
         $dotEnv->load();
 
         if (!self::getLocale()) {

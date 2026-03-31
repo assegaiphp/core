@@ -27,7 +27,7 @@ class Config
   public static function hydrate(?string $configDirectory = null): void
   {
     $config = [];
-    $workingDirectory = $configDirectory ?? getcwd();
+    $workingDirectory = $configDirectory ?? Paths::getWorkingDirectory();
     $configFilename = Paths::join(trim($workingDirectory), 'config', 'default.php');
     $envPath = Paths::join(trim($workingDirectory), '.env');
 
@@ -194,7 +194,7 @@ class Config
   {
     if (!$workspaceDirectory)
     {
-      $workspaceDirectory = getcwd();
+      $workspaceDirectory = Paths::getWorkingDirectory();
     }
 
     $workspaceConfigFilename = Paths::join($workspaceDirectory, 'assegai.json');
@@ -225,7 +225,7 @@ class Config
   {
     if (!$workspaceDirectory)
     {
-      $workspaceDirectory = getcwd();
+      $workspaceDirectory = Paths::getWorkingDirectory();
     }
 
     $workspaceConfigFilename = Paths::join($workspaceDirectory, 'assegai.json');
