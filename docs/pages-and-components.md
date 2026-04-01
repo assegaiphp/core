@@ -171,6 +171,133 @@ And the template can stay small:
 <p>{{ name }} works!</p>
 ```
 
+
+## Twig in Assegai uses normal Twig syntax
+
+If you have never used Twig before, the main thing to know is that Assegai is not inventing a new template language here. A `.twig` file is a normal Twig template rendered on the server.
+
+The most common pieces are:
+
+- `{{ ... }}` to print a value
+- `{% if ... %}` and `{% endif %}` for conditions
+- `{% for item in items %}` for loops
+- `{# ... #}` for comments
+- `{% include ... %}`, `{% extends ... %}`, and `{% block ... %}` for larger template layouts
+
+For example:
+
+```twig
+<section class="about-page">
+  <h1>{{ title }}</h1>
+
+  {% if subtitle %}
+    <p>{{ subtitle }}</p>
+  {% endif %}
+
+  <ul>
+    {% for member in teamMembers %}
+      <li>{{ member.name }}</li>
+    {% endfor %}
+  </ul>
+</section>
+```
+
+So if someone on your team already knows Twig from another PHP project, that knowledge mostly transfers directly.
+
+## What data a Twig template receives in Assegai
+
+In a component-backed page, Assegai gives the template:
+
+- the component's public properties as normal Twig variables like `{{ title }}`
+- the `ctx` helper object for calling component methods and framework helpers
+
+That means a component like this:
+
+```php
+<?php
+
+#[Component(
+  selector: 'app-about',
+  templateUrl: './AboutComponent.twig',
+)]
+class AboutComponent extends AssegaiComponent
+{
+  public string $title = 'About us';
+  public ?string $subtitle = 'Built with Assegai';
+
+  public function greeting(): string
+  {
+    return 'Welcome to the team page.';
+  }
+}
+```
+
+can be rendered like this:
+
+```twig
+<section>
+  <h1>{{ title }}</h1>
+  <p>{{ subtitle }}</p>
+  <p>{{ ctx.greeting() }}</p>
+</section>
+```
+
+The important distinction is:
+
+- use plain Twig variables for public component properties
+- use `ctx.methodName()` for public component methods
+
+## Helpers that Assegai adds to Twig
+
+Assegai keeps the Twig environment fairly small on purpose. The built-in helpers you should expect are:
+
+- `ctx.config(path, default = null)` for config values
+- `ctx.translate(id, parameters = [], domain = '', locale = null)` for translations
+- `ctx.timeAgo(timestamp, timezone = null)` for relative time output
+- `ctx.env(key, default = null)` for environment values
+- `ctx.getLang()` for the current language
+- `ctx.webComponentProps(...)` or `ctx.wcProps(...)` for safe Web Component props
+- `ctx.webComponentBundleUrl()` for the bundle URL
+
+Example:
+
+```twig
+<article>
+  <h1>{{ title }}</h1>
+  <p>{{ ctx.timeAgo(publishedAt) }}</p>
+  <p>{{ ctx.translate('posts.read_more') }}</p>
+</article>
+```
+
+## Do not assume every Twig ecosystem feature is already enabled
+
+This is where confusion usually starts for people coming from Symfony or another Twig-heavy stack.
+
+Assegai does not automatically give you every helper or extension you may have seen elsewhere. For example, you should not assume things like these exist unless you add them yourself:
+
+- a global `app` object
+- `path()` or `url()` routing helpers
+- `asset()` helpers
+- `form_*()` helpers
+- `csrf_token()`
+- random third-party Twig extensions
+
+In other words, standard Twig language features work, but framework-specific extras are only available if Assegai explicitly adds them.
+
+## Where to learn more Twig itself
+
+Use the Assegai guides for the Assegai-specific part of the workflow:
+
+- this guide for how pages and components fit together
+- [Frontend with Web Components](./frontend-with-web-components.md) for where browser code should live
+
+Use the official Twig docs for the template language itself:
+
+- [Twig template basics](https://twig.symfony.com/doc/3.x/templates.html)
+- [Twig tags reference](https://twig.symfony.com/doc/3.x/tags/index.html)
+- [Twig filters reference](https://twig.symfony.com/doc/3.x/filters/index.html)
+- [Twig functions reference](https://twig.symfony.com/doc/3.x/functions/index.html)
+
 ## HTMX is available on rendered pages out of the box
 
 Both HTML rendering paths inject HTMX automatically. That means server-rendered pages can start using `hx-*` attributes without a separate layout step.
