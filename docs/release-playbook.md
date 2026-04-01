@@ -82,7 +82,7 @@ At minimum, every PR should have:
 - one milestone
 - one type label
 
-Recommended milestone labels:
+Recommended milestone names:
 
 - `0.8.0`
 - `0.9.0`
