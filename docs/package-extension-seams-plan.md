@@ -2,6 +2,17 @@
 
 This document is an internal architecture note for future work.
 
+One important part of this plan has now started landing:
+
+- constructor parameter attributes can provide their own dependency value through a generic `resolveParameterValue()` seam
+- `core` no longer hardcodes `#[InjectRepository]`
+- queue injection is now using the same seam too
+- `core` now also exposes `ParameterResolverInterface`
+- modules can now configure injector extensions before provider resolution begins
+- `OrmModule` uses that module-level seam to register repository resolution without teaching `core` about ORM classes
+
+So this document is no longer purely aspirational. It now describes a direction that has already begun in the injector.
+
 It describes how Assegai should support optional packages such as `events`, `orm`, queues, and later integrations without teaching `core` about each package's attributes or constructor tricks.
 
 ## Why this matters
@@ -115,9 +126,33 @@ The injector currently contains hardcoded branches for package-specific attribut
 
 That means adding a new package feature usually requires changing `core/src/Injector.php`.
 
+### What has now landed
+
+The first version of this seam is simpler than the full resolver pipeline described below.
+
+Today, the injector will honor any parameter attribute that exposes:
+
+```php
+public function resolveParameterValue(): mixed
+```
+
+That gives packages a lightweight escape hatch immediately, without forcing `core` to import package-specific attribute
+classes.
+
+This is enough for:
+
+- `orm` repository injection
+- queue injection
+- future package attributes that can resolve themselves directly
+
+The next layer has now landed too:
+
+- packages can register richer resolvers through `ParameterResolverInterface`
+- modules can opt into `ConfiguresInjectorInterface` when they need to register those resolvers before providers are hydrated
+
 ### Desired direction
 
-Introduce a generic parameter resolution extension pipeline.
+Introduce a richer generic parameter resolution extension pipeline.
 
 Suggested shape:
 
@@ -157,6 +192,16 @@ The context would carry things like:
 - future packages can ship resolvers for their own attributes
 
 `core` only loops through registered resolvers. It does not need to recognize each package decorator by name.
+
+### How those resolvers are registered early enough
+
+Resolvers are only useful if they are present before default-scoped providers are built.
+
+That is why `core` now also supports a module-level injector configuration seam. A package bridge module can implement
+`ConfiguresInjectorInterface` and register its resolvers immediately after module discovery, before provider
+resolution starts.
+
+That is the pattern `OrmModule` now uses.
 
 ## Extension seam 3: module-level bridge providers
 
@@ -210,6 +255,9 @@ Prefer explicit module-based registration first.
 That keeps package behavior visible in user code and avoids hidden bootstrapping.
 
 Auto-discovery can be explored later if it solves a clear problem.
+
+In the meantime, the generic attribute seam is the bridge between the old hardcoded world and the fuller resolver
+pipeline described here.
 
 ## How this solves `events`
 

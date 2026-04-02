@@ -2,11 +2,19 @@
     <a href="https://assegaiphp.com/" target="blank"><img src="https://assegaiphp.com/images/logos/logo-cropped.png" width="200" alt="Assegai Logo"></a>
 </div>
 
+<p align="center">
+  <a href="https://github.com/assegaiphp/core/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/assegaiphp/core?display_name=tag&sort=semver&style=flat-square"></a>
+  <a href="https://github.com/assegaiphp/core/actions/workflows/php.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/assegaiphp/core/php.yml?branch=main&label=tests&style=flat-square"></a>
+  <img alt="PHP 8.3+" src="https://img.shields.io/badge/PHP-8.3%2B-777BB4?style=flat-square&logo=php&logoColor=white">
+  <a href="https://github.com/assegaiphp/core/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/assegaiphp/core?style=flat-square"></a>
+  <img alt="Status 0.8.0 milestone" src="https://img.shields.io/badge/status-0.8.0%20milestone-2563eb?style=flat-square">
+</p>
+
 <p style="text-align: center">A progressive <a href="https://php.net">PHP</a> framework for building effecient and scalable server-side applications.</p>
 
 ## Description
 
-Assegai is a framework for building efficient, scalable <a href="https://php.net" target="blank">PHP</a> server-side applications. It uses modern PHP (~ PHP 8.1) and combines elements of OOP (Object Oriented Programming) and FP (Functional Programming).
+Assegai is a framework for building efficient, scalable <a href="https://php.net" target="blank">PHP</a> server-side applications. It uses modern PHP (PHP 8.3+) and combines elements of OOP (Object Oriented Programming) and FP (Functional Programming).
 
 ## Philosophy
 

@@ -20,10 +20,13 @@ use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Session;
 use Mocks\ExplicitRequestScopedService;
+use Mocks\AttributeResolvedService;
 use Mocks\FrameworkAwareAppModule;
 use Mocks\FrameworkAwareContractsService;
 use Mocks\FrameworkAwareService;
 use Mocks\RequestCapturingService;
+use Mocks\ResolverAwareAppModule;
+use Mocks\ResolverResolvedService;
 use ReflectionException;
 use ReflectionProperty;
 use Tests\Support\UnitTester;
@@ -236,6 +239,26 @@ class InjectorCest
     $I->assertSame(Response::current(), $service->response);
     $I->assertInstanceOf(ProjectConfig::class, $service->projectConfig);
     $I->assertSame(Session::getInstance(), $service->session);
+  }
+
+  public function testParameterAttributesCanResolveDependenciesWithoutInjectorHardcoding(UnitTester $I): void
+  {
+    $service = Injector::getInstance()->resolve(AttributeResolvedService::class);
+
+    $I->assertInstanceOf(AttributeResolvedService::class, $service);
+    $I->assertSame('attribute-seam', $service->value->value);
+  }
+
+  public function testImportedModulesCanRegisterPackageParameterResolversBeforeProviderResolution(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(ResolverAwareAppModule::class);
+    $app->boot();
+    $service = Injector::getInstance()->resolve(ResolverResolvedService::class);
+
+    $I->assertInstanceOf(App::class, $app);
+    $I->assertInstanceOf(ResolverResolvedService::class, $service);
+    $I->assertSame('resolved-by-registry', $service->value->value);
+    $I->assertCount(1, Injector::getInstance()->getParameterResolvers());
   }
 
   public function testRefreshingRequestScopeRebindsRequestScopedServices(UnitTester $I): void

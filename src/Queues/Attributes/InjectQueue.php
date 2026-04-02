@@ -48,4 +48,9 @@ readonly class InjectQueue
 
     $this->queue = $driverClass::create($queueConfig);
   }
+
+  public function resolveParameterValue(): QueueInterface
+  {
+    return $this->queue;
+  }
 }

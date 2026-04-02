@@ -167,6 +167,7 @@ Before tagging, make sure the following are done:
 - blog article is ready
 - docs are updated
 - upgrade notes are written if needed
+- updates advisor entry is prepared if the release changes user-facing behavior
 - version number and tag are agreed
 
 Then:
@@ -174,6 +175,7 @@ Then:
 - tag the release
 - publish release notes
 - publish the blog article
+- publish the upgrade notes and updates advisor entry when needed
 
 ## Patch release workflow
 
@@ -214,7 +216,10 @@ Use this checklist for each milestone release.
 - docs updated
 - release notes drafted
 - blog article drafted
+- repo health manifest and README status badge reviewed for the milestone
+- run `assegai updates:scaffold <from> <to>` when a new upgrade path opens
 - upgrade notes drafted when needed
+- updates advisor entry drafted when needed
 
 ### Before tagging
 
@@ -223,11 +228,14 @@ Use this checklist for each milestone release.
 - release notes are final
 - blog article is ready to publish
 - docs reflect shipped behavior, not aspirational behavior
+- package `meta/repo-health.json` files reflect the current release state
+- README badge rows still point at live release and CI signals
 
 ### After tagging
 
 - publish release notes
 - publish the blog article
+- publish or update the updates advisor entry
 - announce the release
 - merge or cherry-pick release-only fixes back to `main`
 - create or confirm the next milestone

@@ -11,13 +11,20 @@ It is about wiring the ORM into an Assegai app cleanly:
 
 ## Install the ORM
 
-For an existing project:
+For an existing project, prefer the one-step Assegai workflow:
 
 ```bash
-composer require assegaiphp/orm
+assegai add orm
 ```
 
-For a new project, the usual path is to choose database setup during `assegai new` and let the CLI scaffold the config for you.
+That will install `assegaiphp/orm` if needed, import `OrmModule`, and expose the ORM commands through package
+discovery.
+
+If you already ran `composer require assegaiphp/orm`, running `assegai add orm` afterward is still fine. It just
+finishes the workspace wiring.
+
+For a new project, the usual path is to choose database setup during `assegai new` and let the CLI scaffold the config
+for you.
 
 ## Configure a database with the CLI
 

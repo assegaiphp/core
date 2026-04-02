@@ -814,6 +814,7 @@ class App implements AppInterface
         }
 
         $this->resolveModules();
+        $this->moduleManager->configureInjectorExtensions();
         $this->resolveProviders();
         $this->resolveDeclarations();
         $this->resolveControllers();

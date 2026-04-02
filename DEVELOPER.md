@@ -10,6 +10,9 @@ These notes are not part of the public guide surface and should not be read as s
 - [Package Extension Seams Plan](./docs/package-extension-seams-plan.md)
 - [Roadmap To 1.0.0](./docs/roadmap-to-v1.md)
 - [Release Playbook](./docs/release-playbook.md)
+- [Repo Health Badges](./docs/repo-health-badges.md)
+- [Upgrade Policy](./docs/upgrade-policy.md)
+- [Updates Advisor Plan](./docs/updates-advisor-plan.md)
 - [Test Suite Stabilization Plan](./docs/test-suite-stabilization-plan.md)
 
 

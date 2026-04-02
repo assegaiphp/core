@@ -27,6 +27,7 @@ use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
+use Assegai\Core\Interfaces\ParameterResolverInterface;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
 use Assegai\Core\Queues\Attributes\InjectQueue;
 use Assegai\Core\Runtimes\RuntimeContext;
@@ -74,6 +75,10 @@ final class Injector implements ITokenStoreOwner, IContainer
    * @var array<class-string, bool>
    */
   protected array $requestScopedDependencyCache = [];
+  /**
+   * @var ParameterResolverInterface[]
+   */
+  protected array $parameterResolvers = [];
   /**
    * @var LoggerInterface The logger instance.
    */
@@ -363,6 +368,16 @@ final class Injector implements ITokenStoreOwner, IContainer
         return null;
       }
 
+      [$isAttributeResolved, $attributeResolvedValue] = $this->resolveDependencyFromParameterAttributes($param);
+      if ($isAttributeResolved) {
+        return $attributeResolvedValue;
+      }
+
+      [$isResolverResolved, $resolverResolvedValue] = $this->resolveDependencyFromResolvers($param);
+      if ($isResolverResolved) {
+        return $resolverResolvedValue;
+      }
+
       if (enum_exists($paramType->getName())) {
         try {
           $reflectionEnum = new ReflectionEnum($paramType->getName());
@@ -376,28 +391,8 @@ final class Injector implements ITokenStoreOwner, IContainer
         return $param->allowsNull() ? null : [];
       }
 
-      # Resolve repository injection
-      $repositoryAttributes = $param->getAttributes('Assegai\Orm\Attributes\InjectRepository');
-
-      foreach ( $repositoryAttributes as $reflectionRepoAttr ) {
-        $injectRepositoryInstance = $reflectionRepoAttr->newInstance();
-        if (property_exists($injectRepositoryInstance, 'repository')) {
-          return $injectRepositoryInstance->repository;
-        }
-      }
-
       # TODO: Check if param has Injectable class or attribute
       $repositoryAttributes = [...$param->getAttributes(CoreInjectable::class), ...$param->getAttributes(Injectable::class)];
-
-      # Resolve queue injection
-      $queueAttributes = $param->getAttributes(InjectQueue::class);
-
-      foreach ( $queueAttributes as $queueAttribute ) {
-        $queueInstance = $queueAttribute->newInstance();
-        if (property_exists($queueInstance, 'queue')) {
-          return $queueInstance->queue;
-        }
-      }
 
       $typeName = $paramType->getName();
       $frameworkDependency = match ($typeName) {
@@ -473,6 +468,69 @@ final class Injector implements ITokenStoreOwner, IContainer
 
       return $dependency;
     }, $parameters);
+  }
+
+  /**
+   * Allows parameter attributes to provide their own resolved dependency value without the injector
+   * hardcoding package-specific attribute names.
+   *
+   * Any attribute that defines a public `resolveParameterValue()` method participates in this seam.
+   *
+   * @param ReflectionParameter $param
+   * @return array{0: bool, 1: mixed}
+   */
+  private function resolveDependencyFromParameterAttributes(ReflectionParameter $param): array
+  {
+    foreach ($param->getAttributes() as $attributeReflection) {
+      $attributeInstance = $attributeReflection->newInstance();
+
+      if (!method_exists($attributeInstance, 'resolveParameterValue')) {
+        continue;
+      }
+
+      return [true, $attributeInstance->resolveParameterValue()];
+    }
+
+    return [false, null];
+  }
+
+  /**
+   * Allows registered package resolvers to provide dependency values for parameter metadata
+   * without hardcoding those packages into the injector itself.
+   *
+   * @param ReflectionParameter $param
+   * @return array{0: bool, 1: mixed}
+   */
+  private function resolveDependencyFromResolvers(ReflectionParameter $param): array
+  {
+    foreach ($this->parameterResolvers as $resolver) {
+      if (!$resolver->supports($param, $this)) {
+        continue;
+      }
+
+      return [true, $resolver->resolve($param, $this)];
+    }
+
+    return [false, null];
+  }
+
+  public function registerParameterResolver(ParameterResolverInterface $resolver): void
+  {
+    foreach ($this->parameterResolvers as $registeredResolver) {
+      if ($registeredResolver::class === $resolver::class) {
+        return;
+      }
+    }
+
+    $this->parameterResolvers[] = $resolver;
+  }
+
+  /**
+   * @return ParameterResolverInterface[]
+   */
+  public function getParameterResolvers(): array
+  {
+    return $this->parameterResolvers;
   }
 
   /**

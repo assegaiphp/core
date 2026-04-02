@@ -11,6 +11,7 @@ use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Interfaces\AssegaiModuleInterface;
+use Assegai\Core\Interfaces\ConfiguresInjectorInterface;
 use Assegai\Core\Interfaces\SingletonInterface;
 use Assegai\Core\Util\Debug\Log;
 use Assegai\Util\Path;
@@ -376,6 +377,29 @@ class ModuleManager implements SingletonInterface
 
       $moduleInstance = $this->instantiateModule($moduleClass);
       $moduleInstance->configure($consumer);
+    }
+  }
+
+  /**
+   * Allows imported modules to contribute injector extensions before provider resolution begins.
+   *
+   * This is how optional packages can teach the framework about package-specific parameter
+   * resolution without core hardcoding those packages directly.
+   *
+   * @return void
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  public function configureInjectorExtensions(): void
+  {
+    foreach (array_keys($this->moduleTokens) as $moduleClass) {
+      if (!is_subclass_of($moduleClass, ConfiguresInjectorInterface::class)) {
+        continue;
+      }
+
+      /** @var ConfiguresInjectorInterface $moduleInstance */
+      $moduleInstance = $this->instantiateModule($moduleClass);
+      $moduleInstance->configureInjector($this->injector);
     }
   }
 
