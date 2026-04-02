@@ -4,6 +4,31 @@ Assegai can treat API description as part of normal application code instead of 
 
 If your controllers and DTOs already describe request handling, the framework can derive a usable API contract from that metadata automatically.
 
+## Use a project-aware bootstrap
+
+If your project lives several directories deep, make the bootstrap file resolve the project root explicitly instead of depending on the shell's current working directory.
+
+Use this pattern:
+
+```php
+<?php
+
+use Assegai\Core\AssegaiFactory;
+use Assegai\App\AppModule;
+
+require __DIR__ . '/vendor/autoload.php';
+
+$app = AssegaiFactory::createFromProject(AppModule::class, __DIR__);
+$app->run();
+```
+
+This matters for:
+
+- runtime docs like `/docs` and `/openapi.json`
+- CLI exports like `assegai api:export openapi`
+- projects that are launched from outside their root directory
+- projects nested deeply inside a monorepo or experiments workspace
+
 ## Runtime docs vs exported files
 
 There are two related but different ideas here:
@@ -158,6 +183,12 @@ You can export OpenAPI directly:
 assegai api:export openapi
 ```
 
+If you are running the command from outside the project root, pass the project directory explicitly:
+
+```bash
+assegai api:export openapi --directory /absolute/path/to/project
+```
+
 Default output:
 
 ```text
@@ -168,6 +199,12 @@ You can export a Postman collection from the same metadata:
 
 ```bash
 assegai api:export postman
+```
+
+From outside the project directory:
+
+```bash
+assegai api:export postman --directory /absolute/path/to/project
 ```
 
 Default output:

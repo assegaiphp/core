@@ -125,7 +125,7 @@ require __DIR__ . '/vendor/autoload.php';
 
 function bootstrap(): void
 {
-  $app = AssegaiFactory::create(AppModule::class);
+  $app = AssegaiFactory::createFromProject(AppModule::class, __DIR__);
   $app->run();
 }
 

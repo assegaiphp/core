@@ -14,6 +14,18 @@ The core idea is simple:
 
 By the end of this guide, you should know where front-end code lives, how to generate new components, and how to run the supported build/watch flow.
 
+
+## Server-rendered pages often use Twig
+
+If you are new to Assegai's frontend story, it helps to separate two different jobs:
+
+- Twig renders HTML on the server
+- Web Components add browser behavior where you need it
+
+So when you see a file like `AboutComponent.twig`, think "server-rendered HTML template," not "browser component code."
+
+That means a page can use Twig for the HTML structure and still hydrate a Web Component later for interactive behavior.
+
 ## The default path for a new app
 
 For a new project, the happy path is:
@@ -42,6 +54,9 @@ Use component-backed pages when:
 - the page belongs to a feature module
 - the template, service, controller, and module should stay together
 - the page still wants to be server-rendered first
+
+
+The `.twig` file here is a normal Twig template. It is the HTML side of the page.
 
 ### `public/js/main.js`
 
@@ -77,6 +92,76 @@ assegai g pg about --wc
 ```
 
 That gives you a server-rendered feature plus a browser-side custom element file that participates in the first-party build flow.
+
+
+## Twig basics in Assegai
+
+The most common Twig syntax you need is:
+
+- `{{ title }}` to print a value
+- `{% if subtitle %}` for conditions
+- `{% for item in items %}` for loops
+- `{# comment #}` for template comments
+
+Example:
+
+```twig
+<section class="hero">
+  <h1>{{ title }}</h1>
+
+  {% if subtitle %}
+    <p>{{ subtitle }}</p>
+  {% endif %}
+
+  <ul>
+    {% for feature in features %}
+      <li>{{ feature }}</li>
+    {% endfor %}
+  </ul>
+</section>
+```
+
+If you already know Twig from somewhere else, that same template language knowledge still applies here.
+
+## What Assegai passes into a Twig template
+
+Component-backed Twig templates receive:
+
+- the component's public properties as normal variables
+- a `ctx` helper object for methods and framework helpers
+
+So if your component has:
+
+```php
+public string $title = 'Dashboard';
+
+public function greeting(): string
+{
+  return 'Welcome back.';
+}
+```
+
+you can use:
+
+```twig
+<h1>{{ title }}</h1>
+<p>{{ ctx.greeting() }}</p>
+```
+
+That is the rule to remember:
+
+- public properties become plain Twig variables
+- public methods are called through `ctx`
+
+Built-in `ctx` helpers include:
+
+- `ctx.config(...)`
+- `ctx.translate(...)`
+- `ctx.timeAgo(...)`
+- `ctx.env(...)`
+- `ctx.getLang()`
+- `ctx.webComponentProps(...)` and `ctx.wcProps(...)`
+- `ctx.webComponentBundleUrl()`
 
 ## A generated component is expected to render through the shadow root
 
@@ -156,6 +241,26 @@ The helper exists because JSON inside HTML needs to be encoded and escaped safel
 
 The runtime reads that `data-props` payload and hydrates the custom element in the browser.
 
+
+## Do not assume every Twig helper from other frameworks exists
+
+Assegai uses Twig, but it does not automatically ship every helper you may have seen in Symfony or other stacks.
+
+Do not assume these are available unless you add them yourself:
+
+- a global `app` object
+- `path()` or `url()` routing helpers
+- `asset()` helpers
+- `form_*()` helpers
+- `csrf_token()`
+- third-party Twig extensions you have not installed
+
+So the safe mental model is:
+
+- standard Twig language features work
+- Assegai-specific helpers are available through `ctx`
+- anything beyond that should be treated as opt-in
+
 ## Bundle configuration lives in `assegai.json`
 
 The basic shape is:
@@ -229,3 +334,15 @@ Keep the server in charge of HTML.
 Use `main.js` sparingly for truly global behavior. Use first-party `.wc.ts` files for new custom elements. Let `serve --dev` or `wc:watch` keep the bundle current while you work.
 
 That keeps the application modular, predictable, and much easier to explain to the next person who joins the project.
+
+
+## Where to go deeper
+
+Use [Pages and Components](./pages-and-components.md) for the Assegai-specific rendering model and when to choose `View`, Twig-backed page components, HTMX, or Web Components.
+
+Use the official Twig docs for the template language itself:
+
+- [Twig template basics](https://twig.symfony.com/doc/3.x/templates.html)
+- [Twig tags reference](https://twig.symfony.com/doc/3.x/tags/index.html)
+- [Twig filters reference](https://twig.symfony.com/doc/3.x/filters/index.html)
+- [Twig functions reference](https://twig.symfony.com/doc/3.x/functions/index.html)

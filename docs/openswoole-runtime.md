@@ -58,6 +58,17 @@ Assegai translates those into the OpenSwoole server options it knows about today
 - `enableCoroutine` -> `enable_coroutine`
 - `hookFlags` -> `hook_flags`
 
+Assegai validates these settings before the runtime boots. That means unsupported keys and invalid values fail early instead of being silently ignored.
+
+`hookFlags` supports a few forms:
+
+- `"all"`
+- `"none"`
+- an integer bitmask
+- a list such as `["file", "sleep"]`
+
+When symbolic hook names are available in the current OpenSwoole runtime, Assegai resolves them into the matching `SWOOLE_HOOK_*` bitmask before handing the settings to the server.
+
 ## Error handling under OpenSwoole
 
 One detail matters more in a long-lived runtime than it does in a short-lived one: failures should still go back through the framework error pipeline.

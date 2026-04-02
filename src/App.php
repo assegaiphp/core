@@ -252,7 +252,7 @@ class App implements AppInterface
      */
     protected function initializeAppProperties(): void
     {
-        $dotEnv = Dotenv::createImmutable(getcwd());
+        $dotEnv = Dotenv::createImmutable(Paths::getWorkingDirectory());
         $dotEnv->load();
 
         if (!self::getLocale()) {
@@ -814,6 +814,7 @@ class App implements AppInterface
         }
 
         $this->resolveModules();
+        $this->moduleManager->configureInjectorExtensions();
         $this->resolveProviders();
         $this->resolveDeclarations();
         $this->resolveControllers();

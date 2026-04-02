@@ -41,6 +41,12 @@ class PostDTO
   public string $body;
 }
 
+class RecursiveNodeDTO
+{
+  public string $name;
+  public ?RecursiveNodeDTO $next = null;
+}
+
 #[Controller('posts')]
 class ApiDocsPostsController
 {
@@ -73,8 +79,18 @@ class ApiDocsPagesController
   }
 }
 
+#[Controller('nodes')]
+class ApiDocsNodesController
+{
+  #[Get(':id<int>')]
+  public function show(int $id): RecursiveNodeDTO
+  {
+    return new RecursiveNodeDTO();
+  }
+}
+
 #[Module(
-  controllers: [ApiDocsPostsController::class, ApiDocsPagesController::class],
+  controllers: [ApiDocsPostsController::class, ApiDocsPagesController::class, ApiDocsNodesController::class],
 )]
 class ApiDocsAppModule
 {

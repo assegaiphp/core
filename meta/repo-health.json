@@ -1,0 +1,15 @@
+{
+  "repository": "assegaiphp/core",
+  "package": "assegaiphp/core",
+  "php": ">=8.3",
+  "license": "MIT",
+  "ci": {
+    "workflow": "php.yml",
+    "label": "tests"
+  },
+  "status": {
+    "label": "0.8.0 milestone",
+    "color": "2563eb",
+    "summary": "OpenSwoole runtime foundations and release-prep work."
+  }
+}

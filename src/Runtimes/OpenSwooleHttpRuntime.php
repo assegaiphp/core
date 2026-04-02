@@ -7,22 +7,31 @@ use Assegai\Core\Http\Requests\RuntimeRequestContext;
 use Assegai\Core\Http\Responses\Emitters\OpenSwooleResponseEmitter;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\HttpRuntimeInterface;
+use Assegai\Core\Runtimes\OpenSwoole\OpenSwooleServerSettingsResolver;
 use Assegai\Core\Runtimes\OpenSwoole\Interfaces\OpenSwooleHttpServerInterface;
 use Assegai\Core\Runtimes\OpenSwoole\Interfaces\OpenSwooleServerFactoryInterface;
 use Assegai\Core\Runtimes\OpenSwoole\NativeOpenSwooleServerFactory;
+use InvalidArgumentException;
 
 class OpenSwooleHttpRuntime implements HttpRuntimeInterface
 {
+  /**
+   * @var array<string, mixed>
+   */
+  private array $settings;
+
   /**
    * @param array<string, mixed> $settings
    */
   public function __construct(
     private readonly string $host = '127.0.0.1',
     private readonly int $port = 9501,
-    private readonly array $settings = [],
+    array $settings = [],
     private ?OpenSwooleServerFactoryInterface $serverFactory = null,
   )
   {
+    $this->assertNetworkBinding();
+    $this->settings = (new OpenSwooleServerSettingsResolver())->normalize($settings);
     $this->serverFactory ??= new NativeOpenSwooleServerFactory();
   }
 
@@ -156,59 +165,17 @@ class OpenSwooleHttpRuntime implements HttpRuntimeInterface
    */
   private function resolveServerSettings(): array
   {
-    $settings = [
-      'enable_coroutine' => $this->settings['enableCoroutine'] ?? true,
-    ];
-
-    $hookFlags = $this->settings['hookFlags'] ?? 'all';
-    $resolvedHookFlags = $this->resolveHookFlags($hookFlags);
-
-    if ($resolvedHookFlags !== null) {
-      $settings['hook_flags'] = $resolvedHookFlags;
-    }
-
-    $optionalMappings = [
-      'workerNum' => 'worker_num',
-      'taskWorkerNum' => 'task_worker_num',
-      'maxRequest' => 'max_request',
-      'daemonize' => 'daemonize',
-      'logFile' => 'log_file',
-      'pidFile' => 'pid_file',
-    ];
-
-    foreach ($optionalMappings as $sourceKey => $targetKey) {
-      if (!array_key_exists($sourceKey, $this->settings)) {
-        continue;
-      }
-
-      $settings[$targetKey] = $this->settings[$sourceKey];
-    }
-
-    return $settings;
+    return (new OpenSwooleServerSettingsResolver())->toServerSettings($this->settings);
   }
 
-  private function resolveHookFlags(mixed $hookFlags): mixed
+  private function assertNetworkBinding(): void
   {
-    if ($hookFlags === null || $hookFlags === false) {
-      return null;
+    if (trim($this->host) === '') {
+      throw new InvalidArgumentException('The OpenSwoole runtime host must be a non-empty string.');
     }
 
-    if (is_int($hookFlags)) {
-      return $hookFlags;
+    if ($this->port < 1 || $this->port > 65535) {
+      throw new InvalidArgumentException('The OpenSwoole runtime port must be between 1 and 65535.');
     }
-
-    if (is_string($hookFlags)) {
-      $normalized = strtolower(trim($hookFlags));
-
-      if ($normalized === '' || $normalized === 'none') {
-        return null;
-      }
-
-      if ($normalized === 'all' && defined('SWOOLE_HOOK_ALL')) {
-        return constant('SWOOLE_HOOK_ALL');
-      }
-    }
-
-    return $hookFlags;
   }
 }

@@ -47,6 +47,34 @@ class RuntimeAwareAppModule implements AssegaiModuleInterface
   }
 }
 
+#[Controller('worker-error-probe')]
+class WorkerErrorProbeController
+{
+  #[Get('ok')]
+  public function ok(RequestInterface $request): Response
+  {
+    return Response::current()->jsonRaw([
+      'path' => $request->getPath(),
+      'limit' => $request->getLimit(),
+      'cookie' => $request->getCookies('mode'),
+    ]);
+  }
+
+  #[Get('fail')]
+  public function fail(): Response
+  {
+    throw new \RuntimeException('Worker probe failure');
+  }
+}
+
+#[Module(controllers: [WorkerErrorProbeController::class])]
+class WorkerErrorProbeAppModule implements AssegaiModuleInterface
+{
+  public function configure(MiddlewareConsumer $consumer): void
+  {
+  }
+}
+
 #[Controller('lifecycle-probe')]
 final class LifecycleProbeController
 {
@@ -140,6 +168,7 @@ use Assegai\Core\Routing\Router;
 use InvalidArgumentException;
 use ReflectionProperty;
 use Tests\Runtime\RuntimeAwareAppModule;
+use Tests\Runtime\WorkerErrorProbeAppModule;
 use Tests\Support\UnitTester;
 
 class RuntimeCest
@@ -358,6 +387,32 @@ class RuntimeCest
   {
     $I->expectThrowable(InvalidArgumentException::class, static function (): void {
       AssegaiFactory::resolveRuntime('mystery');
+    });
+  }
+
+  public function testOpenSwooleRuntimeRejectsUnsupportedSettings(UnitTester $I): void
+  {
+    $I->expectThrowable(InvalidArgumentException::class, static function (): void {
+      new OpenSwooleHttpRuntime(settings: [
+        'unsupportedThing' => true,
+      ]);
+    });
+  }
+
+  public function testOpenSwooleRuntimeRejectsInvalidBindingsAndNumericSettings(UnitTester $I): void
+  {
+    $I->expectThrowable(InvalidArgumentException::class, static function (): void {
+      new OpenSwooleHttpRuntime(host: ' ', port: 9501);
+    });
+
+    $I->expectThrowable(InvalidArgumentException::class, static function (): void {
+      new OpenSwooleHttpRuntime(host: '127.0.0.1', port: 0);
+    });
+
+    $I->expectThrowable(InvalidArgumentException::class, static function (): void {
+      new OpenSwooleHttpRuntime(settings: [
+        'workerNum' => 0,
+      ]);
     });
   }
 
@@ -687,6 +742,368 @@ class RuntimeCest
     $I->assertNull(RuntimeContext::get(Responder::class));
   }
 
+
+  public function testOpenSwooleRuntimeKeepsSequentialWorkerRequestsIsolated(UnitTester $I): void
+  {
+    $requests = [
+      $this->createFakeOpenSwooleRequest(
+        path: '/runtime-probe',
+        queryString: 'limit=10&lang=fr',
+        query: [
+          'path' => '/runtime-probe',
+          'limit' => '10',
+          'lang' => 'fr',
+        ],
+        cookies: [
+          'mode' => 'first',
+        ],
+        remoteAddress: '10.20.30.51',
+      ),
+      $this->createFakeOpenSwooleRequest(
+        path: '/runtime-probe',
+        queryString: 'limit=25&lang=ny',
+        query: [
+          'path' => '/runtime-probe',
+          'limit' => '25',
+          'lang' => 'ny',
+        ],
+        cookies: [
+          'mode' => 'second',
+        ],
+        remoteAddress: '10.20.30.52',
+      ),
+    ];
+    $responses = [
+      $this->createFakeOpenSwooleResponse(),
+      $this->createFakeOpenSwooleResponse(),
+    ];
+
+    $server = new class($requests, $responses) implements OpenSwooleHttpServerInterface {
+      /** @var array<string, mixed> */
+      public array $settings = [];
+      /** @var array<string, callable> */
+      public array $handlers = [];
+
+      /**
+       * @param array<int, object> $requests
+       * @param array<int, object> $responses
+       */
+      public function __construct(
+        private readonly array $requests,
+        private readonly array $responses,
+      )
+      {
+      }
+
+      public function set(array $settings): void
+      {
+        $this->settings = $settings;
+      }
+
+      public function on(string $event, callable $handler): void
+      {
+        $this->handlers[$event] = $handler;
+      }
+
+      public function start(): void
+      {
+        ($this->handlers['workerStart'])();
+
+        foreach ($this->requests as $index => $request) {
+          ($this->handlers['request'])($request, $this->responses[$index]);
+        }
+
+        ($this->handlers['workerExit'])();
+      }
+    };
+
+    $runtime = new OpenSwooleHttpRuntime(
+      host: '127.0.0.1',
+      port: 9517,
+      settings: [
+        'workerNum' => 2,
+      ],
+      serverFactory: $this->createFakeOpenSwooleFactory($server),
+    );
+
+    $app = AssegaiFactory::create(RuntimeAwareAppModule::class, $runtime);
+    $app->run();
+
+    $firstPayload = json_decode($responses[0]->body, true);
+    $secondPayload = json_decode($responses[1]->body, true);
+
+    $I->assertSame(200, $responses[0]->status);
+    $I->assertSame(200, $responses[1]->status);
+    $I->assertSame('application/json', $responses[0]->headers['Content-Type'] ?? null);
+    $I->assertSame('application/json', $responses[1]->headers['Content-Type'] ?? null);
+    $I->assertSame([
+      'path' => '/runtime-probe',
+      'limit' => 10,
+      'lang' => 'fr',
+      'cookie' => 'first',
+      'remote_ip' => '10.20.30.51',
+    ], $firstPayload);
+    $I->assertSame([
+      'path' => '/runtime-probe',
+      'limit' => 25,
+      'lang' => 'ny',
+      'cookie' => 'second',
+      'remote_ip' => '10.20.30.52',
+    ], $secondPayload);
+    $I->assertSame(1, $this->readProtectedProperty($app, 'applicationGraphBuildCount'));
+    $I->assertSame(1, $this->readProtectedProperty($app, 'middlewareBuildCount'));
+    $I->assertNull(RuntimeContext::get(Request::class));
+    $I->assertNull(RuntimeContext::get(HttpResponse::class));
+    $I->assertNull(RuntimeContext::get(Responder::class));
+  }
+
+
+  public function testOpenSwooleRuntimeCanRecoverFromAFailedRequestAndServeALaterOne(UnitTester $I): void
+  {
+    $requests = [
+      $this->createFakeOpenSwooleRequest(
+        path: '/worker-error-probe/ok',
+        queryString: 'limit=5',
+        query: [
+          'path' => '/worker-error-probe/ok',
+          'limit' => '5',
+        ],
+        cookies: [
+          'mode' => 'first',
+        ],
+        remoteAddress: '10.20.30.61',
+      ),
+      $this->createFakeOpenSwooleRequest(
+        path: '/worker-error-probe/fail',
+        queryString: '',
+        query: [
+          'path' => '/worker-error-probe/fail',
+        ],
+        remoteAddress: '10.20.30.62',
+      ),
+      $this->createFakeOpenSwooleRequest(
+        path: '/worker-error-probe/ok',
+        queryString: 'limit=7',
+        query: [
+          'path' => '/worker-error-probe/ok',
+          'limit' => '7',
+        ],
+        cookies: [
+          'mode' => 'third',
+        ],
+        remoteAddress: '10.20.30.63',
+      ),
+    ];
+    $responses = [
+      $this->createFakeOpenSwooleResponse(),
+      $this->createFakeOpenSwooleResponse(),
+      $this->createFakeOpenSwooleResponse(),
+    ];
+
+    $server = new class($requests, $responses) implements OpenSwooleHttpServerInterface {
+      /** @var array<string, mixed> */
+      public array $settings = [];
+      /** @var array<string, callable> */
+      public array $handlers = [];
+
+      /**
+       * @param array<int, object> $requests
+       * @param array<int, object> $responses
+       */
+      public function __construct(
+        private readonly array $requests,
+        private readonly array $responses,
+      )
+      {
+      }
+
+      public function set(array $settings): void
+      {
+        $this->settings = $settings;
+      }
+
+      public function on(string $event, callable $handler): void
+      {
+        $this->handlers[$event] = $handler;
+      }
+
+      public function start(): void
+      {
+        ($this->handlers['workerStart'])();
+
+        foreach ($this->requests as $index => $request) {
+          ($this->handlers['request'])($request, $this->responses[$index]);
+        }
+
+        ($this->handlers['workerExit'])();
+      }
+    };
+
+    $runtime = new OpenSwooleHttpRuntime(
+      host: '127.0.0.1',
+      port: 9518,
+      settings: [
+        'workerNum' => 1,
+      ],
+      serverFactory: $this->createFakeOpenSwooleFactory($server),
+    );
+
+    $app = AssegaiFactory::create(WorkerErrorProbeAppModule::class, $runtime);
+    $app->run();
+
+    $firstPayload = json_decode($responses[0]->body, true);
+    $thirdPayload = json_decode($responses[2]->body, true);
+
+    $I->assertSame(200, $responses[0]->status);
+    $I->assertSame(500, $responses[1]->status);
+    $I->assertSame(200, $responses[2]->status);
+    $I->assertSame('application/json', $responses[0]->headers['Content-Type'] ?? null);
+    $I->assertSame('text/html', $responses[1]->headers['Content-Type'] ?? null);
+    $I->assertSame('application/json', $responses[2]->headers['Content-Type'] ?? null);
+    $I->assertSame([
+      'path' => '/worker-error-probe/ok',
+      'limit' => 5,
+      'cookie' => 'first',
+    ], $firstPayload);
+    $I->assertSame([
+      'path' => '/worker-error-probe/ok',
+      'limit' => 7,
+      'cookie' => 'third',
+    ], $thirdPayload);
+    $I->assertNotSame('Worker probe failure', trim($responses[1]->body));
+    $I->assertTrue(
+      str_contains(strtolower($responses[1]->body), '<html')
+      || str_contains(strtolower($responses[1]->body), '<!doctype html')
+    );
+    $I->assertSame(1, $this->readProtectedProperty($app, 'applicationGraphBuildCount'));
+    $I->assertSame(1, $this->readProtectedProperty($app, 'middlewareBuildCount'));
+    $I->assertNull(RuntimeContext::get(Request::class));
+    $I->assertNull(RuntimeContext::get(HttpResponse::class));
+    $I->assertNull(RuntimeContext::get(Responder::class));
+  }
+
+  public function testOpenSwooleRuntimeCanResolveHookFlagListsIntoBitmasks(UnitTester $I): void
+  {
+    if (!defined('SWOOLE_HOOK_FILE')) {
+      define('SWOOLE_HOOK_FILE', 4);
+    }
+
+    if (!defined('SWOOLE_HOOK_SLEEP')) {
+      define('SWOOLE_HOOK_SLEEP', 8);
+    }
+
+    $expectedHookFlags = constant('SWOOLE_HOOK_FILE') | constant('SWOOLE_HOOK_SLEEP');
+    $request = new class {
+      public array $server = [
+        'request_method' => 'GET',
+        'request_uri' => '/runtime-probe',
+        'query_string' => '',
+        'remote_addr' => '10.20.30.42',
+        'server_protocol' => 'HTTP/1.1',
+      ];
+      public array $header = [
+        'host' => 'runtime.local',
+      ];
+      public array $get = [
+        'path' => '/runtime-probe',
+      ];
+      public array $post = [];
+      public array $cookie = [];
+      public array $files = [];
+
+      public function rawContent(): string
+      {
+        return '';
+      }
+    };
+
+    $response = new class {
+      public ?int $status = null;
+      /** @var array<string, string> */
+      public array $headers = [];
+      public string $body = '';
+      public bool $writable = true;
+
+      public function isWritable(): bool
+      {
+        return $this->writable;
+      }
+
+      public function status(int $status): void
+      {
+        $this->status = $status;
+      }
+
+      public function header(string $name, string $value): void
+      {
+        $this->headers[$name] = $value;
+      }
+
+      public function end(string $body): void
+      {
+        $this->body = $body;
+        $this->writable = false;
+      }
+    };
+
+    $server = new class($request, $response) implements OpenSwooleHttpServerInterface {
+      /** @var array<string, mixed> */
+      public array $settings = [];
+      /** @var array<string, callable> */
+      public array $handlers = [];
+
+      public function __construct(
+        private readonly object $request,
+        private readonly object $response,
+      )
+      {
+      }
+
+      public function set(array $settings): void
+      {
+        $this->settings = $settings;
+      }
+
+      public function on(string $event, callable $handler): void
+      {
+        $this->handlers[$event] = $handler;
+      }
+
+      public function start(): void
+      {
+        ($this->handlers['request'])($this->request, $this->response);
+      }
+    };
+
+    $factory = new class($server) implements OpenSwooleServerFactoryInterface {
+      public function __construct(
+        private readonly OpenSwooleHttpServerInterface $server,
+      )
+      {
+      }
+
+      public function create(string $host, int $port): OpenSwooleHttpServerInterface
+      {
+        return $this->server;
+      }
+    };
+
+    $runtime = new OpenSwooleHttpRuntime(
+      host: '127.0.0.1',
+      port: 9516,
+      settings: [
+        'hookFlags' => ['file', 'sleep'],
+      ],
+      serverFactory: $factory,
+    );
+
+    $app = AssegaiFactory::create(RuntimeAwareAppModule::class, $runtime);
+    $app->run();
+
+    $I->assertSame($expectedHookFlags, $server->settings['hook_flags'] ?? null);
+    $I->assertSame(200, $response->status);
+  }
+
   public function testOpenSwooleRuntimeRoutesEscapedHandlerFailuresThroughFrameworkHandlers(UnitTester $I): void
   {
     $request = new class {
@@ -807,6 +1224,99 @@ class RuntimeCest
     $I->assertNull(RuntimeContext::get(Request::class));
     $I->assertNull(RuntimeContext::get(HttpResponse::class));
     $I->assertNull(RuntimeContext::get(Responder::class));
+  }
+
+
+  private function createFakeOpenSwooleRequest(
+    string $path,
+    string $queryString,
+    array $query,
+    array $cookies = [],
+    string $remoteAddress = '127.0.0.1',
+  ): object
+  {
+    return new class($path, $queryString, $query, $cookies, $remoteAddress) {
+      public array $server;
+      public array $header = [
+        'host' => 'runtime.local',
+      ];
+      public array $get;
+      public array $post = [];
+      public array $cookie;
+      public array $files = [];
+
+      public function __construct(
+        string $path,
+        string $queryString,
+        array $query,
+        array $cookies,
+        string $remoteAddress,
+      )
+      {
+        $this->server = [
+          'request_method' => 'GET',
+          'request_uri' => $path,
+          'query_string' => $queryString,
+          'remote_addr' => $remoteAddress,
+          'server_protocol' => 'HTTP/1.1',
+        ];
+        $this->get = $query;
+        $this->cookie = $cookies;
+      }
+
+      public function rawContent(): string
+      {
+        return '';
+      }
+    };
+  }
+
+  private function createFakeOpenSwooleResponse(): object
+  {
+    return new class {
+      public ?int $status = null;
+      /** @var array<string, string> */
+      public array $headers = [];
+      public string $body = '';
+      public bool $writable = true;
+
+      public function isWritable(): bool
+      {
+        return $this->writable;
+      }
+
+      public function status(int $status): void
+      {
+        $this->status = $status;
+      }
+
+      public function header(string $name, string $value): void
+      {
+        $this->headers[$name] = $value;
+      }
+
+      public function end(string $body): void
+      {
+        $this->body = $body;
+        $this->writable = false;
+      }
+    };
+  }
+
+  private function createFakeOpenSwooleFactory(OpenSwooleHttpServerInterface $server): OpenSwooleServerFactoryInterface
+  {
+    return new class($server) implements OpenSwooleServerFactoryInterface {
+      public function __construct(
+        private readonly OpenSwooleHttpServerInterface $server,
+      )
+      {
+      }
+
+      public function create(string $host, int $port): OpenSwooleHttpServerInterface
+      {
+        return $this->server;
+      }
+    };
   }
 
   /**

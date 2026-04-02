@@ -178,11 +178,11 @@ use Assegai\Core\AssegaiFactory;
 use Assegai\Core\Interceptors\EmptyResultInterceptor;
 use Assegaiphp\BlogApi\AppModule;
 
-require './vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
 function bootstrap(): void
 {
-  $app = AssegaiFactory::create(AppModule::class);
+  $app = AssegaiFactory::createFromProject(AppModule::class, __DIR__);
   $app->useGlobalInterceptors(EmptyResultInterceptor::class);
   $app->run();
 }

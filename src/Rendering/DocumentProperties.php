@@ -8,7 +8,7 @@ use Assegai\Core\Enumerations\ViewType;
 /**
  * Shared document-level properties for rendered HTML responses.
  *
- * This class is intentionally rendering-agnostic so it can be used by both
+ * This class is intentionally rendering-agnostic, so it can be used by both
  * view responses and component responses.
  */
 class DocumentProperties
@@ -433,6 +433,9 @@ class DocumentProperties
 
     /**
      * @param mixed $scriptDefinition
+     * @param int $indentLevel
+     * @param bool $deferFirst
+     * @return string
      */
     private function renderExternalScriptTag(mixed $scriptDefinition, int $indentLevel = 0, bool $deferFirst = false): string
     {

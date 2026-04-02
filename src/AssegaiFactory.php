@@ -45,6 +45,7 @@ final class AssegaiFactory
   public static function createFromProject(string $moduleName, ?string $workingDirectory = null, ?string $runtime = null): App
   {
     $workingDirectory ??= getcwd() ?: '.';
+    putenv('ASSEGAI_WORKING_DIR=' . $workingDirectory);
     $config = self::loadProjectConfig($workingDirectory);
     $configuredRuntime = $runtime
       ?? self::readEnvironmentValue('ASSEGAI_RUNTIME')
