@@ -24,6 +24,10 @@ class RequestQuery extends stdClass
    */
   public function __construct(string $raw = '', array $props = [])
   {
+    if ($raw === '' && $props === []) {
+      $raw = (string)($_SERVER['QUERY_STRING'] ?? '');
+    }
+
     $this->raw = $raw !== '' ? $raw : (is_array($props) && $props !== [] ? http_build_query($props) : '');
 
     $this->props = $props;
