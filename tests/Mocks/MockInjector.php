@@ -155,6 +155,21 @@ class ResolverBridgeModule implements AssegaiModuleInterface, ConfiguresInjector
 }
 
 #[Module(
+  providers: [
+    ResolverResolvedService::class,
+  ],
+  controllers: [],
+  imports: [],
+)]
+class ResolverOnlyBridgeModule implements ConfiguresInjectorInterface
+{
+  public function configureInjector(Injector $injector): void
+  {
+    $injector->registerParameterResolver(new MockParameterResolver());
+  }
+}
+
+#[Module(
   providers: [],
   controllers: [],
   imports: [
@@ -162,6 +177,17 @@ class ResolverBridgeModule implements AssegaiModuleInterface, ConfiguresInjector
   ],
 )]
 class ResolverAwareAppModule
+{
+}
+
+#[Module(
+  providers: [],
+  controllers: [],
+  imports: [
+    ResolverOnlyBridgeModule::class,
+  ],
+)]
+class ResolverOnlyAwareAppModule
 {
 }
 

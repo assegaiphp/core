@@ -56,7 +56,7 @@ The current shape is:
 {
   "repository": "assegaiphp/core",
   "package": "assegaiphp/core",
-  "php": ">=8.3",
+  "php": ">=8.4",
   "license": "MIT",
   "ci": {
     "workflow": "php.yml",
@@ -103,7 +103,7 @@ Phase 1 is:
 - `assegaiphp/rabbitmq`
 - `assegaiphp/beanstalkd`
 
-Phase 2 should extend the same pattern to:
+Phase 2 now extends the same pattern to:
 
 - `assegaiphp/common`
 - `assegaiphp/util`
@@ -111,6 +111,10 @@ Phase 2 should extend the same pattern to:
 - `assegaiphp/forms`
 - `assegaiphp/collections`
 
+Phase 3 can continue with:
+
+- any remaining satellite packages that have real automated test lanes
+- packages that still need a test stack refresh before a tests badge would be honest
 
 ## CI requirement
 
