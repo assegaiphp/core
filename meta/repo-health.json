@@ -1,7 +1,7 @@
 {
   "repository": "assegaiphp/core",
   "package": "assegaiphp/core",
-  "php": ">=8.3",
+  "php": ">=8.4",
   "license": "MIT",
   "ci": {
     "workflow": "php.yml",

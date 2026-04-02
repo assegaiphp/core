@@ -218,11 +218,27 @@ final class OpenSwooleServerSettingsResolver
       $tokens = [];
 
       foreach ($hookFlags as $token) {
+        if (is_int($token)) {
+          $tokens[] = $token;
+          continue;
+        }
+
         if (!is_scalar($token)) {
           throw new InvalidArgumentException('The OpenSwoole setting [hookFlags] must contain only strings or integers.');
         }
 
-        $tokens[] = $this->normalizeHookFlagToken((string) $token);
+        $trimmed = trim((string) $token);
+
+        if ($trimmed === '') {
+          throw new InvalidArgumentException('The OpenSwoole setting [hookFlags] contains an empty flag name.');
+        }
+
+        if (filter_var($trimmed, FILTER_VALIDATE_INT) !== false) {
+          $tokens[] = (int) $trimmed;
+          continue;
+        }
+
+        $tokens[] = $this->normalizeHookFlagToken($trimmed);
       }
 
       return $tokens === [] ? null : $tokens;
@@ -267,7 +283,9 @@ final class OpenSwooleServerSettingsResolver
       $combined = 0;
 
       foreach ($hookFlags as $token) {
-        $resolved = $this->resolveSingleHookFlagForServer($token);
+        $resolved = is_int($token)
+          ? $token
+          : $this->resolveSingleHookFlagForServer($token);
 
         if (!is_int($resolved)) {
           return $hookFlags;

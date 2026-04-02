@@ -26,6 +26,7 @@ use Mocks\FrameworkAwareContractsService;
 use Mocks\FrameworkAwareService;
 use Mocks\RequestCapturingService;
 use Mocks\ResolverAwareAppModule;
+use Mocks\ResolverOnlyAwareAppModule;
 use Mocks\ResolverResolvedService;
 use ReflectionException;
 use ReflectionProperty;
@@ -252,6 +253,18 @@ class InjectorCest
   public function testImportedModulesCanRegisterPackageParameterResolversBeforeProviderResolution(UnitTester $I): void
   {
     $app = AssegaiFactory::create(ResolverAwareAppModule::class);
+    $app->boot();
+    $service = Injector::getInstance()->resolve(ResolverResolvedService::class);
+
+    $I->assertInstanceOf(App::class, $app);
+    $I->assertInstanceOf(ResolverResolvedService::class, $service);
+    $I->assertSame('resolved-by-registry', $service->value->value);
+    $I->assertCount(1, Injector::getInstance()->getParameterResolvers());
+  }
+
+  public function testInjectorExtensionsCanBeConfiguredByImportedClassesWithoutTheModuleInterface(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(ResolverOnlyAwareAppModule::class);
     $app->boot();
     $service = Injector::getInstance()->resolve(ResolverResolvedService::class);
 

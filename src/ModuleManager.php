@@ -398,7 +398,7 @@ class ModuleManager implements SingletonInterface
       }
 
       /** @var ConfiguresInjectorInterface $moduleInstance */
-      $moduleInstance = $this->instantiateModule($moduleClass);
+      $moduleInstance = $this->instantiateClass($moduleClass);
       $moduleInstance->configureInjector($this->injector);
     }
   }
@@ -551,20 +551,20 @@ class ModuleManager implements SingletonInterface
   }
 
   /**
-   * Creates an instance of the given module class using DI-resolved constructor dependencies where available.
+   * Creates an instance of the given class using DI-resolved constructor dependencies where available.
    *
-   * @param class-string<AssegaiModuleInterface> $moduleClass
-   * @return AssegaiModuleInterface
+   * @param class-string $className
+   * @return object
    * @throws ContainerException
    * @throws ReflectionException
    */
-  private function instantiateModule(string $moduleClass): AssegaiModuleInterface
+  private function instantiateClass(string $className): object
   {
-    if (!isset($this->reflectionCache['rootToken'][$moduleClass])) {
-      $this->reflectionCache['rootToken'][$moduleClass] = new ReflectionClass($moduleClass);
+    if (!isset($this->reflectionCache['rootToken'][$className])) {
+      $this->reflectionCache['rootToken'][$className] = new ReflectionClass($className);
     }
 
-    $reflectionClass = $this->reflectionCache['rootToken'][$moduleClass];
+    $reflectionClass = $this->reflectionCache['rootToken'][$className];
     $constructor = $reflectionClass->getConstructor();
 
     if (!$constructor || !$constructor->getParameters()) {
@@ -585,6 +585,20 @@ class ModuleManager implements SingletonInterface
     }
 
     return $reflectionClass->newInstanceArgs($dependencies);
+  }
+
+  /**
+   * Creates an instance of the given module class using DI-resolved constructor dependencies where available.
+   *
+   * @param class-string<AssegaiModuleInterface> $moduleClass
+   * @return AssegaiModuleInterface
+   * @throws ContainerException
+   * @throws ReflectionException
+   */
+  private function instantiateModule(string $moduleClass): AssegaiModuleInterface
+  {
+    /** @var AssegaiModuleInterface */
+    return $this->instantiateClass($moduleClass);
   }
 
   /**

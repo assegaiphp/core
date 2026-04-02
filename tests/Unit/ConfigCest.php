@@ -32,8 +32,15 @@ class ConfigCest
       unset($GLOBALS['config']);
     }
 
+    unset($_ENV['ENV'], $_ENV['DEBUG_MODE']);
+
     $I->assertFalse(isset($GLOBALS['config']));
     Config::hydrate($this->workingDirectory);
+
+    $_ENV['ENV'] = 'DEV';
+    $_ENV['DEBUG_MODE'] = 'false';
+    $_SERVER['ENV'] = 'DEV';
+    $_SERVER['DEBUG_MODE'] = 'false';
 
     $workspaceConfigFilename = Paths::join($this->workingDirectory, 'assegai.json');
     if (! is_file($workspaceConfigFilename))
