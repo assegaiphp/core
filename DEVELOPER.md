@@ -12,6 +12,7 @@ These notes are not part of the public guide surface and should not be read as s
 - [Roadmap To 1.0.0](./docs/roadmap-to-v1.md)
 - [Release Playbook](./docs/release-playbook.md)
 - [Versioning Strategy](./docs/versioning-strategy.md)
+- [Commit And PR Guidelines](./docs/commit-and-pr-guidelines.md)
 - [Repo Health Badges](./docs/repo-health-badges.md)
 - [Upgrade Policy](./docs/upgrade-policy.md)
 - [Updates Advisor Plan](./docs/updates-advisor-plan.md)
