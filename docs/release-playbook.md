@@ -86,6 +86,8 @@ Recommended milestone names:
 
 - `0.8.0`
 - `0.9.0`
+- `0.10.0`
+- `0.11.0`
 - `1.0.0`
 
 Recommended type labels:
@@ -118,11 +120,12 @@ For each milestone, write down:
 - the things that are explicitly out of scope
 - the blog article topic
 
-For the current roadmap:
+For the current near-term roadmap:
 
 - `0.8.0`: OpenSwoole Runtime Foundations
 - `0.9.0`: ORM Stability Rewrite
-- `1.0.0`: confidence and stability release
+- additional `0.x` milestones as needed based on stability and feedback
+- `1.0.0`: confidence and stability release when the framework is actually ready
 
 ### 2. Merge feature work into `main`
 
@@ -254,10 +257,37 @@ A good release article should explain:
 - what is still experimental or still coming later
 - what the next milestone is about
 
+## The `1.0.0` rule
+
+When we talk about `1.0.0`, use this framing:
+
+- `1.0.0` is the minimum viable identity of AssegaiPHP
+- it is not the complete list of everything Assegai could eventually become
+- surplus or optional power features should land in `1.0.0+` unless they are clearly part of the framework's essential identity
+
+Simple test:
+
+> if removing a feature still leaves something that is clearly AssegaiPHP, that feature is probably not a `1.0.0` blocker
+
+That rule should keep us from accidentally turning `1.0.0` into a permanently moving target.
+
+## Versioning and reporting
+
+Before each milestone release, confirm the versioning story is coherent:
+
+- `assegaiphp/core` is the framework version users should think of as the Assegai version
+- `assegaiphp/console` is the CLI version
+- first-party packages that are part of the milestone should align to the same release line where possible
+- `assegai version` and `assegai info` should report the running CLI version and the target app's Assegai version correctly
+
+See [Versioning Strategy](./versioning-strategy.md) for the detailed policy.
+
 Planned milestone articles:
 
 - `0.8.0`: OpenSwoole runtime foundations
 - `0.9.0`: ORM stability rewrite
+- likely `1.0.0+`: entity-driven database sync and the entity-first migration workflow
+- likely `1.0.0+`: application runtime contexts, non-web execution, and scheduling
 - `1.0.0`: what AssegaiPHP 1.0 means and why the framework is ready
 
 ## What not to do

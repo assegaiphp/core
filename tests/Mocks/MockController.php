@@ -575,6 +575,35 @@ class RequestAwareExportedProviderAppModule
 {
 }
 
+#[Controller(path: 'private-provider-pipeline')]
+class PrivateRequestAwareProviderController
+{
+  public function __construct(private readonly RequestAwareService $service)
+  {
+  }
+
+  #[Get(':slug<slug>')]
+  public function requestAware(): string
+  {
+    return $this->service->currentPath();
+  }
+}
+
+#[Module(
+  providers: [RequestAwareService::class],
+)]
+class PrivateRequestAwareProviderModule
+{
+}
+
+#[Module(
+  imports: [PrivateRequestAwareProviderModule::class],
+  controllers: [PrivateRequestAwareProviderController::class],
+)]
+class RequestAwarePrivateProviderAppModule
+{
+}
+
 #[Module(
   controllers: [AllRoutesController::class],
 )]

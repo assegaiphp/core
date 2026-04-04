@@ -11,6 +11,7 @@ use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\ModuleManager;
+use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Routing\Router;
 use Codeception\Attribute\Incomplete;
 use Codeception\Attribute\Skip;
@@ -28,7 +29,10 @@ use Mocks\NestedApiController;
 use Mocks\NestedAppModule;
 use Mocks\NestedFeaturesController;
 use Mocks\NestedRootController;
+use Mocks\RequestAwareExportedProviderAppModule;
 use Mocks\RequestAwarePipelineAppModule;
+use Mocks\RequestAwarePrivateProviderAppModule;
+use Mocks\RequestAwareProviderAppModule;
 use Mocks\ResponseMetadataAppModule;
 use Mocks\UnknownConstraintAppModule;
 use Mocks\WildcardControllerAppModule;
@@ -721,6 +725,46 @@ class RouterCest
   }
 
   /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testControllersCanInjectProvidersDeclaredInTheSameModule(UnitTester $I): void
+  {
+    $result = $this->dispatch('/provider-pipeline/testing', RequestAwareProviderAppModule::class);
+
+    $I->assertSame('provider-pipeline/testing', $result['response']->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testControllersCanInjectProvidersExportedByImportedModules(UnitTester $I): void
+  {
+    $result = $this->dispatch('/exported-provider-pipeline/testing', RequestAwareExportedProviderAppModule::class);
+
+    $I->assertSame('exported-provider-pipeline/testing', $result['response']->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testControllersCannotInjectProvidersThatImportedModulesDoNotExport(UnitTester $I): void
+  {
+    $I->expectThrowable(ContainerException::class, fn() => $this->dispatch('/private-provider-pipeline/testing', RequestAwarePrivateProviderAppModule::class));
+  }
+
+  /**
    * @return array<string, ReflectionClass>
    * @throws EntryNotFoundException
    * @throws HttpException
@@ -735,6 +779,7 @@ class RouterCest
    */
   private function makeRequest(string $path, string $host = 'localhost', string $method = 'GET'): Request
   {
+    RuntimeContext::flush();
     $_GET['path'] = $path;
     $_SERVER['REQUEST_METHOD'] = $method;
     $_SERVER['HTTP_HOST'] = $host;

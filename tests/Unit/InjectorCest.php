@@ -19,8 +19,9 @@ use Assegai\Core\ModuleManager;
 use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Session;
-use Mocks\ExplicitRequestScopedService;
 use Mocks\AttributeResolvedService;
+use Mocks\ExplicitRequestScopedService;
+use Mocks\ExportVisibilityAppModule;
 use Mocks\FrameworkAwareAppModule;
 use Mocks\FrameworkAwareContractsService;
 use Mocks\FrameworkAwareService;
@@ -28,6 +29,8 @@ use Mocks\RequestCapturingService;
 use Mocks\ResolverAwareAppModule;
 use Mocks\ResolverOnlyAwareAppModule;
 use Mocks\ResolverResolvedService;
+use Mocks\RootPrivateConsumerService;
+use Mocks\RootPublicConsumerService;
 use ReflectionException;
 use ReflectionProperty;
 use Tests\Support\UnitTester;
@@ -340,6 +343,19 @@ class InjectorCest
     $I->assertSame(Request::current(), $secondExplicitScoped->request);
     $I->assertNull($injector->get(RequestCapturingService::class));
     $I->assertNull($injector->get(ExplicitRequestScopedService::class));
+  }
+
+  public function testImportedModulesOnlyExposeExportedProviders(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(ExportVisibilityAppModule::class);
+    $app->boot();
+    $injector = Injector::getInstance();
+
+    $publicConsumer = $injector->resolve(RootPublicConsumerService::class);
+
+    $I->assertInstanceOf(RootPublicConsumerService::class, $publicConsumer);
+    $I->assertSame('private', $publicConsumer->publicService->privateService->value);
+    $I->expectThrowable(\Assegai\Core\Exceptions\Container\ResolveException::class, fn() => $injector->resolve(RootPrivateConsumerService::class));
   }
 
   public function testSessionLifecycleStartsAndClosesPerRequest(UnitTester $I): void

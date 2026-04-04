@@ -774,7 +774,7 @@ final class Router
 
             foreach ($constructorParams as $param) {
                 try {
-                    $dependencies[] = $this->injector->resolve($param->getType()->getName());
+                    $dependencies[] = $this->injector->resolveForConsumer($reflectionController->getName(), $param->getType()->getName());
                 } catch (Exception $exception) {
                     throw new ContainerException(sprintf(
                         'Failed to resolve %s for controller %s: %s',

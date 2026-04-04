@@ -191,6 +191,68 @@ class ResolverOnlyAwareAppModule
 {
 }
 
+#[Injectable]
+class FeaturePrivateService
+{
+  public string $value = 'private';
+}
+
+#[Injectable]
+class FeaturePublicService
+{
+  public function __construct(
+    public FeaturePrivateService $privateService,
+  ) {
+  }
+}
+
+#[Injectable(options: ['scope' => Scope::TRANSIENT, 'durable' => false])]
+class RootPrivateConsumerService
+{
+  public function __construct(
+    public FeaturePrivateService $privateService,
+  ) {
+  }
+}
+
+#[Injectable]
+class RootPublicConsumerService
+{
+  public function __construct(
+    public FeaturePublicService $publicService,
+  ) {
+  }
+}
+
+#[Module(
+  providers: [
+    FeaturePrivateService::class,
+    FeaturePublicService::class,
+  ],
+  controllers: [],
+  imports: [],
+  exports: [
+    FeaturePublicService::class,
+  ],
+)]
+class FeatureExportsModule
+{
+}
+
+#[Module(
+  providers: [
+    RootPrivateConsumerService::class,
+    RootPublicConsumerService::class,
+  ],
+  controllers: [],
+  imports: [
+    FeatureExportsModule::class,
+  ],
+)]
+class ExportVisibilityAppModule
+{
+}
+
 #[Module(
   providers: [
     FrameworkAwareService::class,

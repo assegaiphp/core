@@ -427,14 +427,14 @@ final class Injector implements ITokenStoreOwner, IContainer
         return $frameworkDependency;
       }
 
-      $dependency = $this->get($typeName);
-
-      if (null !== $dependency) {
-        return $dependency;
-      }
-
       try {
-        $dependency = $this->resolve($typeName);
+        $this->assertDependencyAccessible($id, $typeName);
+
+        $dependency = $this->get($typeName);
+
+        if (null === $dependency) {
+          $dependency = $this->resolve($typeName);
+        }
       } catch (ContainerException $exception) {
         if ($param->isDefaultValueAvailable()) {
           return $param->getDefaultValue();
@@ -531,6 +531,81 @@ final class Injector implements ITokenStoreOwner, IContainer
   public function getParameterResolvers(): array
   {
     return $this->parameterResolvers;
+  }
+
+
+  /**
+   * Resolves a dependency for a specific consumer after verifying module export visibility.
+   *
+   * @param string $consumerId
+   * @param string $dependencyId
+   * @return mixed
+   * @throws ContainerException|ReflectionException
+   */
+  public function resolveForConsumer(string $consumerId, string $dependencyId): mixed
+  {
+    $this->assertDependencyAccessible($consumerId, $dependencyId);
+
+    return $this->resolve($dependencyId);
+  }
+
+  /**
+   * Verifies that a consumer can access the requested provider according to module exports.
+   *
+   * @param string $consumerId
+   * @param string $dependencyId
+   * @return void
+   * @throws ContainerException
+   */
+  private function assertDependencyAccessible(string $consumerId, string $dependencyId): void
+  {
+    $moduleManager = ModuleManager::getInstance();
+    $consumerModule = $this->resolveConsumerModule($consumerId, $moduleManager);
+
+    if (null === $consumerModule) {
+      return;
+    }
+
+    if ($moduleManager->canModuleAccessProvider($consumerModule, $dependencyId)) {
+      return;
+    }
+
+    $ownerModule = $moduleManager->getProviderOwnerModule($dependencyId) ?? 'an inaccessible module';
+
+    throw new ContainerException(sprintf(
+      "%s cannot access %s because %s does not export it.",
+      $consumerId,
+      $dependencyId,
+      $ownerModule,
+    ));
+  }
+
+  /**
+   * Resolves the owning module for a consumer class when it belongs to the application graph.
+   *
+   * @param string $consumerId
+   * @param ModuleManager $moduleManager
+   * @return string|null
+   */
+  private function resolveConsumerModule(string $consumerId, ModuleManager $moduleManager): ?string
+  {
+    $providerOwner = $moduleManager->getProviderOwnerModule($consumerId);
+
+    if (null !== $providerOwner) {
+      return $providerOwner;
+    }
+
+    $controllerOwner = ControllerManager::getInstance()->getOwningModule($consumerId);
+
+    if (null !== $controllerOwner) {
+      return $controllerOwner;
+    }
+
+    if (array_key_exists($consumerId, $moduleManager->getModuleTokens())) {
+      return $consumerId;
+    }
+
+    return null;
   }
 
   /**
