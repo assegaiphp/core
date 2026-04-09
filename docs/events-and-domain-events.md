@@ -78,8 +78,8 @@ use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\Interfaces\AssegaiModuleInterface;
-use Assegai\Events\Assegai\AssegaiEventEmitter;
-use Assegai\Events\Assegai\EventsModule;
+use Assegai\Events\Bridge\AssegaiEventEmitter;
+use Assegai\Events\Bridge\EventsModule;
 
 #[Injectable]
 final class OrdersService
@@ -246,8 +246,8 @@ That means events emitted too early can be missed, especially if they are fired 
 If you need to emit during startup code, wait for the readiness watcher first:
 
 ```php
-use Assegai\Events\Assegai\AssegaiEventEmitter;
-use Assegai\Events\Assegai\EventEmitterReadinessWatcherProvider;
+use Assegai\Events\Bridge\AssegaiEventEmitter;
+use Assegai\Events\Bridge\EventEmitterReadinessWatcherProvider;
 
 final class StartupPublisher
 {

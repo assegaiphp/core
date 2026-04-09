@@ -303,6 +303,8 @@ class AppModule
 }
 ```
 
+That import is about composition, not automatic provider sharing. If another module needs to inject `PostsService`, `PostsModule` must export `PostsService` first.
+
 At that point you have a working route prefix at:
 
 ```text
@@ -354,6 +356,7 @@ If you are building interactive front-end features, the next guide to read is [F
 The CLI is not just a convenience layer. It encodes the framework's conventions:
 
 - every feature gets a module boundary
+- providers stay private to that module unless you export them
 - controllers and providers are created together
 - page generation uses declarations and components
 - resources naturally line up with the ORM story

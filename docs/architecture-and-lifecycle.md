@@ -32,6 +32,8 @@ Modules are the unit of composition. They tell Assegai what belongs together:
 - imported modules
 - exported providers
 
+Imported modules extend the application graph, but only exported providers are injectable outside their own module boundary.
+
 ### Controllers
 
 Controllers define routes and translate HTTP requests into application calls.

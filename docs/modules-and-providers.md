@@ -60,6 +60,39 @@ class PostsModule
 
 That simplicity is intentional. Modules should mostly describe relationships.
 
+
+## Providers stay private unless you export them
+
+This is the part that matters most for `0.8.0`:
+
+- a module can always use its own providers
+- importing a module composes its routes, declarations, and exported providers into the app
+- importing a module does not make all of its providers injectable everywhere
+- if another module needs one of your providers, you must list it in `exports`
+
+For example, if `PostsService` should be usable outside `PostsModule`, export it:
+
+```php
+<?php
+
+namespace Assegaiphp\BlogApi\Posts;
+
+use Assegai\Core\Attributes\Modules\Module;
+
+#[Module(
+  providers: [PostsService::class],
+  controllers: [PostsController::class],
+  exports: [PostsService::class],
+)]
+class PostsModule
+{
+}
+```
+
+That turns `PostsService` into part of the module's public surface instead of keeping it private to the feature.
+
+If you forget this step and another module tries to inject `PostsService`, bootstrap will fail because the dependency is outside the module boundary but not exported.
+
 ## Providers are where application logic lives
 
 Providers should be marked `#[Injectable]`:
@@ -134,6 +167,28 @@ That same pattern also works between providers. As your app grows, you can injec
 - repositories
 - custom guards
 - interceptors
+
+
+Across module boundaries, keep one extra rule in mind: the provider must come from an imported module and that module must export it.
+
+For example, this works because `PostsModule` exports `PostsService`:
+
+```php
+<?php
+
+namespace Assegaiphp\BlogApi\Api;
+
+use Assegai\Core\Attributes\Injectable;
+use Assegaiphp\BlogApi\Posts\PostsService;
+
+#[Injectable]
+class ApiService
+{
+  public function __construct(private PostsService $postsService)
+  {
+  }
+}
+```
 
 ## Module composition diagram
 
@@ -283,6 +338,8 @@ class ApiModule
 
 That is one of the nicer parts of the Assegai CLI story: nested route branches and nested module trees can be generated from the path you give the schematic.
 
+If `ApiService` needs to inject `PostsService`, `PostsModule` must also export `PostsService`. Imports compose modules. Exports define which providers are public across module boundaries.
+
 ## How generators help
 
 When you run generators from the project root, the CLI updates `AppModule` for you by adding:
@@ -311,3 +368,7 @@ When you are deciding where code should go:
 - provider: behavior and orchestration
 - declaration/component: rendered UI
 - entity: persistence shape
+
+And one extra rule for module design:
+
+- export only the providers another module genuinely needs

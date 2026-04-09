@@ -221,7 +221,7 @@ The clean pattern is:
 For example:
 
 - `Assegai\Events\EventEmitter` stays framework-neutral
-- `Assegai\Events\Assegai\EventsModule` provides the Assegai-specific bridge
+- `Assegai\Events\Bridge\EventsModule` provides the Assegai-specific bridge
 
 That is much cleaner than making `core` depend on `events`.
 
