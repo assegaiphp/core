@@ -395,7 +395,7 @@ That lets the transport layer remain simple while the repository keeps the persi
 ## Techniques that scale well
 
 - Keep DTOs, entities, and services as separate responsibilities even when the feature feels small.
-- Prefer module-level `data_source` config over repeating the database name on every entity.
+- Prefer module-level `data_source` config over repeating the database name on every entity, and prefer the fully qualified `driver:name` format there.
 - Use `findOne()` with an explicit `where` even for primary-key lookups. It keeps the service intent obvious.
 - Reach for explicit relation loading instead of assuming a property is already hydrated.
 

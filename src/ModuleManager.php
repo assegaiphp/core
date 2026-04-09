@@ -45,6 +45,10 @@ class ModuleManager implements SingletonInterface
    */
   protected array $moduleImportsMap = [];
   /**
+   * @var array<class-string, class-string[]> A map of module exports keyed by module class.
+   */
+  protected array $moduleExportsMap = [];
+  /**
    * @var array<class-string, class-string|null> A map of module parents keyed by child module class.
    */
   protected array $moduleParentMap = [];
@@ -56,6 +60,10 @@ class ModuleManager implements SingletonInterface
    * @var array<class-string> A list of all the imported module tokens
    */
   protected array $providerTokens = [];
+  /**
+   * @var array<class-string, class-string> A map of provider owner modules keyed by provider class.
+   */
+  protected array $providerModuleMap = [];
   /**
    * @var array<class-string> A list of all the declared component class names.
    */
@@ -177,6 +185,8 @@ class ModuleManager implements SingletonInterface
     try {
       $this->moduleTokens = [];
       $this->moduleImportsMap = [];
+      $this->moduleExportsMap = [];
+      $this->providerModuleMap = [];
       $this->moduleParentMap = [$rootToken => null];
       $this->config = [];
       $this->declarationTokens = [];
@@ -213,6 +223,7 @@ class ModuleManager implements SingletonInterface
         /** @var array{declarations: string[], imports: string[], exports: string[], providers: string[], controllers: string[], config: array<string, mixed>} $args */
         $args = $reflectionModuleAttribute->getArguments();
         $imports = $args['imports'] ?? [];
+        $exports = $args['exports'] ?? [];
 
         // Add module to processed list
         $processedTokens[$currentToken] = true;
@@ -220,6 +231,10 @@ class ModuleManager implements SingletonInterface
         // Store module metadata
         $this->moduleTokens[$currentToken] = $reflectionModuleAttribute;
         $this->moduleImportsMap[$currentToken] = $imports;
+        $this->moduleExportsMap[$currentToken] = $exports;
+        foreach ($args['providers'] ?? [] as $providerClass) {
+          $this->providerModuleMap[$providerClass] = $currentToken;
+        }
 
         // Merge config values
         if (!empty($args['config'])) {
@@ -247,7 +262,7 @@ class ModuleManager implements SingletonInterface
         }
 
         // Process exports
-        foreach ($args['exports'] ?? [] as $export) {
+        foreach ($exports as $export) {
           if ($this->isModuleClass($export)) {
             if (!isset($processedTokens[$export])) {
               $stack[] = $export;
@@ -425,8 +440,18 @@ class ModuleManager implements SingletonInterface
   public function buildProviderTokensList(): void
   {
     $this->providerTokens = [];
+    $this->providerModuleMap = [];
 
-    foreach ($this->moduleTokens as $module) {
+    foreach ($this->moduleTokens as $moduleClass => $module) {
+      /** @var array{providers?: string[]} $args */
+      $args = $module->getArguments();
+
+      foreach ($args['providers'] ?? [] as $tokenId) {
+        $this->providerModuleMap[$tokenId] = $moduleClass;
+      }
+    }
+
+    foreach ($this->moduleTokens as $moduleClass => $module) {
       /** @var array{imports: string[], exports: string[], providers: string[]} $args */
       $args = $module->getArguments();
 
@@ -581,7 +606,7 @@ class ModuleManager implements SingletonInterface
         continue;
       }
 
-      $dependencies[] = $this->injector->resolve($type->getName());
+      $dependencies[] = $this->injector->resolveForConsumer($className, $type->getName());
     }
 
     return $reflectionClass->newInstanceArgs($dependencies);
@@ -599,6 +624,77 @@ class ModuleManager implements SingletonInterface
   {
     /** @var AssegaiModuleInterface */
     return $this->instantiateClass($moduleClass);
+  }
+
+  /**
+   * Returns the owning module class for the given provider when it belongs to the app graph.
+   *
+   * @param string $providerClass
+   * @return class-string|null
+   */
+  public function getProviderOwnerModule(string $providerClass): ?string
+  {
+    return $this->providerModuleMap[$providerClass] ?? null;
+  }
+
+  /**
+   * Determines whether the consumer module can access the given provider.
+   *
+   * Providers are visible within their declaring module and across imports only when the
+   * imported module explicitly exports them, either directly or through a re-exported module.
+   *
+   * @param class-string $consumerModuleClass
+   * @param class-string $providerClass
+   * @return bool
+   */
+  public function canModuleAccessProvider(string $consumerModuleClass, string $providerClass): bool
+  {
+    $ownerModule = $this->getProviderOwnerModule($providerClass);
+
+    if (null === $ownerModule) {
+      return true;
+    }
+
+    if ($ownerModule === $consumerModuleClass) {
+      return true;
+    }
+
+    foreach ($this->getImportedModules($consumerModuleClass) as $importedModule) {
+      if ($this->moduleExportsProvider($importedModule, $providerClass)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Determines whether the given module exports the provider directly or through a re-exported module.
+   *
+   * @param class-string $moduleClass
+   * @param class-string $providerClass
+   * @param array<int, class-string> $visitedModules
+   * @return bool
+   */
+  private function moduleExportsProvider(string $moduleClass, string $providerClass, array $visitedModules = []): bool
+  {
+    if (in_array($moduleClass, $visitedModules, true)) {
+      return false;
+    }
+
+    $visitedModules[] = $moduleClass;
+
+    foreach ($this->moduleExportsMap[$moduleClass] ?? [] as $export) {
+      if ($export === $providerClass) {
+        return true;
+      }
+
+      if ($this->isModuleClass($export) && $this->moduleExportsProvider($export, $providerClass, $visitedModules)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**

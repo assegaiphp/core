@@ -122,6 +122,17 @@ class ControllerManager
   }
 
   /**
+   * Returns the owning module class for the given controller.
+   *
+   * @param string $controllerClass
+   * @return string|null
+   */
+  public function getOwningModule(string $controllerClass): ?string
+  {
+    return $this->controllerRouteMetadata[$controllerClass]['module'] ?? null;
+  }
+
+  /**
    * Returns the resolved route prefix for the given controller.
    *
    * @param string $controllerClass

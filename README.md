@@ -16,6 +16,12 @@
 
 Assegai is a framework for building efficient, scalable <a href="https://php.net" target="blank">PHP</a> server-side applications. It uses modern PHP (PHP 8.4+) and combines elements of OOP (Object Oriented Programming) and FP (Functional Programming).
 
+## Contribution workflow
+
+For commit and pull request conventions in this repo, see:
+
+- [docs/commit-and-pr-guidelines.md](./docs/commit-and-pr-guidelines.md)
+
 ## Philosophy
 
 <p>In recent years, PHP has gained a lot of features out the box that make it a really compelling language for developers. Assegai aims to take advantage of these wonderful features and provide an application architecture which allows for the effortless creation of highly testable, scalable, loosely coupled and easily maintainable applications. The architecture is heavily inspired by Nestjs.</p>

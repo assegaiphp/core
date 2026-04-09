@@ -215,7 +215,7 @@ use Assegai\Core\Attributes\Modules\Module;
 #[Module(
   providers: [PostsService::class],
   controllers: [PostsController::class],
-  config: ['data_source' => 'blog'],
+  config: ['data_source' => 'mysql:blog'],
 )]
 class PostsModule
 {
@@ -225,7 +225,7 @@ class PostsModule
 That gives you a good spectrum of choices:
 
 - app-wide default on `AppModule`
-- feature default on `PostsModule`
+- feature default on `PostsModule`, ideally with the fully qualified `driver:name` format
 - explicit override on `PostEntity`
 
 ## Replace placeholders with a repository-backed service

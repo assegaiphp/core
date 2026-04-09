@@ -90,7 +90,7 @@ use Assegaiphp\BlogApi\Posts\PostsModule;
 
 #[Module(
   imports: [PostsModule::class],
-  config: ['data_source' => 'blog'],
+  config: ['data_source' => 'mysql:blog'],
 )]
 class AppModule
 {
@@ -111,14 +111,14 @@ use Assegai\Core\Attributes\Modules\Module;
 #[Module(
   providers: [PostsService::class],
   controllers: [PostsController::class],
-  config: ['data_source' => 'blog'],
+  config: ['data_source' => 'mysql:blog'],
 )]
 class PostsModule
 {
 }
 ```
 
-That keeps the choice close to the feature without repeating it on every entity.
+That keeps the choice close to the feature without repeating it on every entity. In Assegai apps, prefer the fully qualified `driver:name` shape here, such as `sqlite:blog_api_db` or `mysql:orders_db`.
 
 ### Entity-level override
 
@@ -165,7 +165,7 @@ class NoteEntity
 2. the active module config key `data_source`
 3. an error if neither is available
 
-If the configured data source string includes a driver prefix like `sqlite:local`, the driver is derived from that prefix.
+If the configured data source string includes a driver prefix like `sqlite:local`, the driver is derived from that prefix. That is the preferred module-level format, and it is what the CLI should write when it helps configure `data_source`.
 
 ## Inject a repository into a service
 
