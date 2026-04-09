@@ -25,6 +25,7 @@ use Mocks\ExportVisibilityAppModule;
 use Mocks\FrameworkAwareAppModule;
 use Mocks\FrameworkAwareContractsService;
 use Mocks\FrameworkAwareService;
+use Mocks\ProviderOwnershipOrderingAppModule;
 use Mocks\RequestCapturingService;
 use Mocks\ResolverAwareAppModule;
 use Mocks\ResolverOnlyAwareAppModule;
@@ -356,6 +357,16 @@ class InjectorCest
     $I->assertInstanceOf(RootPublicConsumerService::class, $publicConsumer);
     $I->assertSame('private', $publicConsumer->publicService->privateService->value);
     $I->expectThrowable(\Assegai\Core\Exceptions\Container\ResolveException::class, fn() => $injector->resolve(RootPrivateConsumerService::class));
+  }
+
+  public function testProviderOwnershipMapIsPopulatedBeforeResolvingDefaultProviders(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(ProviderOwnershipOrderingAppModule::class);
+
+    $I->expectThrowable(
+      \Assegai\Core\Exceptions\Container\ResolveException::class,
+      fn() => $app->boot(),
+    );
   }
 
   public function testSessionLifecycleStartsAndClosesPerRequest(UnitTester $I): void

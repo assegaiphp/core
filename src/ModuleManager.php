@@ -443,13 +443,21 @@ class ModuleManager implements SingletonInterface
     $this->providerModuleMap = [];
 
     foreach ($this->moduleTokens as $moduleClass => $module) {
+      /** @var array{providers?: string[]} $args */
+      $args = $module->getArguments();
+
+      foreach ($args['providers'] ?? [] as $tokenId) {
+        $this->providerModuleMap[$tokenId] = $moduleClass;
+      }
+    }
+
+    foreach ($this->moduleTokens as $moduleClass => $module) {
       /** @var array{imports: string[], exports: string[], providers: string[]} $args */
       $args = $module->getArguments();
 
       foreach ($args['providers'] ?? [] as $tokenId) {
         if ($provider = $this->validateProvider($tokenId)) {
           $this->providerTokens[$tokenId] = $provider;
-          $this->providerModuleMap[$tokenId] = $moduleClass;
           $scope = $this->injector->getDependencyScope($tokenId, $provider);
 
           if ($scope === \Assegai\Core\Enumerations\Scope::DEFAULT) {

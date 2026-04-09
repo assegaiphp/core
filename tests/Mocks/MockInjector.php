@@ -253,6 +253,56 @@ class ExportVisibilityAppModule
 {
 }
 
+#[Injectable]
+class OrderingPrivateProviderService
+{
+  public string $value = 'hidden';
+}
+
+#[Injectable]
+class OrderingSingletonConsumerService
+{
+  public function __construct(
+    public OrderingPrivateProviderService $privateService,
+  ) {
+  }
+}
+
+#[Module(
+  providers: [
+    OrderingPrivateProviderService::class,
+  ],
+  controllers: [],
+  imports: [],
+)]
+class OrderingHiddenModule
+{
+}
+
+#[Module(
+  providers: [
+    OrderingSingletonConsumerService::class,
+  ],
+  controllers: [],
+  imports: [
+    OrderingHiddenModule::class,
+  ],
+)]
+class OrderingConsumerModule
+{
+}
+
+#[Module(
+  providers: [],
+  controllers: [],
+  imports: [
+    OrderingConsumerModule::class,
+  ],
+)]
+class ProviderOwnershipOrderingAppModule
+{
+}
+
 #[Module(
   providers: [
     FrameworkAwareService::class,
