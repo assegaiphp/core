@@ -276,7 +276,7 @@ class PostsService
     $saveResult = $this->postsRepository->save($post);
 
     if ($saveResult->isError()) {
-      throw new RuntimeException('Failed to create post.', previous: $saveResult->getErrors()[0]);
+      throw new RuntimeException('Failed to create post.', previous: $saveResult->getLatestError());
     }
 
     return $post;

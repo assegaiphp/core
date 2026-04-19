@@ -643,13 +643,22 @@ class App implements AppInterface
         $this->refreshRequestScope();
         broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
         try {
-            $resourcePath = Paths::getPublicPath($_SERVER['REQUEST_URI']);
+            $resourcePath = $this->resolvePublicResourcePath($_SERVER['REQUEST_URI'] ?? null);
 
-            if (is_file($resourcePath) && !preg_match('/index.(htm|html|php|xhtml)$/', $resourcePath)) {
+            if (is_string($resourcePath)) {
                 $mimeType = Paths::getMimeType($resourcePath);
 
                 header("Content-Type: $mimeType");
-                require_once($resourcePath);
+                header('X-Content-Type-Options: nosniff');
+
+                $contentLength = filesize($resourcePath);
+
+                if (is_int($contentLength) && $contentLength >= 0) {
+                    header('Content-Length: ' . $contentLength);
+                }
+
+                readfile($resourcePath);
+                return;
             } else {
                 $this->startSessionForCurrentRequest();
 
@@ -681,6 +690,101 @@ class App implements AppInterface
         }
     }
 
+    /**
+     * Resolves a request URI to a safe static file inside the public directory.
+     *
+     * @param string|null $requestUri
+     * @return string|false
+     */
+    protected function resolvePublicResourcePath(?string $requestUri): string|false
+    {
+        $publicDirectory = realpath(Paths::getPublicPath());
+
+        if ($publicDirectory === false || !is_dir($publicDirectory)) {
+            return false;
+        }
+
+        if (!is_string($requestUri) || trim($requestUri) === '') {
+            return false;
+        }
+
+        $requestPath = parse_url($requestUri, PHP_URL_PATH);
+
+        if (!is_string($requestPath) || $requestPath === '' || $requestPath === '/') {
+            return false;
+        }
+
+        $relativePath = trim(str_replace('\\', '/', ltrim($requestPath, '/')), '/');
+
+        if ($relativePath === '' || $this->containsHiddenPathSegment($relativePath)) {
+            return false;
+        }
+
+        $resourceCandidate = $publicDirectory . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+        $resourcePath = realpath($resourceCandidate);
+
+        if ($resourcePath === false || !is_file($resourcePath)) {
+            return false;
+        }
+
+        if (!$this->isPathInsideDirectory($resourcePath, $publicDirectory)) {
+            return false;
+        }
+
+        if ($this->shouldBypassPublicResourceStreaming($resourcePath)) {
+            return false;
+        }
+
+        return $resourcePath;
+    }
+
+    /**
+     * @param string $relativePath
+     * @return bool
+     */
+    protected function containsHiddenPathSegment(string $relativePath): bool
+    {
+        $segments = array_filter(explode('/', $relativePath), static fn(string $segment): bool => $segment !== '');
+
+        foreach ($segments as $segment) {
+            if (str_starts_with($segment, '.')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param string $resourcePath
+     * @return bool
+     */
+    protected function shouldBypassPublicResourceStreaming(string $resourcePath): bool
+    {
+        $extension = strtolower(pathinfo($resourcePath, PATHINFO_EXTENSION));
+
+        if (in_array($extension, ['php', 'phtml', 'phar', 'inc'], true)) {
+            return true;
+        }
+
+        return in_array(
+            strtolower(pathinfo($resourcePath, PATHINFO_BASENAME)),
+            ['index.htm', 'index.html', 'index.php', 'index.xhtml'],
+            true,
+        );
+    }
+
+    /**
+     * @param string $path
+     * @param string $directory
+     * @return bool
+     */
+    protected function isPathInsideDirectory(string $path, string $directory): bool
+    {
+        $directory = rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+        return str_starts_with($path, $directory);
+    }
     /**
      * Handles an uncaught throwable through the framework exception pipeline.
      *

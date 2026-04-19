@@ -31,15 +31,19 @@ They focus on the tasks most people need first:
 14. [API Docs and Clients](./api-docs-and-clients.md)
 15. [Pages, Components, HTMX, and Web Components](./pages-and-components.md)
 16. [Data and ORM](./data-and-orm.md)
-17. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
-18. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
-19. [ORM Relations](./orm-relations.md)
-20. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
-21. [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md)
-22. [Events In Depth](./events-and-domain-events-in-depth.md)
-23. [OpenSwoole Runtime](./openswoole-runtime.md)
-24. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
-25. [Queues and Background Jobs](./queues-and-background-jobs.md)
+17. [Getting Started](./orm-getting-started.md)
+18. [Data Sources](./orm-data-sources.md)
+19. [Entities](./orm-entities.md)
+20. [Relations](./orm-relations.md)
+21. [Migrations](./orm-migrations.md)
+22. [Working with Entity Manager](./orm-entity-manager.md)
+23. [Query Builder](./orm-query-builder.md)
+24. [Drivers](./orm-drivers.md)
+25. [Custom CLI Schematics In Depth](./custom-cli-schematics-in-depth.md)
+26. [Events In Depth](./events-and-domain-events-in-depth.md)
+27. [OpenSwoole Runtime](./openswoole-runtime.md)
+28. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
+29. [Queues and Background Jobs](./queues-and-background-jobs.md)
 
 ## Guide map
 
@@ -70,14 +74,18 @@ This section is about working style and day-to-day delivery rather than one isol
 - [Authentication and OAuth In Depth](./authentication-and-oauth.md) goes deeper into strategy selection, route ownership, and provider-backed login flows.
 - [API Docs and Clients](./api-docs-and-clients.md) covers `/docs`, `/openapi.json`, Postman export, and the TypeScript client generator.
 - [Pages, Components, HTMX, and Web Components](./pages-and-components.md) covers server-rendered UI patterns and the new Web Components workflow.
-- [Data and ORM](./data-and-orm.md) is the ORM map, including the practical techniques that keep data-heavy features maintainable.
+- [Data and ORM](./data-and-orm.md) is the ORM map for both standalone package users and full Assegai apps.
 
-### Data and Persistence
+### Data and ORM
 
-- [ORM Setup and Data Sources](./orm-setup-and-data-sources.md) covers installation, CLI database setup, data source resolution, and repository injection.
-- [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md) explains entity modeling, CRUD patterns, and the result objects controllers can return directly.
-- [ORM Relations](./orm-relations.md) is the relation guide for `OneToOne`, `ManyToOne`, `OneToMany`, and `ManyToMany`, with a strong focus on ownership and loading.
-- [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md) covers schema evolution and the CLI commands around migrations, loading, and seeding.
+- [Getting Started](./orm-getting-started.md) shows the first working ORM path both inside Assegai and in standalone PHP.
+- [Data Sources](./orm-data-sources.md) explains the `data_source` concept, named stores, `driver:name` resolution, and direct `DataSource` usage.
+- [Entities](./orm-entities.md) explains how entity classes model persisted shape and how they differ from DTOs.
+- [Relations](./orm-relations.md) covers ownership, loading, and relation writes for `OneToOne`, `ManyToOne`, `OneToMany`, and `ManyToMany`.
+- [Migrations](./orm-migrations.md) covers repeatable schema change in both standalone and Assegai workflows.
+- [Working with Entity Manager](./orm-entity-manager.md) explains the central ORM coordination layer beneath repositories.
+- [Query Builder](./orm-query-builder.md) introduces the lower-level SQL-family builder and the dialect-specific fluent branches.
+- [Drivers](./orm-drivers.md) explains the supported SQL families, their config shape, and the matching PDO extensions.
 - [Queues and Background Jobs](./queues-and-background-jobs.md) covers work that should move off the request path.
 
 ## What makes Assegai feel fast
@@ -136,10 +144,14 @@ Assegai is more than one package. The current public organization and guide surf
 If your app is data-backed, the ORM reading path is:
 
 1. [Data and ORM](./data-and-orm.md)
-2. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
-3. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
-4. [ORM Relations](./orm-relations.md)
-5. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
+2. [Getting Started](./orm-getting-started.md)
+3. [Data Sources](./orm-data-sources.md)
+4. [Entities](./orm-entities.md)
+5. [Relations](./orm-relations.md)
+6. [Migrations](./orm-migrations.md)
+7. [Working with Entity Manager](./orm-entity-manager.md)
+8. [Query Builder](./orm-query-builder.md)
+9. [Drivers](./orm-drivers.md)
 
 ## Notes on accuracy
 

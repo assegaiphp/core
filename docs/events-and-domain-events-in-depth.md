@@ -305,7 +305,7 @@ Example configuration:
 Example module import:
 
 ```php
-use Assegai\Events\Assegai\Outbox\EventsOutboxModule;
+use Assegai\Events\Bridge\Outbox\EventsOutboxModule;
 
 #[Module(
   imports: [EventsOutboxModule::class],
@@ -319,7 +319,7 @@ Example relay usage:
 
 ```php
 use Assegai\Core\Attributes\Injectable;
-use Assegai\Events\Assegai\Outbox\AssegaiOutboxRelayService;
+use Assegai\Events\Bridge\Outbox\AssegaiOutboxRelayService;
 
 #[Injectable]
 final class OutboxDrainService
