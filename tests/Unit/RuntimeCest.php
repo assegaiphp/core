@@ -1340,6 +1340,86 @@ class RuntimeCest
     $I->assertNull(RuntimeContext::get(Responder::class));
   }
 
+  public function testPublicResourceResolutionRejectsTraversalHiddenFilesAndPhpScripts(UnitTester $I): void
+  {
+    $publicDirectory = $this->workingDirectory . '/public';
+
+    if (!is_dir($publicDirectory)) {
+      @mkdir($publicDirectory, 0777, true);
+    }
+
+    $safeAsset = $publicDirectory . '/logo.png';
+    $hiddenAsset = $publicDirectory . '/.private.txt';
+    $scriptAsset = $publicDirectory . '/debug.php';
+
+    file_put_contents($safeAsset, 'png-bytes');
+    file_put_contents($hiddenAsset, 'hidden');
+    file_put_contents($scriptAsset, "<?php echo 'leak';");
+
+    $app = AssegaiFactory::createFromProject('Tests\\Runtime\\DummyAppModule', $this->workingDirectory);
+    $resolvePublicResourcePath = new \ReflectionMethod($app, 'resolvePublicResourcePath');
+
+    try {
+      $resolvedSafeAsset = $resolvePublicResourcePath->invoke($app, '/logo.png');
+      $resolvedHiddenAsset = $resolvePublicResourcePath->invoke($app, '/.private.txt');
+      $resolvedScriptAsset = $resolvePublicResourcePath->invoke($app, '/debug.php');
+      $resolvedTraversal = $resolvePublicResourcePath->invoke($app, '/../bootstrap.php');
+
+      $I->assertSame(realpath($safeAsset), $resolvedSafeAsset);
+      $I->assertFalse($resolvedHiddenAsset);
+      $I->assertFalse($resolvedScriptAsset);
+      $I->assertFalse($resolvedTraversal);
+    } finally {
+      foreach ([$safeAsset, $hiddenAsset, $scriptAsset] as $filename) {
+        if (is_file($filename)) {
+          unlink($filename);
+        }
+      }
+    }
+  }
+  public function testStaticAssetsAreStreamedWithoutExecutingEmbeddedPhpSequences(UnitTester $I): void
+  {
+    $publicImagesDirectory = $this->workingDirectory . '/public/images';
+
+    if (!is_dir($publicImagesDirectory)) {
+      @mkdir($publicImagesDirectory, 0777, true);
+    }
+
+    $assetFilename = $publicImagesDirectory . '/binary-probe.png';
+    $assetContents = "not-a-real-png<?php echo 'EXECUTED'; ?>tail";
+
+    file_put_contents($assetFilename, $assetContents);
+    $_SERVER['REQUEST_URI'] = '/images/binary-probe.png';
+    $_GET['path'] = 'images/binary-probe.png';
+
+    if (function_exists('header_remove')) {
+      header_remove();
+    }
+
+    $app = AssegaiFactory::createFromProject('Tests\\Runtime\\DummyAppModule', $this->workingDirectory);
+    $runDefaultHttpLifecycle = new \ReflectionMethod($app, 'runDefaultHttpLifecycle');
+
+    ob_start();
+
+    try {
+      $runDefaultHttpLifecycle->invoke($app);
+      $output = (string) ob_get_clean();
+    } finally {
+      if (ob_get_level() > 0) {
+        ob_end_clean();
+      }
+
+      if (is_file($assetFilename)) {
+        unlink($assetFilename);
+      }
+
+      if (function_exists('header_remove')) {
+        header_remove();
+      }
+    }
+
+    $I->assertSame($assetContents, $output);
+  }
 
   private function createFakeOpenSwooleRequest(
     string $path,

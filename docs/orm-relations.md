@@ -1,44 +1,38 @@
-# ORM Relations
+# Relations
 
-Relations are usually the first ORM topic that feels confusing.
+Relations describe how entities connect to each other.
 
-This page focuses on the practical questions that matter most: where the foreign key lives, which side owns the write, and when related data appears on an entity.
+That sounds simple, but relation bugs usually come from one of three misunderstandings:
 
-The mental model is intentionally close to TypeORM:
+- not knowing which side owns the write
+- expecting related data to load automatically
+- treating collection properties as if they create foreign keys by themselves
 
-- owner sides store the actual foreign key or join table metadata
-- inverse sides describe how to navigate the graph
-- relations are loaded explicitly
-- collection relations are not magic arrays from nowhere; they appear because the query asked for them
-
-The current ORM test coverage verifies:
-
-- loading `OneToOne`, `ManyToOne`, `OneToMany`, and `ManyToMany` relations
-- owner-side join-column writes for relation objects
-
-That is the behavior this guide leans on.
+This guide focuses on the practical mental model that keeps those mistakes rare.
 
 ## The most important rule: know the owner side
 
 Use this as the quick reference:
 
-| Relation type | Owner side | Stored key |
+| Relation type | Owner side | Where the stored key lives |
 | --- | --- | --- |
-| `OneToOne` | the side with `#[JoinColumn(...)]` | a foreign key column on the owner table |
-| `ManyToOne` | the `ManyToOne` property | a foreign key column on the many-side table |
-| `OneToMany` | inverse side only | no foreign key lives on this property |
-| `ManyToMany` | the side with `#[JoinTable(...)]` | rows in the join table |
+| `OneToOne` | the side with `#[JoinColumn(...)]` | a foreign key on the owner table |
+| `ManyToOne` | the `ManyToOne` property | a foreign key on the many-side table |
+| `OneToMany` | inverse side only | nowhere on this property directly |
+| `ManyToMany` | the side with `#[JoinTable(...)]` | the join table |
 
-When writes feel surprising, ownership is usually the first thing to check.
+If a relation write behaves strangely, ownership is the first thing to check.
 
 ## One-to-one
 
-Think of `User` and `Profile`: one user has one profile, and one profile belongs to one user.
+Use one-to-one when each record on one side matches at most one record on the other side.
+
+Example: a cinema has one profile, and a profile belongs to one cinema.
 
 ```php
 <?php
 
-namespace Assegaiphp\BlogApi\Users\Entities;
+namespace Assegaiphp\CinemaHub\Cinemas\Entities;
 
 use Assegai\Orm\Attributes\Columns\Column;
 use Assegai\Orm\Attributes\Columns\PrimaryGeneratedColumn;
@@ -47,21 +41,21 @@ use Assegai\Orm\Attributes\Relations\JoinColumn;
 use Assegai\Orm\Attributes\Relations\OneToOne;
 use Assegai\Orm\Queries\Sql\ColumnType;
 
-#[Entity(table: 'profiles', database: 'blog')]
-class ProfileEntity
+#[Entity(table: 'cinema_profiles', database: 'cinema')]
+class CinemaProfileEntity
 {
   #[PrimaryGeneratedColumn]
   public ?int $id = null;
 
   #[Column(type: ColumnType::TEXT, nullable: false)]
-  public string $bio = '';
+  public string $description = '';
 
-  #[OneToOne(type: UserEntity::class)]
-  public ?UserEntity $user = null;
+  #[OneToOne(type: CinemaEntity::class)]
+  public ?CinemaEntity $cinema = null;
 }
 
-#[Entity(table: 'users', database: 'blog')]
-class UserEntity
+#[Entity(table: 'cinemas', database: 'cinema')]
+class CinemaEntity
 {
   #[PrimaryGeneratedColumn]
   public ?int $id = null;
@@ -69,45 +63,54 @@ class UserEntity
   #[Column(type: ColumnType::VARCHAR, nullable: false)]
   public string $name = '';
 
-  #[OneToOne(type: ProfileEntity::class)]
-  #[JoinColumn(name: 'profileId')]
-  public ?ProfileEntity $profile = null;
+  #[OneToOne(type: CinemaProfileEntity::class)]
+  #[JoinColumn(name: 'profile_id')]
+  public ?CinemaProfileEntity $profile = null;
 }
 ```
 
-In that model:
+How to read that:
 
-- `UserEntity::$profile` is the owner side
-- `users.profileId` stores the key
-- `ProfileEntity::$user` is the inverse navigation back to the user
+- `CinemaEntity::$profile` is the owner side
+- the `cinemas` table stores the foreign key
+- `CinemaProfileEntity::$cinema` is the inverse navigation back
 
-Load it explicitly:
 
-```php
-<?php
+### SQL shape for the one-to-one example
 
-$user = $usersRepository->findOne([
-  'where' => ['id' => 1],
-  'relations' => ['profile'],
-])->getData();
+A one-to-one relation still becomes ordinary SQL tables. The special part is that the owner table stores a foreign key that should point to only one row.
 
-$profile = $profilesRepository->findOne([
-  'where' => ['id' => 1],
-  'relations' => ['user'],
-])->getData();
+```sql
+CREATE TABLE cinema_profiles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  description TEXT NOT NULL
+);
+
+CREATE TABLE cinemas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name VARCHAR(255) NOT NULL,
+  profile_id INTEGER NULL UNIQUE,
+  FOREIGN KEY (profile_id) REFERENCES cinema_profiles(id)
+);
 ```
+
+| Table | Important columns | What to notice |
+| --- | --- | --- |
+| `cinema_profiles` | `id`, `description` | no foreign key lives here in this example |
+| `cinemas` | `id`, `name`, `profile_id` | `profile_id` is the owner-side join column |
+
+Because the join column is declared explicitly as `#[JoinColumn(name: 'profile_id')]`, the SQL column uses that exact name.
 
 ## Many-to-one and one-to-many
 
-This is the classic `Author` and `Post` relationship:
+This is the most common relation pair.
 
-- many posts belong to one author
-- one author has many posts
+Example: many showtimes belong to one cinema, and one cinema has many showtimes.
 
 ```php
 <?php
 
-namespace Assegaiphp\BlogApi\Posts\Entities;
+namespace Assegaiphp\CinemaHub\Showtimes\Entities;
 
 use Assegai\Orm\Attributes\Columns\Column;
 use Assegai\Orm\Attributes\Columns\PrimaryGeneratedColumn;
@@ -116,8 +119,8 @@ use Assegai\Orm\Attributes\Relations\ManyToOne;
 use Assegai\Orm\Attributes\Relations\OneToMany;
 use Assegai\Orm\Queries\Sql\ColumnType;
 
-#[Entity(table: 'authors', database: 'blog')]
-class AuthorEntity
+#[Entity(table: 'cinemas', database: 'cinema')]
+class CinemaEntity
 {
   #[PrimaryGeneratedColumn]
   public ?int $id = null;
@@ -125,54 +128,68 @@ class AuthorEntity
   #[Column(type: ColumnType::VARCHAR, nullable: false)]
   public string $name = '';
 
-  #[OneToMany(type: PostEntity::class, referencedProperty: 'id', inverseSide: 'author')]
-  public array $posts = [];
+  #[OneToMany(type: ShowtimeEntity::class, referencedProperty: 'id', inverseSide: 'cinema')]
+  public array $showtimes = [];
 }
 
-#[Entity(table: 'posts', database: 'blog')]
-class PostEntity
+#[Entity(table: 'showtimes', database: 'cinema')]
+class ShowtimeEntity
 {
   #[PrimaryGeneratedColumn]
   public ?int $id = null;
 
   #[Column(type: ColumnType::VARCHAR, nullable: false)]
-  public string $title = '';
+  public string $startsAt = '';
 
-  #[ManyToOne(type: AuthorEntity::class)]
-  public ?AuthorEntity $author = null;
+  #[ManyToOne(type: CinemaEntity::class)]
+  public ?CinemaEntity $cinema = null;
 }
 ```
 
-In practice:
+What matters here:
 
-- the foreign key lives on the `posts` table
-- `PostEntity::$author` is the write-oriented owner side
-- `AuthorEntity::$posts` is the read-oriented inverse collection
+- the foreign key lives on the `showtimes` table
+- `ShowtimeEntity::$cinema` is the owner side
+- `CinemaEntity::$showtimes` is the inverse collection
 
-Load either direction explicitly:
+If you are saving relation data, write through the owner side.
 
-```php
-<?php
 
-$post = $postsRepository->findOne([
-  'where' => ['id' => 1],
-  'relations' => ['author'],
-])->getData();
+### SQL shape for the many-to-one example
 
-$author = $authorsRepository->findOne([
-  'where' => ['id' => 1],
-  'relations' => ['posts'],
-])->getData();
+This pair is easier to understand if you read it from the table side first: one cinema row can be referenced by many showtime rows.
+
+```sql
+CREATE TABLE cinemas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE showtimes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  starts_at VARCHAR(255) NOT NULL,
+  cinema_id INTEGER NULL,
+  FOREIGN KEY (cinema_id) REFERENCES cinemas(id)
+);
 ```
+
+| Table | Important columns | What to notice |
+| --- | --- | --- |
+| `cinemas` | `id`, `name` | the parent row lives here |
+| `showtimes` | `id`, `starts_at`, `cinema_id` | `cinema_id` is the stored foreign key |
+
+The important part is that `#[OneToMany(...)]` does not create its own column. The actual stored key is the implicit join column on the `ManyToOne` side, which the ORM now derives here as `cinema_id`.
 
 ## Many-to-many
 
-Use this when both sides can have multiple related records, like `Post` and `Tag`.
+Use many-to-many when both sides can have multiple related records.
+
+Example: one movie can belong to many genres, and one genre can describe many movies.
 
 ```php
 <?php
 
-namespace Assegaiphp\BlogApi\Posts\Entities;
+namespace Assegaiphp\CinemaHub\Movies\Entities;
 
 use Assegai\Orm\Attributes\Columns\Column;
 use Assegai\Orm\Attributes\Columns\PrimaryGeneratedColumn;
@@ -181,21 +198,21 @@ use Assegai\Orm\Attributes\Relations\JoinTable;
 use Assegai\Orm\Attributes\Relations\ManyToMany;
 use Assegai\Orm\Queries\Sql\ColumnType;
 
-#[Entity(table: 'tags', database: 'blog')]
-class TagEntity
+#[Entity(table: 'genres', database: 'cinema')]
+class GenreEntity
 {
   #[PrimaryGeneratedColumn]
   public ?int $id = null;
 
   #[Column(type: ColumnType::VARCHAR, nullable: false)]
-  public string $label = '';
+  public string $name = '';
 
-  #[ManyToMany(type: PostEntity::class, inverseSide: 'tags')]
-  public array $posts = [];
+  #[ManyToMany(type: MovieEntity::class, inverseSide: 'genres')]
+  public array $movies = [];
 }
 
-#[Entity(table: 'posts', database: 'blog')]
-class PostEntity
+#[Entity(table: 'movies', database: 'cinema')]
+class MovieEntity
 {
   #[PrimaryGeneratedColumn]
   public ?int $id = null;
@@ -203,135 +220,106 @@ class PostEntity
   #[Column(type: ColumnType::VARCHAR, nullable: false)]
   public string $title = '';
 
-  #[ManyToMany(type: TagEntity::class, inverseSide: 'posts')]
-  #[JoinTable(name: 'posts_tags', joinColumn: 'post_id', inverseJoinColumn: 'tag_id')]
-  public array $tags = [];
+  #[ManyToMany(type: GenreEntity::class, inverseSide: 'movies')]
+  #[JoinTable(name: 'movies_genres', joinColumn: 'movie_id', inverseJoinColumn: 'genre_id')]
+  public array $genres = [];
 }
 ```
 
-In that model:
+In this case:
 
-- `PostEntity::$tags` is the owner side because it has `#[JoinTable(...)]`
+- `MovieEntity::$genres` is the owner side because it has `#[JoinTable(...)]`
 - the join table stores the relationship rows
-- `TagEntity::$posts` is the inverse side
+- `GenreEntity::$movies` is the inverse side
 
-Load either side with the `relations` option:
 
-```php
-<?php
+### SQL shape for the many-to-many example
 
-$post = $postsRepository->findOne([
-  'where' => ['id' => 2],
-  'relations' => ['tags'],
-])->getData();
+A many-to-many relation becomes three tables: the two entity tables you already expected, plus a join table whose only job is to connect their keys.
 
-$tag = $tagsRepository->findOne([
-  'where' => ['id' => 2],
-  'relations' => ['posts'],
-])->getData();
+```sql
+CREATE TABLE movies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE genres (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE movies_genres (
+  movie_id INTEGER NOT NULL,
+  genre_id INTEGER NOT NULL,
+  PRIMARY KEY (movie_id, genre_id),
+  FOREIGN KEY (movie_id) REFERENCES movies(id),
+  FOREIGN KEY (genre_id) REFERENCES genres(id)
+);
 ```
 
-## How relation loading works
+| Table | Important columns | What to notice |
+| --- | --- | --- |
+| `movies` | `id`, `title` | regular entity table |
+| `genres` | `id`, `name` | regular entity table |
+| `movies_genres` | `movie_id`, `genre_id` | join table declared by `#[JoinTable(...)]` |
 
-Relations are not loaded unless you ask for them.
+That join table is the whole relation. Each row simply says, “this movie is linked to this genre.”
 
-The most common forms are:
+## Relations are loaded explicitly
 
-```php
-<?php
+Do not assume related data appears by magic.
 
-['relations' => ['author', 'tags']]
-```
-
-or:
-
-```php
-<?php
-
-['relations' => ['author' => true, 'tags' => true]]
-```
-
-Use that on `find()`, `findOne()`, and the entity-manager level equivalents when you need related data.
-
-## Writing relation objects through the owner side
-
-When you want to persist an owner-side relation object, use `save()` with relation options enabled.
-
-Example: create a post and point it at an existing author.
+Ask for it in the query:
 
 ```php
 <?php
 
-use Assegai\Orm\Management\Options\InsertOptions;
-
-$author = $authorsRepository->findOne([
+$cinema = $cinemas->findOne([
   'where' => ['id' => 1],
+  'relations' => ['showtimes'],
 ])->getData();
 
-$post = $postsRepository->create((object) [
-  'title' => 'Inserted with author',
+$movie = $movies->findOne([
+  'where' => ['id' => 42],
+  'relations' => ['genres'],
+])->getData();
+```
+
+That explicitness is a feature. It keeps data access easier to reason about and prevents accidental overfetching.
+
+## Writing through the owner side
+
+Here is the practical pattern for a many-to-one relation:
+
+```php
+<?php
+
+$cinema = $cinemas->findOne([
+  'where' => ['id' => 1],
+])->getFirst();
+
+$showtime = $showtimes->create([
+  'startsAt' => '2026-04-12 19:30:00',
 ]);
 
-$post->author = $author;
+$showtime->cinema = $cinema;
 
-$result = $postsRepository->save(
-  $post,
-  new InsertOptions(relations: ['author'])
-);
+$saveResult = $showtimes->save($showtime);
 ```
 
-The key idea is that the owner-side property is what the ORM can translate into the stored key.
+Why this works:
 
-If the relation starts from a DTO or other plain object instead, the same rule still applies: pass the object into `create(...)`, then attach the related entity on the owner side before `save(...)`.
+- the write goes through `ShowtimeEntity::$cinema`
+- that property is the owner side
+- the owner side is the place that controls the stored foreign key
 
-For updates, the same pattern applies with `UpdateOptions`:
+## Practical advice
 
-```php
-<?php
+- Learn the owner side first.
+- Load relations explicitly.
+- Keep inverse collection properties for navigation, not for pretending they own the write.
+- Persist through the side with `#[JoinColumn(...)]` or `#[JoinTable(...)]`.
 
-use Assegai\Orm\Management\Options\UpdateOptions;
+## Next steps
 
-$post = $postsRepository->findOne([
-  'where' => ['id' => 1],
-])->getData();
-
-$post->author = $anotherAuthor;
-
-$postsRepository->save(
-  $post,
-  new UpdateOptions(relations: ['author'])
-);
-```
-
-## Relation options
-
-Relation attributes accept a `RelationOptions` object for advanced behavior such as:
-
-- `cascade`
-- `isNullable`
-- `onDelete`
-- `onUpdate`
-- `isEager`
-- `isPersistent`
-- `orphanedRowAction`
-
-Those options are there for cases where your schema and lifecycle rules need more control, but the most important first step is still correct ownership and explicit loading.
-
-## Common pitfalls
-
-- Putting `#[JoinColumn]` on both sides of a one-to-one. Pick one owner side.
-- Expecting `OneToMany` to store a key. The actual key lives on the `ManyToOne` side.
-- Forgetting `#[JoinTable]` on the owner side of a many-to-many.
-- Reading a relation property without loading it in the query.
-- Trying to write a relation from the inverse side and expecting the foreign key to move automatically.
-
-## Relation techniques that work well
-
-- Use singular names for related object properties like `$post->author` and plural names for collection properties like `$author->posts`.
-- Keep the owning side obvious in the entity definition, even when the inverse side feels more convenient to read from.
-- Load only the relations the request actually needs.
-- Keep relation writes in the service layer so the controller stays about HTTP, not graph persistence.
-
-## Next step
-
-Once the model is in place, move on to [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md).
+Once relations make sense, move on to [Migrations](./orm-migrations.md) so the schema evolves in step with the model.

@@ -1,117 +1,82 @@
 # Data and ORM
 
-Think of the ORM as the part of the stack that maps PHP classes to database tables and gives your services repositories instead of hand-written SQL everywhere.
+The ORM gives you a few layers to work with persisted data:
 
-Assegai's ORM story is intentionally familiar to teams coming from NestJS and TypeORM:
+- entities model stored shape
+- repositories handle entity-scoped CRUD work
+- the entity manager coordinates broader persistence workflows
+- the query builder gives you lower-level SQL-family control when you need it
 
-- entities describe persistence shape
-- repositories are injected into services
-- modules can choose the default data source for a feature
-- migrations evolve the schema deliberately
-- relations are explicit, not magical
+In Assegai, modules point to a `data_source` rather than a `database`. That wording is deliberate. The abstraction is meant to stay broader than one SQL engine or one storage style. Today the first-class family is SQL:
 
-This page is the map for that workflow. It explains the mental model, the recommended techniques, and where to go next in the deeper ORM guides.
+- MySQL
+- MariaDB
+- PostgreSQL
+- SQLite
 
-## The happy path
+Over time, the same top-level idea is meant to grow into additional backends too. That is why these guides talk about entities, data sources, and drivers instead of collapsing everything into database config.
 
-For most data-backed applications, the smoothest workflow is:
+## What this section teaches
 
-1. create a project with `assegai new`
-2. configure a database during project setup or later with the CLI
-3. generate a resource with `assegai g r posts`
-4. turn the generated entity into a real model
-5. inject a repository into the service
-6. add migrations once the schema starts to matter
+By the end of this track, you should understand:
 
-That path is what the CLI, `core`, and `orm` are all steering toward.
+- what a data source is and why the framework uses that term
+- how to configure the ORM in a standalone project or an Assegai app
+- how entities map PHP classes to stored records
+- how relations model ownership and navigation between entities
+- how migrations keep schema changes deliberate and repeatable
+- when to use repositories, when to use the entity manager, and when to drop to the query builder
+- how driver choice affects configuration and query fluency
 
-## Database support today
+## Recommended reading path
 
-The data source enum surface is broader than the maturity level you should assume for day-to-day application work.
+Read these in order if you are new to the ORM:
 
-Today, the smoothest path is usually:
+1. [Getting Started](./orm-getting-started.md)
+2. [Data Sources](./orm-data-sources.md)
+3. [Entities](./orm-entities.md)
+4. [Relations](./orm-relations.md)
+5. [Migrations](./orm-migrations.md)
+6. [Working with Entity Manager](./orm-entity-manager.md)
+7. [Query Builder](./orm-query-builder.md)
+8. [Drivers](./orm-drivers.md)
 
-- MySQL first for long-running application work
-- SQLite next for local development, tests, prototypes, and small apps
-- PostgreSQL with support continuing to improve
+## Two valid ways to start
 
-Other data source types exist in the enum surface, but they should be treated as a longer-term compatibility direction rather than the default recommendation for production apps today.
+There is no single correct starting point for every team.
 
-## Techniques
+If you are building an Assegai app, the smoothest route is usually:
 
-These are the habits that keep Assegai ORM code predictable as the app grows:
+1. `assegai add orm`
+2. `assegai database:configure ...`
+3. `assegai database:setup ...`
+4. set a module-level `data_source`
+5. inject a repository into a service
 
-- Start from a generated resource. `assegai g r posts` gives you DTOs, an entity, a module, a service, and a controller that already fit the framework's conventions.
-- Prefer module-level `data_source` defaults. It usually gives the best balance between explicitness and repetition.
-- Keep DTOs and entities separate. DTOs describe request shape; entities describe persistence shape.
-- Pass DTOs straight into `create($dto)` and `update(..., $dto)` unless you have a real reason to reshape the data first.
-- Prefer `save()` as the default write path for new records. Reach for `insert()` when you specifically want the lower-level insert-style flow.
-- Load relations explicitly at the query boundary. Ask for the relation you need in `find()` or `findOne()` instead of assuming it will always be present.
-- Write through the owning side of a relation. The property with `#[JoinColumn]` or `#[JoinTable]` is the side that controls the stored key.
-- Let controllers stay thin. Repository result objects are useful inside the data layer, but service methods will usually be easier to work with if they return plain objects or arrays.
-- Prefer `softRemove(...)` as the default delete path when your entity already carries `ChangeRecorderTrait`.
+If you are using the ORM without Assegai, the smoothest route is usually:
 
-## ORM guide map
+1. `composer require assegaiphp/orm`
+2. enable only the PDO extension for the driver you want
+3. configure `OrmRuntime`
+4. create a `DataSource`
+5. fetch a repository or work through the entity manager
 
-Use this set as a progressive track:
+Both are first-class workflows. The difference is mostly where configuration and convenience come from.
 
-1. [ORM Setup and Data Sources](./orm-setup-and-data-sources.md)
-2. [ORM Entities, Repositories, and Results](./orm-entities-repositories-and-results.md)
-3. [ORM Relations](./orm-relations.md)
-4. [ORM Migrations and Database Workflows](./orm-migrations-and-database-workflows.md)
+## A mental model that holds up
 
-## Quick example
+If the ORM feels abstract at first, this model usually helps:
 
-This is the smallest realistic flow for a generated resource:
+- a **driver** knows how to speak to a specific backend family such as MySQL or PostgreSQL
+- a **data source** is a named configured store that uses one of those drivers
+- an **entity** describes how a PHP class maps to stored data
+- a **repository** is the everyday entity-scoped API for CRUD-style work
+- the **entity manager** is the broader coordination layer underneath repositories
+- the **query builder** is the lower-level fluent API for SQL-family work when repository options are not enough
+- **migrations** capture schema changes so environments do not drift apart
 
-```php
-<?php
+## Where to go next
 
-namespace Assegaiphp\BlogApi\Posts;
+If you want the fastest route to a working feature, start with [Getting Started](./orm-getting-started.md).
 
-use Assegai\Core\Attributes\Injectable;
-use Assegai\Orm\Attributes\InjectRepository;
-use Assegai\Orm\Management\Repository;
-use Assegaiphp\BlogApi\Posts\DTOs\CreatePostDTO;
-use Assegaiphp\BlogApi\Posts\Entities\PostEntity;
-use RuntimeException;
-
-#[Injectable]
-class PostsService
-{
-  public function __construct(
-    #[InjectRepository(PostEntity::class)]
-    private Repository $postsRepository,
-  ) {
-  }
-
-  public function findAll(): array
-  {
-    return $this->postsRepository->find([
-      'order' => ['id' => 'DESC'],
-      'limit' => 20,
-      'skip' => 0,
-    ])->getData();
-  }
-
-  public function create(CreatePostDTO $dto): object
-  {
-    $post = $this->postsRepository->create($dto);
-
-    $saveResult = $this->postsRepository->save($post);
-
-    if ($saveResult->isError()) {
-      throw new RuntimeException('Failed to create post.', previous: $saveResult->getErrors()[0]);
-    }
-
-    return $post;
-  }
-}
-```
-
-From there, the deeper guides help you decide:
-
-- how the feature chooses its data source
-- how to model columns and result shapes
-- how to load and persist relations
-- how to evolve the schema with migrations
+If you already know you need to reason about configuration first, jump straight to [Data Sources](./orm-data-sources.md).
