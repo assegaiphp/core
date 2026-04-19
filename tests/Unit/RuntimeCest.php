@@ -1340,7 +1340,7 @@ class RuntimeCest
     $I->assertNull(RuntimeContext::get(Responder::class));
   }
 
-  public function testPublicResourceResolutionRejectsTraversalHiddenFilesAndPhpScripts(UnitTester $I): void
+  public function testPublicResourceResolutionRejectsTraversalHiddenFilesAndUnsafeScriptLikeAssets(UnitTester $I): void
   {
     $publicDirectory = $this->workingDirectory . '/public';
 
@@ -1351,10 +1351,19 @@ class RuntimeCest
     $safeAsset = $publicDirectory . '/logo.png';
     $hiddenAsset = $publicDirectory . '/.private.txt';
     $scriptAsset = $publicDirectory . '/debug.php';
+    $sourceAsset = $publicDirectory . '/debug.phps';
+    $wellKnownDirectory = $publicDirectory . '/.well-known/acme-challenge';
+    $wellKnownAsset = $wellKnownDirectory . '/token';
+
+    if (!is_dir($wellKnownDirectory)) {
+      @mkdir($wellKnownDirectory, 0777, true);
+    }
 
     file_put_contents($safeAsset, 'png-bytes');
     file_put_contents($hiddenAsset, 'hidden');
     file_put_contents($scriptAsset, "<?php echo 'leak';");
+    file_put_contents($sourceAsset, '<?php echo "source";');
+    file_put_contents($wellKnownAsset, 'acme-token');
 
     $app = AssegaiFactory::createFromProject('Tests\\Runtime\\DummyAppModule', $this->workingDirectory);
     $resolvePublicResourcePath = new \ReflectionMethod($app, 'resolvePublicResourcePath');
@@ -1363,16 +1372,26 @@ class RuntimeCest
       $resolvedSafeAsset = $resolvePublicResourcePath->invoke($app, '/logo.png');
       $resolvedHiddenAsset = $resolvePublicResourcePath->invoke($app, '/.private.txt');
       $resolvedScriptAsset = $resolvePublicResourcePath->invoke($app, '/debug.php');
+      $resolvedSourceAsset = $resolvePublicResourcePath->invoke($app, '/debug.phps');
+      $resolvedWellKnownAsset = $resolvePublicResourcePath->invoke($app, '/.well-known/acme-challenge/token');
       $resolvedTraversal = $resolvePublicResourcePath->invoke($app, '/../bootstrap.php');
 
       $I->assertSame(realpath($safeAsset), $resolvedSafeAsset);
       $I->assertFalse($resolvedHiddenAsset);
       $I->assertFalse($resolvedScriptAsset);
+      $I->assertFalse($resolvedSourceAsset);
+      $I->assertSame(realpath($wellKnownAsset), $resolvedWellKnownAsset);
       $I->assertFalse($resolvedTraversal);
     } finally {
-      foreach ([$safeAsset, $hiddenAsset, $scriptAsset] as $filename) {
+      foreach ([$safeAsset, $hiddenAsset, $scriptAsset, $sourceAsset, $wellKnownAsset] as $filename) {
         if (is_file($filename)) {
           unlink($filename);
+        }
+      }
+
+      foreach ([$wellKnownDirectory, dirname($wellKnownDirectory)] as $directory) {
+        if (is_dir($directory)) {
+          @rmdir($directory);
         }
       }
     }

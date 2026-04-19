@@ -731,7 +731,7 @@ class App implements AppInterface
             return false;
         }
 
-        if ($this->shouldBypassPublicResourceStreaming($resourcePath)) {
+        if ($this->shouldBypassPublicResourceStreaming($resourcePath, $relativePath)) {
             return false;
         }
 
@@ -746,8 +746,8 @@ class App implements AppInterface
     {
         $segments = array_filter(explode('/', $relativePath), static fn(string $segment): bool => $segment !== '');
 
-        foreach ($segments as $segment) {
-            if (str_starts_with($segment, '.')) {
+        foreach ($segments as $index => $segment) {
+            if (str_starts_with($segment, '.') && !($index === 0 && $segment === '.well-known')) {
                 return true;
             }
         }
@@ -759,11 +759,73 @@ class App implements AppInterface
      * @param string $resourcePath
      * @return bool
      */
-    protected function shouldBypassPublicResourceStreaming(string $resourcePath): bool
+    protected function shouldBypassPublicResourceStreaming(string $resourcePath, string $relativePath): bool
     {
         $extension = strtolower(pathinfo($resourcePath, PATHINFO_EXTENSION));
+        $normalizedRelativePath = trim(str_replace('\\', '/', $relativePath), '/');
 
         if (in_array($extension, ['php', 'phtml', 'phar', 'inc'], true)) {
+            return true;
+        }
+
+        if ($extension === '') {
+            return !str_starts_with($normalizedRelativePath, '.well-known/');
+        }
+
+        $allowedExtensions = [
+            '7z',
+            'atom',
+            'avif',
+            'bmp',
+            'bz2',
+            'css',
+            'csv',
+            'eot',
+            'gif',
+            'gz',
+            'htm',
+            'html',
+            'ico',
+            'jpeg',
+            'jpg',
+            'js',
+            'json',
+            'map',
+            'md',
+            'mjs',
+            'mp3',
+            'mp4',
+            'mpeg',
+            'oga',
+            'ogv',
+            'ogx',
+            'otf',
+            'pdf',
+            'png',
+            'rss',
+            'rtf',
+            'svg',
+            'svgz',
+            'tgz',
+            'ts',
+            'ttf',
+            'txt',
+            'wasm',
+            'wav',
+            'weba',
+            'webm',
+            'webmanifest',
+            'webp',
+            'woff',
+            'woff2',
+            'xhtml',
+            'xls',
+            'xlsx',
+            'xml',
+            'zip',
+        ];
+
+        if (!in_array($extension, $allowedExtensions, true)) {
             return true;
         }
 

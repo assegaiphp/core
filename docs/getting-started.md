@@ -48,10 +48,12 @@ The scaffold flow currently prompts for:
 
 If you opt into database setup during scaffolding, the CLI also:
 
-- writes database settings into `config/default.php`
+- writes database settings into `config/secure.php`
 - generates a default users resource when one does not already exist
 - updates `src/AppModule.php` to import that resource module
 - attempts to install `assegaiphp/orm`
+
+In a fresh project, `config/secure.php` sits at the top of the config cascade and overrides the lower-priority config files when it is present.
 
 ## What a fresh project looks like
 
@@ -64,7 +66,8 @@ blog-api/
 ├── bootstrap.php
 ├── composer.json
 ├── config/
-│   └── default.php
+│   ├── default.php
+│   └── secure.php
 ├── index.php
 ├── public/
 │   ├── css/style.css

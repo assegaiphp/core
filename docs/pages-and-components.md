@@ -256,7 +256,7 @@ Assegai keeps the Twig environment fairly small on purpose. The built-in helpers
 - `ctx.timeAgo(timestamp, timezone = null)` for relative time output
 - `ctx.env(key, default = null)` for environment values
 - `ctx.getLang()` for the current language
-- `ctx.webComponentProps(...)` or `ctx.wcProps(...)` for safe Web Component props
+- `ctx.wcProps(...)` for safe Web Component props
 - `ctx.webComponentBundleUrl()` for the bundle URL
 
 Example:
@@ -331,7 +331,7 @@ Assegai's Web Components support is built around a server-first model:
 ### Twig templates get a safe props helper
 
 ```twig
-<app-user-card data-props='{{ ctx.webComponentProps({
+<app-user-card data-props='{{ ctx.wcProps({
   name: name,
   quote: quote
 }) }}'>
@@ -341,13 +341,13 @@ Assegai's Web Components support is built around a server-first model:
 
 That helper is doing one practical job: turning your PHP or Twig data into JSON that is safe to place inside an HTML attribute.
 
-Without that step, quotes and special characters can break the markup. So although the browser ultimately receives a JSON string, `ctx.webComponentProps(...)` keeps the template code safe and predictable.
+Without that step, quotes and special characters can break the markup. So although the browser ultimately receives a JSON string, `ctx.wcProps(...)` keeps the template code safe and predictable.
 
 ### PHP views can use the same pattern
 
 ```php
 <app-user-card
-  data-props='<?= web_component_props([
+  data-props='<?= wc_props([
     "name" => $name,
     "quote" => $quote,
   ]) ?>'
@@ -417,7 +417,7 @@ Use `enabled: false` to disable automatic injection entirely.
 Assegai exposes small helpers around bundle resolution and prop encoding:
 
 ```php
-web_component_props($props);
+wc_props($props);
 web_component_bundle_url();
 web_component_bundle_tag();
 ```
@@ -425,7 +425,7 @@ web_component_bundle_tag();
 Inside Twig component templates, these are surfaced through `ctx`:
 
 ```twig
-{{ ctx.webComponentProps({ name: name }) }}
+{{ ctx.wcProps({ name: name }) }}
 {{ ctx.webComponentBundleUrl() }}
 ```
 
