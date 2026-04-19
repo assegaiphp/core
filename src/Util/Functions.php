@@ -220,13 +220,23 @@ if (!function_exists('register_dependency')) {
   }
 }
 
+if (!function_exists('wc_props')) {
+  /**
+   * Encodes component props for safe use inside a custom element attribute.
+   */
+  function wc_props(mixed $props = []): string
+  {
+    return WebComponentSupport::encodeProps($props);
+  }
+}
+
 if (!function_exists('web_component_props')) {
   /**
    * Encodes component props for safe use inside a custom element attribute.
    */
   function web_component_props(mixed $props = []): string
   {
-    return WebComponentSupport::encodeProps($props);
+    return wc_props($props);
   }
 }
 

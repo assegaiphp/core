@@ -99,11 +99,12 @@ TWIG
     $this->deleteDirectory($this->workspace);
   }
 
-  public function testTheWebComponentPropsHelperEscapesJsonForHtmlAttributes(UnitTester $I): void
+  public function testTheWcPropsHelperEscapesJsonForHtmlAttributes(UnitTester $I): void
   {
-    $encoded = web_component_props(['quote' => "Let's <ship>"]);
+    $encoded = wc_props(['quote' => "Let's <ship>"]);
 
     $I->assertSame('{&quot;quote&quot;:&quot;Let&#039;s &lt;ship&gt;&quot;}', $encoded);
+    $I->assertSame($encoded, web_component_props(['quote' => "Let's <ship>"]));
   }
 
   public function testTheWebComponentBundleHelpersResolveTheConfiguredBundle(UnitTester $I): void

@@ -160,7 +160,7 @@ Built-in `ctx` helpers include:
 - `ctx.timeAgo(...)`
 - `ctx.env(...)`
 - `ctx.getLang()`
-- `ctx.webComponentProps(...)` and `ctx.wcProps(...)`
+- `ctx.wcProps(...)`
 - `ctx.webComponentBundleUrl()`
 
 ## A generated component is expected to render through the shadow root
@@ -218,7 +218,7 @@ For most new projects, `serve --dev` is the easiest starting point.
 From Twig:
 
 ```twig
-<app-user-card data-props='{{ ctx.webComponentProps({
+<app-user-card data-props='{{ ctx.wcProps({
   name: user.name,
   role: user.role
 }) }}'></app-user-card>
@@ -228,7 +228,7 @@ From a PHP view:
 
 ```php
 <app-user-card
-  data-props='<?= web_component_props([
+  data-props='<?= wc_props([
     "name" => $user["name"],
     "role" => $user["role"],
   ]) ?>'
@@ -237,7 +237,7 @@ From a PHP view:
 
 `data-props` is not a special Assegai-only format. It is just JSON stored in an HTML attribute.
 
-The helper exists because JSON inside HTML needs to be encoded and escaped safely. Quotes, apostrophes, and other characters can break the markup if you try to hand-build the string. `web_component_props(...)` and `ctx.webComponentProps(...)` do that safely and give PHP views and Twig templates one consistent way to pass data.
+The helper exists because JSON inside HTML needs to be encoded and escaped safely. Quotes, apostrophes, and other characters can break the markup if you try to hand-build the string. `wc_props(...)` and `ctx.wcProps(...)` do that safely and give PHP views and Twig templates one consistent way to pass data.
 
 The runtime reads that `data-props` payload and hydrates the custom element in the browser.
 

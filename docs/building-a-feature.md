@@ -201,7 +201,7 @@ class PostEntity
 }
 ```
 
-The `database` name should match the connection configured in `config/default.php`.
+The `database` name should match the connection configured in `config/secure.php`.
 
 If you want the whole feature to share the same default connection, you can also put it on the module:
 

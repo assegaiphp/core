@@ -191,7 +191,7 @@ class DefaultTemplateEngine extends TemplateEngine
             $ctx->addMethod('getLang', fn() => Request::current()->getLang());
         }
 
-        $webComponentPropsMethod = fn(mixed $props = []) => new Markup(web_component_props($props), 'UTF-8');
+        $webComponentPropsMethod = fn(mixed $props = []) => new Markup(wc_props($props), 'UTF-8');
 
         if (!method_exists($ctx, 'webComponentProps')) {
             $ctx->addMethod('webComponentProps', $webComponentPropsMethod);
