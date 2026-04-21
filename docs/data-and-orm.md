@@ -13,6 +13,7 @@ In Assegai, modules point to a `data_source` rather than a `database`. That word
 - MariaDB
 - PostgreSQL
 - SQLite
+- MSSQL
 
 Over time, the same top-level idea is meant to grow into additional backends too. That is why these guides talk about entities, data sources, and drivers instead of collapsing everything into database config.
 
@@ -27,6 +28,7 @@ By the end of this track, you should understand:
 - how migrations keep schema changes deliberate and repeatable
 - when to use repositories, when to use the entity manager, and when to drop to the query builder
 - how driver choice affects configuration and query fluency
+- where SQL-specific storage options belong when you need schema, engine, or SQLite `WITHOUT ROWID` behavior
 
 ## Recommended reading path
 
@@ -70,6 +72,7 @@ If the ORM feels abstract at first, this model usually helps:
 - a **driver** knows how to speak to a specific backend family such as MySQL or PostgreSQL
 - a **data source** is a named configured store that uses one of those drivers
 - an **entity** describes how a PHP class maps to stored data
+- `SqlEntityOptions` carries SQL-only storage choices when you need them
 - a **repository** is the everyday entity-scoped API for CRUD-style work
 - the **entity manager** is the broader coordination layer underneath repositories
 - the **query builder** is the lower-level fluent API for SQL-family work when repository options are not enough

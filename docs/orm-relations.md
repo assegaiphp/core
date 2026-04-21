@@ -41,7 +41,7 @@ use Assegai\Orm\Attributes\Relations\JoinColumn;
 use Assegai\Orm\Attributes\Relations\OneToOne;
 use Assegai\Orm\Queries\Sql\ColumnType;
 
-#[Entity(table: 'cinema_profiles', database: 'cinema')]
+#[Entity(table: 'cinema_profiles', dataSource: 'cinema')]
 class CinemaProfileEntity
 {
   #[PrimaryGeneratedColumn]
@@ -54,7 +54,7 @@ class CinemaProfileEntity
   public ?CinemaEntity $cinema = null;
 }
 
-#[Entity(table: 'cinemas', database: 'cinema')]
+#[Entity(table: 'cinemas', dataSource: 'cinema')]
 class CinemaEntity
 {
   #[PrimaryGeneratedColumn]
@@ -119,7 +119,7 @@ use Assegai\Orm\Attributes\Relations\ManyToOne;
 use Assegai\Orm\Attributes\Relations\OneToMany;
 use Assegai\Orm\Queries\Sql\ColumnType;
 
-#[Entity(table: 'cinemas', database: 'cinema')]
+#[Entity(table: 'cinemas', dataSource: 'cinema')]
 class CinemaEntity
 {
   #[PrimaryGeneratedColumn]
@@ -132,7 +132,7 @@ class CinemaEntity
   public array $showtimes = [];
 }
 
-#[Entity(table: 'showtimes', database: 'cinema')]
+#[Entity(table: 'showtimes', dataSource: 'cinema')]
 class ShowtimeEntity
 {
   #[PrimaryGeneratedColumn]
@@ -198,7 +198,7 @@ use Assegai\Orm\Attributes\Relations\JoinTable;
 use Assegai\Orm\Attributes\Relations\ManyToMany;
 use Assegai\Orm\Queries\Sql\ColumnType;
 
-#[Entity(table: 'genres', database: 'cinema')]
+#[Entity(table: 'genres', dataSource: 'cinema')]
 class GenreEntity
 {
   #[PrimaryGeneratedColumn]
@@ -211,7 +211,7 @@ class GenreEntity
   public array $movies = [];
 }
 
-#[Entity(table: 'movies', database: 'cinema')]
+#[Entity(table: 'movies', dataSource: 'cinema')]
 class MovieEntity
 {
   #[PrimaryGeneratedColumn]

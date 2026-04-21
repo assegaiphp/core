@@ -257,7 +257,7 @@ class AppModule
 
 ### Entity-level override
 
-If one entity must always use a specific data source, put that decision on the entity:
+If one entity must always use a specific data source, put that selection on the entity and keep SQL-only storage concerns separate:
 
 ```php
 <?php
@@ -267,7 +267,7 @@ use Assegai\Orm\Enumerations\DataSourceType;
 
 #[Entity(
   table: 'audit_logs',
-  database: 'analytics',
+  dataSource: 'analytics',
   driver: DataSourceType::POSTGRESQL,
 )]
 class AuditLogEntity
@@ -279,7 +279,7 @@ class AuditLogEntity
 
 When `#[InjectRepository(SomeEntity::class)]` is used inside an Assegai app, the ORM resolves the connection in this order:
 
-1. the entity's `database` value
+1. the entity's `dataSource` value
 2. the current module's `data_source`
 3. an error if neither is available
 
