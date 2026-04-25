@@ -3,6 +3,7 @@
 namespace Assegai\Core\Http;
 
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Injector;
 use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;

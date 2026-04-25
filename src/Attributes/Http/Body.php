@@ -24,15 +24,15 @@ use Twig\Error\SyntaxError;
 class Body
 {
   /**
-   * @var string|array|stdClass|mixed|null $value
+   * @var string|array<string, mixed>|stdClass|null $value
    */
-  public string|array|stdClass $value;
+  public string|array|stdClass|null $value;
 
   /**
    * Body constructor.
    *
    * @param string|null $key The key of the body
-   * @param array|IPipeTransform|string|null $pipes
+   * @param array<int, IPipeTransform|string>|IPipeTransform|string|null $pipes
    * @throws RenderingException
    * @throws ReflectionException
    * @throws LoaderError

@@ -3,6 +3,7 @@
 namespace Assegai\Core\GraphQL;
 
 use Assegai\Core\Http\Requests\Request;
+use Assegai\Core\Injector;
 use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
@@ -37,7 +38,7 @@ class GraphQLArgumentsHost implements IHttpArgumentsHost
   }
 
   /**
-   * @return array
+   * @return array<int, string>
    */
   public function getArgs(): array
   {

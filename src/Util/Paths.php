@@ -79,7 +79,8 @@ final class Paths
     }
 
     $path = preg_replace('/\/+/', '/', $path);
-    return rtrim($path, '/');
+
+    return rtrim(is_string($path) ? $path : '', '/');
   }
 
   /**
@@ -94,7 +95,7 @@ final class Paths
       $filename = parse_url($filename, PHP_URL_PATH) ?: $filename;
     }
 
-    return self::join(self::getWorkingDirectory(), 'public', $filename);
+    return self::join(self::getWorkingDirectory(), 'public', $filename ?? '');
   }
 
   /**
@@ -143,7 +144,7 @@ final class Paths
       'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'xml' => 'application/xml',
       '7z' => 'application/x-7z-compressed',
-      default => $mimeType,
+      default => is_string($mimeType) ? $mimeType : 'application/octet-stream',
     };
   }
 }

@@ -119,7 +119,7 @@ class Log
   public static function debug(string $tag, string $message): void
   {
     error_log(
-      printf("%sD/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message),
+      sprintf("%sD/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message),
       3,
       DEFAULT_LOG_FILE
     );
@@ -134,7 +134,7 @@ class Log
   public static function info(string $tag, string $message): void
   {
     error_log(
-      printf("%sI/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message),
+      sprintf("%sI/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message),
       3,
       DEFAULT_LOG_FILE
     );
@@ -149,7 +149,7 @@ class Log
   public static function warn(string $tag, string $message): void
   {
     error_log(
-      printf("%sW/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message),
+      sprintf("%sW/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message),
       3,
       DEFAULT_LOG_FILE
     );

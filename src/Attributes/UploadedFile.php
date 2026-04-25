@@ -15,12 +15,12 @@ use Attribute;
 class UploadedFile
 {
   /**
-   * @var object|array
+   * @var object|array<string, mixed>
    */
   public readonly object|array $value;
 
   /**
-   * @param array|IPipeTransform|null $pipeTransform
+   * @param array<int, IPipeTransform>|IPipeTransform|null $pipeTransform
    */
   public function __construct(public readonly array|IPipeTransform|null $pipeTransform = null)
   {

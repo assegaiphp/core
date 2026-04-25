@@ -169,6 +169,7 @@ class OpenApiGenerator
   }
 
   /**
+   * @param ReflectionClass<object> $controllerReflection
    * @param array<int, string> $controllerHosts
    * @return array<string, mixed>
    */
@@ -367,10 +368,10 @@ class OpenApiGenerator
   private function buildResponses(ReflectionMethod $handler, int $statusCode): array
   {
     $responseContent = $this->buildResponseContent($handler);
-    $responses = [
-      (string) $statusCode => [
-        'description' => $this->statusDescription($statusCode),
-      ],
+    /** @var array<string, mixed> $responses */
+    $responses = [];
+    $responses[(string) $statusCode] = [
+      'description' => $this->statusDescription($statusCode),
     ];
 
     if ($responseContent !== null) {
@@ -381,8 +382,8 @@ class OpenApiGenerator
 
     if ($redirect !== null) {
       $arguments = $redirect->getArguments();
-      $redirectStatus = $arguments['status'] ?? $arguments[1] ?? 302;
-      $redirectUrl = $arguments['url'] ?? $arguments[0] ?? '/';
+      $redirectStatus = (int) ($arguments['status'] ?? $arguments[1] ?? 302);
+      $redirectUrl = (string) ($arguments['url'] ?? $arguments[0] ?? '/');
       $responses[(string) $redirectStatus] = [
         'description' => 'Redirect response.',
         'headers' => [
@@ -512,6 +513,9 @@ class OpenApiGenerator
     return [];
   }
 
+  /**
+   * @param array<string, mixed> $schema
+   */
   private function schemaLooksJson(array $schema): bool
   {
     if (isset($schema['$ref'])) {
@@ -644,6 +648,7 @@ class OpenApiGenerator
   }
 
   /**
+   * @param class-string $className
    * @return array<int, array<string, mixed>>
    */
   private function expandQueryDtoParameters(string $className): array
@@ -693,6 +698,10 @@ class OpenApiGenerator
       $selected = null;
 
       foreach ($type->getTypes() as $innerType) {
+        if (!$innerType instanceof ReflectionNamedType) {
+          continue;
+        }
+
         if ($innerType->getName() === 'null') {
           $nullable = true;
           continue;
@@ -705,7 +714,7 @@ class OpenApiGenerator
         ? $this->schemaFromNamedType($selected)
         : ['type' => 'object'];
 
-      if ($schema !== null && $nullable) {
+      if ($nullable) {
         $schema['nullable'] = true;
       }
 
@@ -720,9 +729,9 @@ class OpenApiGenerator
   }
 
   /**
-   * @return array<string, mixed>|null
+   * @return array<string, mixed>
    */
-  private function schemaFromNamedType(ReflectionNamedType $type): ?array
+  private function schemaFromNamedType(ReflectionNamedType $type): array
   {
     $typeName = $type->getName();
 
@@ -763,6 +772,7 @@ class OpenApiGenerator
   }
 
   /**
+   * @param class-string $className
    * @return array<string, mixed>
    */
   private function registerComponentSchema(string $className, bool $nullable = false): array
@@ -787,6 +797,7 @@ class OpenApiGenerator
   }
 
   /**
+   * @param class-string $className
    * @return array<string, mixed>
    */
   private function inlineSchemaForClass(string $className): array
@@ -884,9 +895,7 @@ class OpenApiGenerator
         $schema = $validationRule['schema'];
       }
 
-      if (isset($validationRule['rule'])) {
-        $validationRules[] = $validationRule['rule'];
-      }
+      $validationRules[] = $validationRule['rule'];
     }
 
     if ($validationRules !== []) {
@@ -897,6 +906,7 @@ class OpenApiGenerator
   }
 
   /**
+   * @param array<string, mixed> $schema
    * @return array{schema: array<string, mixed>, rule: string}
    */
   private function applyNotEmptyRule(array $schema): array
@@ -914,6 +924,8 @@ class OpenApiGenerator
   }
 
   /**
+   * @param ReflectionAttribute<object> $attribute
+   * @param array<string, mixed> $schema
    * @return array{schema: array<string, mixed>, rule: string}
    */
   private function applyDateRule(ReflectionAttribute $attribute, array $schema): array
@@ -927,6 +939,8 @@ class OpenApiGenerator
   }
 
   /**
+   * @param ReflectionAttribute<object> $attribute
+   * @param array<string, mixed> $schema
    * @return array{schema: array<string, mixed>, rule: string}
    */
   private function applyEnumRule(ReflectionAttribute $attribute, array $schema): array
@@ -942,6 +956,8 @@ class OpenApiGenerator
   }
 
   /**
+   * @param ReflectionAttribute<object> $attribute
+   * @param array<string, mixed> $schema
    * @return array{schema: array<string, mixed>, rule: string}
    */
   private function applyBetweenRule(ReflectionAttribute $attribute, array $schema): array
@@ -972,6 +988,8 @@ class OpenApiGenerator
   }
 
   /**
+   * @param ReflectionAttribute<object> $attribute
+   * @param array<string, mixed> $schema
    * @return array{schema: array<string, mixed>, rule: string}
    */
   private function applyEqualToRule(ReflectionAttribute $attribute, array $schema): array
@@ -984,6 +1002,7 @@ class OpenApiGenerator
   }
 
   /**
+   * @param array<string, mixed> $schema
    * @return array{schema: array<string, mixed>, rule: string}
    */
   private function applyPatternRule(array $schema, string $pattern, string $description): array
@@ -996,6 +1015,7 @@ class OpenApiGenerator
 
   /**
    * @param array{rule: string} $rule
+   * @param array<string, mixed> $schema
    * @return array{schema: array<string, mixed>, rule: string}
    */
   private function applyDescription(array $rule, array $schema, string $description): array
@@ -1013,6 +1033,7 @@ class OpenApiGenerator
   }
 
   /**
+   * @param class-string<UnitEnum> $enumClass
    * @return array<string, mixed>
    */
   private function enumSchema(string $enumClass): array
@@ -1050,7 +1071,7 @@ class OpenApiGenerator
 
     if ($type instanceof ReflectionUnionType) {
       foreach ($type->getTypes() as $innerType) {
-        if ($innerType->getName() === 'null') {
+        if ($innerType instanceof ReflectionNamedType && $innerType->getName() === 'null') {
           return false;
         }
       }
@@ -1059,6 +1080,9 @@ class OpenApiGenerator
     return true;
   }
 
+  /**
+   * @param ReflectionClass<object> $class
+   */
   private function isRequiredProperty(ReflectionProperty $property, ReflectionClass $class): bool
   {
     foreach ($property->getAttributes(IsOptional::class) as $_) {
@@ -1079,7 +1103,7 @@ class OpenApiGenerator
 
     if ($type instanceof ReflectionUnionType) {
       foreach ($type->getTypes() as $innerType) {
-        if ($innerType->getName() === 'null') {
+        if ($innerType instanceof ReflectionNamedType && $innerType->getName() === 'null') {
           return false;
         }
       }
@@ -1134,6 +1158,9 @@ class OpenApiGenerator
     return $this->humanizeName($name);
   }
 
+  /**
+   * @param ReflectionClass<object> $controllerReflection
+   */
   private function buildOperationId(ReflectionClass $controllerReflection, ReflectionMethod $handler): string
   {
     $controllerName = preg_replace('/Controller$/', '', $controllerReflection->getShortName()) ?: $controllerReflection->getShortName();
@@ -1163,6 +1190,9 @@ class OpenApiGenerator
     };
   }
 
+  /**
+   * @param ReflectionAttribute<object> $attribute
+   */
   private function getRouteAttributePath(ReflectionAttribute $attribute): string
   {
     $arguments = $attribute->getArguments();
@@ -1230,6 +1260,7 @@ class OpenApiGenerator
   }
 
   /**
+   * @param array<string, mixed> $schema
    * @return array<string, mixed>
    */
   private function applyRouteConstraint(array $schema, ?string $constraint): array
@@ -1251,7 +1282,7 @@ class OpenApiGenerator
   }
 
   /**
-   * @return array<string, mixed>
+   * @param array<string, mixed> $schema
    */
   private function buildSchemaExample(array $schema): mixed
   {
@@ -1289,6 +1320,7 @@ class OpenApiGenerator
   }
 
   /**
+   * @param array<string, mixed> $schema
    * @return array<string, mixed>
    */
   private function buildObjectExample(array $schema): array
@@ -1306,6 +1338,9 @@ class OpenApiGenerator
     return $example;
   }
 
+  /**
+   * @param class-string $className
+   */
   private function componentNameFor(string $className): string
   {
     if (isset($this->componentNames[$className])) {
@@ -1328,7 +1363,9 @@ class OpenApiGenerator
   }
 
   /**
-   * @param ReflectionAttribute[] $attributes
+   * @param array<int, ReflectionAttribute<object>> $attributes
+   * @param class-string $attributeClass
+   * @return ReflectionAttribute<object>|null
    */
   private function findAttribute(array $attributes, string $attributeClass): ?ReflectionAttribute
   {
@@ -1341,6 +1378,9 @@ class OpenApiGenerator
     return null;
   }
 
+  /**
+   * @return ReflectionAttribute<object>|null
+   */
   private function findRequestMapperAttribute(ReflectionMethod $handler): ?ReflectionAttribute
   {
     foreach ($handler->getAttributes() as $attribute) {
@@ -1360,7 +1400,7 @@ class OpenApiGenerator
 
     if ($type instanceof ReflectionUnionType) {
       foreach ($type->getTypes() as $innerType) {
-        if ($innerType->getName() !== 'null') {
+        if ($innerType instanceof ReflectionNamedType && $innerType->getName() !== 'null') {
           return $innerType->getName();
         }
       }

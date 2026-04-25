@@ -13,9 +13,9 @@ use Attribute;
 class Query
 {
   /**
-   * @var string|RequestQuery
+   * @var array<string, mixed>|string|RequestQuery
    */
-  public string|RequestQuery $value;
+  public array|string|RequestQuery $value;
 
   /**
    * @param string|null $key

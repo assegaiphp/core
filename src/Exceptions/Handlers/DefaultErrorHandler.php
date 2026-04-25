@@ -63,7 +63,7 @@ class DefaultErrorHandler implements ErrorHandlerInterface
         'error' => $status->name,
       ]
     };
-    $this->emitErrorResponse(json_encode($response), ContentType::JSON, $status->code);
+    $this->emitErrorResponse(json_encode($response) ?: '{}', ContentType::JSON, $status->code);
   }
 
   /**

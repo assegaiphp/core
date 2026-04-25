@@ -64,6 +64,7 @@ Primary goals:
 - implement PostgreSQL properly as a supported database target
 - make SQL generation context-aware so MySQL-specific and PostgreSQL-specific syntax come from the right dialect layer
 - improve ORM documentation so the recommended patterns match real application code
+- start separating backend-neutral entity metadata from SQL-specific storage metadata through a compatibility-friendly transition
 
 Release bar:
 
@@ -72,6 +73,7 @@ Release bar:
 - PostgreSQL support is no longer a placeholder path
 - ORM tests cover all supported dialects in a meaningful way
 - security-sensitive query paths keep using prepared statements and validated identifiers
+- the entity metadata surface is cleaner than before, with SQL-only storage concerns moving toward dedicated attributes without breaking existing apps
 - one release article explains the rewrite, the dialect model, and the practical benefits for users
 
 Release article:

@@ -143,7 +143,7 @@ use Assegai\Orm\Support\OrmRuntime;
 
 #[Entity(
   table: 'movies',
-  database: 'catalog',
+  dataSource: 'catalog',
   driver: DataSourceType::SQLITE,
 )]
 class MovieEntity
