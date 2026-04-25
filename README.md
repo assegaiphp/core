@@ -7,7 +7,7 @@
   <a href="https://github.com/assegaiphp/core/actions/workflows/php.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/assegaiphp/core/php.yml?branch=main&label=tests&style=flat-square"></a>
   <img alt="PHP 8.4+" src="https://img.shields.io/badge/PHP-8.4%2B-777BB4?style=flat-square&logo=php&logoColor=white">
   <a href="https://github.com/assegaiphp/core/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/assegaiphp/core?style=flat-square"></a>
-  <img alt="Status 0.8.0 milestone" src="https://img.shields.io/badge/status-0.8.0%20milestone-2563eb?style=flat-square">
+  <img alt="Status active" src="https://img.shields.io/badge/status-active-10b981?style=flat-square">
 </p>
 
 <p style="text-align: center">A progressive <a href="https://php.net">PHP</a> framework for building effecient and scalable server-side applications.</p>
@@ -34,54 +34,54 @@ For commit and pull request conventions in this repo, see:
 $ composer require assegaiphp/core
 ```
 
+For a real application, the recommended path is still the CLI:
+
+```bash
+$ assegai new my-app
+```
+
+Then use Core directly when you want to understand or extend the framework runtime itself.
+
+### Minimal bootstrap
+
 ```php
 <?php
 // <path-to-project>/index.php
 
-...
+if (!isset($_GET['path']) || $_GET['path'] === '') {
+  $_GET['path'] = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+}
 
-/*
- * Set the path to the request URI.
- */
-$_GET['path'] = trim($_SERVER['REQUEST_URI'], '/');
-
-/*
- * This is the entry point of the application.
- */
-
-require_once './bootstrap.php';
+require_once __DIR__ . '/bootstrap.php';
 ```
 
-Bootstrap the app
+Bootstrap the app:
 
 ```php
 <?php
 // <path-to-project>/bootstrap.php
 
 use Assegai\Core\AssegaiFactory;
-use Liferaftinc\RudderDashboard\AppModule;
+use App\AppModule;
 
-require './vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
-/**
- * Bootstraps the application.
- *
- * @return void
- */
 function bootstrap(): void
 {
-  $app = AssegaiFactory::create(AppModule::class);
+  $app = AssegaiFactory::createFromProject(AppModule::class, __DIR__);
   $app->run();
 }
 
 bootstrap();
 ```
 
-Start the dev server
+Start the development server:
 
 ```bash
-$ php -S localhost:5000 -t <path-to-project>
+$ assegai serve
 ```
+
+For the fuller walkthrough, start with [Getting Started](./docs/getting-started.md).
 
 ### Server-rendered UI, HTMX, and Web Components
 
@@ -113,19 +113,24 @@ public function findById(#[Param('id')] int $id): object
 
 Built-in constraints currently include `int`, `slug`, `uuid`, `alpha`, `alnum`, `hex`, and `ulid`.
 
-* To check out the [guide](https://assegaiphp.com/guide), visit [assegaiphp.com](https://assegaiphp.com). :books:
+For the full guide set, visit [assegaiphp.com/guide](https://assegaiphp.com/guide).
 
 ## Questions
 
-For questions and support please use the official [Discord channel](). The issue list of this repo is **exclusively** for bug reports and feature requests.
+For questions and support, use the official guide and support pages:
+
+- [Guide](https://assegaiphp.com/guide)
+- [Support](https://assegaiphp.com/support)
+
+The issue list of this repo is **exclusively** for bug reports and feature requests.
 
 ## Issues
 
-Please make sure to read the [Issues Reporting Checklist](CONTRIBUTING.md#issues-and-bugs) before opening an issue. Issues not conforming to the guidelines may be closed immediately.
+Please make sure to read the [Issues Reporting Checklist](./CONTRIBUTING.md#issues-and-bugs) before opening an issue. Issues not conforming to the guidelines may be closed immediately.
 
 ## Consulting
 
-With official support, you can get expert help straight from the Assegai core team. We provide dedicated technical support, migration stratgies, advice on best practices (and design decisions), PR reviews, and team augmentation. Read more about [support here](https://assegaiphp.com).
+With official support, you can get expert help straight from the Assegai core team. We provide dedicated technical support, migration strategies, advice on best practices and design decisions, PR reviews, and team augmentation. Read more about [support here](https://assegaiphp.com/support).
 
 ## Support
 
