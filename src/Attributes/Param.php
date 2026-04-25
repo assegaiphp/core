@@ -20,14 +20,11 @@ use Twig\Error\SyntaxError;
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class Param
 {
-  /**
-   * @var string|stdClass|array|mixed|object
-   */
   public readonly string|stdClass $value;
 
   /**
    * @param string|null $key
-   * @param array|IPipeTransform|string|null $pipes
+   * @param array<int, IPipeTransform|string>|IPipeTransform|string|null $pipes
    * @throws RenderingException
    * @throws ReflectionException
    * @throws LoaderError
@@ -41,7 +38,10 @@ class Param
   {
     $request = Request::current();
     $params = $request->getParams();
-    $value = ( !empty($this->key) ) ? ($params[$this->key] ?? $params) : json_decode(json_encode($params));
+    $encodedParams = json_encode($params);
+    $value = (!empty($this->key))
+      ? ($params[$this->key] ?? $params)
+      : (is_string($encodedParams) ? json_decode($encodedParams) : new stdClass());
 
     if ($this->pipes) {
       if (is_string($this->pipes)) {
@@ -67,7 +67,8 @@ class Param
       is_array($value) => (object)$value,
       is_bool($value),
       is_numeric($value) => (string)$value,
-      default => $value
+      is_string($value) => $value,
+      default => new stdClass()
     };
   }
 }

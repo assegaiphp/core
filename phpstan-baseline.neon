@@ -1,0 +1,2041 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Argument of an invalid type Assegai\\\\Core\\\\Exceptions\\\\Interfaces\\\\ExceptionFilterInterface supplied for foreach, only iterables are supported\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Call to an undefined method ReflectionType\\:\\:getName\\(\\)\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Call to an undefined method ReflectionType\\:\\:isBuiltin\\(\\)\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Cannot call method get\\(\\) on Assegai\\\\Core\\\\Config\\\\AppConfig\\|null\\.$#"
+			count: 2
+			path: src/App.php
+
+		-
+			message: "#^Comparison operation \"\\>\\=\" between int\\<0, max\\> and 0 is always true\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\App\\:\\:getModuleTokens\\(\\) return type with generic class ReflectionAttribute does not specify its types\\: T$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\App\\:\\:tabulate\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\App\\:\\:tabulate\\(\\) has parameter \\$headings with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\App\\:\\:useGlobalInterceptors\\(\\) has parameter \\$interceptors with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\App\\:\\:useGlobalPipes\\(\\) has parameter \\$pipes with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Parameter \\#1 \\$callback of function set_error_handler expects \\(callable\\(int, string, string, int\\)\\: bool\\)\\|null, Closure\\(mixed, mixed, mixed, mixed\\)\\: void given\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Parameter \\#1 \\$logger of class Assegai\\\\Core\\\\Exceptions\\\\Handlers\\\\HttpExceptionHandler constructor expects Psr\\\\Log\\\\LoggerInterface, Psr\\\\Log\\\\LoggerInterface\\|null given\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Parameter \\#1 \\$logger of class Assegai\\\\Core\\\\Exceptions\\\\Handlers\\\\WhoopsErrorHandler constructor expects Psr\\\\Log\\\\LoggerInterface, Psr\\\\Log\\\\LoggerInterface\\|null given\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Parameter \\#1 \\$logger of class Assegai\\\\Core\\\\Exceptions\\\\Handlers\\\\WhoopsExceptionHandler constructor expects Psr\\\\Log\\\\LoggerInterface, Psr\\\\Log\\\\LoggerInterface\\|null given\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Parameter \\#1 \\$moduleClass of method Assegai\\\\Core\\\\App\\:\\:instantiateLifecycleModule\\(\\) expects class\\-string, \\(int\\|string\\) given\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Parameter \\#1 \\$options of class Assegai\\\\Core\\\\Rendering\\\\Engines\\\\DefaultTemplateEngine constructor expects array\\{root_module_class\\: class\\-string\\|null, router\\: Assegai\\\\Core\\\\Routing\\\\Router\\|null, module_manager\\: Assegai\\\\Core\\\\ModuleManager\\|null, controller_manager\\: Assegai\\\\Core\\\\ControllerManager\\|null, injector\\: Assegai\\\\Core\\\\Injector\\|null\\}, array\\{root_module_class\\: string, router\\: Assegai\\\\Core\\\\Routing\\\\Router, module_manager\\: Assegai\\\\Core\\\\ModuleManager, controller_manager\\: Assegai\\\\Core\\\\ControllerManager, injector\\: Assegai\\\\Core\\\\Injector\\} given\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Parameter \\#1 \\$providerClass of method Assegai\\\\Core\\\\App\\:\\:shouldParticipateInBootstrap\\(\\) expects class\\-string, \\(int\\|string\\) given\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Parameter \\#1 \\$string of function str_pad expects string, float given\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Parameter \\#4 \\$composerConfig of class Assegai\\\\Core\\\\ApiDocs\\\\OpenApiGenerator constructor expects Assegai\\\\Core\\\\Config\\\\ComposerConfig, Assegai\\\\Core\\\\Config\\\\ComposerConfig\\|null given\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Parameter \\#5 \\$projectConfig of class Assegai\\\\Core\\\\ApiDocs\\\\OpenApiGenerator constructor expects Assegai\\\\Core\\\\Config\\\\ProjectConfig, Assegai\\\\Core\\\\Config\\\\ProjectConfig\\|null given\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\App\\:\\:\\$controllerMap type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\App\\:\\:\\$controllers type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\App\\:\\:\\$exceptionFilters \\(array\\<Assegai\\\\Core\\\\Exceptions\\\\Interfaces\\\\ExceptionFilterInterface\\>\\) does not accept array\\<array\\<Assegai\\\\Core\\\\Exceptions\\\\Interfaces\\\\ExceptionFilterInterface\\|class\\-string\\>\\|Assegai\\\\Core\\\\Exceptions\\\\Interfaces\\\\ExceptionFilterInterface\\>\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\App\\:\\:\\$exceptionFilters \\(array\\<Assegai\\\\Core\\\\Exceptions\\\\Interfaces\\\\ExceptionFilterInterface\\>\\) does not accept array\\<array\\|Assegai\\\\Core\\\\Exceptions\\\\Interfaces\\\\ExceptionFilterInterface\\>\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\App\\:\\:\\$lifecycleTargets type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\App\\:\\:\\$profileResults type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/App.php
+
+		-
+			message: "#^Variable \\$filterType might not be defined\\.$#"
+			count: 2
+			path: src/App.php
+
+		-
+			message: "#^Variable \\$time might not be defined\\.$#"
+			count: 2
+			path: src/App.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ArgumentsHost\\:\\:getArgs\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/ArgumentsHost.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ArgumentsHost\\:\\:getArgsByIndex\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/ArgumentsHost.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\AssegaiFactory\\:\\:createWithRuntime\\(\\) has parameter \\$options with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/AssegaiFactory.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\AssegaiFactory\\:\\:getConfigValue\\(\\) has parameter \\$config with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/AssegaiFactory.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\AssegaiFactory\\:\\:resolveRuntime\\(\\) has parameter \\$options with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/AssegaiFactory.php
+
+		-
+			message: "#^Strict comparison using \\=\\=\\= between string and null will always evaluate to false\\.$#"
+			count: 1
+			path: src/AssegaiFactory.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Common\\\\DynamicModule\\:\\:__construct\\(\\) has parameter \\$config with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Common/DynamicModule.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Common\\\\DynamicModule\\:\\:__construct\\(\\) has parameter \\$controllers with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Common/DynamicModule.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Common\\\\DynamicModule\\:\\:__construct\\(\\) has parameter \\$exports with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Common/DynamicModule.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Common\\\\DynamicModule\\:\\:__construct\\(\\) has parameter \\$imports with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Common/DynamicModule.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Common\\\\DynamicModule\\:\\:__construct\\(\\) has parameter \\$module with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Common/DynamicModule.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Common\\\\DynamicModule\\:\\:__construct\\(\\) has parameter \\$providers with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Common/DynamicModule.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Components\\\\AssegaiComponent\\:\\:getTemplateContentBySelector\\(\\) should return string but returns string\\|null\\.$#"
+			count: 1
+			path: src/Components/AssegaiComponent.php
+
+		-
+			message: "#^Negated boolean expression is always false\\.$#"
+			count: 4
+			path: src/Components/AssegaiComponent.php
+
+		-
+			message: "#^Parameter \\#1 \\.\\.\\.\\$paths of static method Assegai\\\\Core\\\\Util\\\\Paths\\:\\:join\\(\\) expects string, string\\|false given\\.$#"
+			count: 2
+			path: src/Components/AssegaiComponent.php
+
+		-
+			message: "#^Parameter \\#2 \\.\\.\\.\\$paths of static method Assegai\\\\Core\\\\Util\\\\Paths\\:\\:join\\(\\) expects string, string\\|null given\\.$#"
+			count: 1
+			path: src/Components/AssegaiComponent.php
+
+		-
+			message: "#^Result of \\|\\| is always false\\.$#"
+			count: 2
+			path: src/Components/AssegaiComponent.php
+
+		-
+			message: "#^Cannot call method getName\\(\\) on ReflectionType\\|null\\.$#"
+			count: 1
+			path: src/Components/ComponentFactory.php
+
+		-
+			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
+			count: 1
+			path: src/Components/ComponentFactory.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Components\\\\ComponentFactory\\:\\:isValidComponentClass\\(\\) has parameter \\$componentClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Components/ComponentFactory.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Config\\:\\:database\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Config.php
+
+		-
+			message: "#^PHPDoc tag @return with type mixed is not subtype of native type object\\|null\\.$#"
+			count: 1
+			path: src/Config.php
+
+		-
+			message: "#^Parameter \\#1 \\$filename of function is_file expects string, string\\|null given\\.$#"
+			count: 1
+			path: src/Config.php
+
+		-
+			message: "#^Parameter \\#1 \\$json of function json_decode expects string, string\\|false given\\.$#"
+			count: 1
+			path: src/Config.php
+
+		-
+			message: "#^Ternary operator condition is always true\\.$#"
+			count: 3
+			path: src/Config.php
+
+		-
+			message: "#^Call to an undefined method ReflectionType\\:\\:getName\\(\\)\\.$#"
+			count: 1
+			path: src/Consumers/GuardsConsumer.php
+
+		-
+			message: "#^Call to an undefined method ReflectionType\\:\\:isBuiltin\\(\\)\\.$#"
+			count: 1
+			path: src/Consumers/GuardsConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Consumers\\\\GuardsConsumer\\:\\:canActivate\\(\\) has parameter \\$guards with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Consumers/GuardsConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Consumers\\\\GuardsConsumer\\:\\:resolveGuards\\(\\) has parameter \\$guards with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Consumers/GuardsConsumer.php
+
+		-
+			message: "#^Parameter \\#1 \\$guardClass of method Assegai\\\\Core\\\\Consumers\\\\GuardsConsumer\\:\\:resolveGuard\\(\\) expects class\\-string\\<Assegai\\\\Core\\\\Interfaces\\\\ICanActivate\\>, string given\\.$#"
+			count: 1
+			path: src/Consumers/GuardsConsumer.php
+
+		-
+			message: "#^Unreachable statement \\- code above always terminates\\.$#"
+			count: 2
+			path: src/Consumers/GuardsConsumer.php
+
+		-
+			message: "#^Dead catch \\- ReflectionException is never thrown in the try block\\.$#"
+			count: 2
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:apply\\(\\) has parameter \\$class with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:exclude\\(\\) has parameter \\$routes with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:extractControllerPath\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:flattenTargets\\(\\) has parameter \\$targets with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:forRoutes\\(\\) has parameter \\$routes with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:registrationMatchesRequest\\(\\) has parameter \\$routeDefinition with no value type specified in iterable type array\\.$#"
+			count: 2
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:targetMatchesRequest\\(\\) has parameter \\$target with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Offset 'name' on array\\{0\\: string, name\\: non\\-falsy\\-string, 1\\: non\\-falsy\\-string, constraint\\?\\: non\\-falsy\\-string, 2\\?\\: non\\-falsy\\-string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Parameter \\#1 \\$controllerClass of method Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:controllerMatchesRequest\\(\\) expects class\\-string, string given\\.$#"
+			count: 1
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Parameter \\#1 \\$targets of method Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:flattenTargets\\(\\) expects array\\<int, array\\|object\\|string\\>, array\\<int\\|string, array\\|object\\|string\\> given\\.$#"
+			count: 3
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:\\$excludedRoutes type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:\\$middleware \\(array\\<int, Assegai\\\\Core\\\\Interfaces\\\\MiddlewareInterface\\|\\(callable\\(\\)\\: mixed\\)\\|class\\-string\\<Assegai\\\\Core\\\\Interfaces\\\\MiddlewareInterface\\>\\>\\) does not accept non\\-empty\\-array\\<int, \\(callable\\(\\)\\: mixed\\)\\|object\\|string\\>\\.$#"
+			count: 1
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:\\$routeMap type has no value type specified in iterable type array\\.$#"
+			count: 2
+			path: src/Consumers/MiddlewareConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ControllerManager\\:\\:buildControllerTokensList\\(\\) has parameter \\$moduleTokensList with generic class ReflectionAttribute but does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ControllerManager\\:\\:buildControllerTokensList\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ControllerManager\\:\\:getControllerAttributeInstance\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ControllerManager\\:\\:getControllerHostsFromReflection\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ControllerManager\\:\\:getControllerPath\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ControllerManager\\:\\:getControllerReflection\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ControllerManager\\:\\:getControllerTokenList\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ControllerManager\\:\\:getModuleControllerTokens\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Offset 'controllers' on array\\{controllers\\: array\\<string\\>\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^PHPDoc tag @var for variable \\$moduleAttributeReflection contains generic class ReflectionAttribute but does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Parameter \\#1 \\$objectOrClass of class ReflectionClass constructor expects class\\-string\\<T of object\\>\\|T of object, string given\\.$#"
+			count: 2
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$controllerPathTokenIdMap type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$controllerRouteMetadata \\(array\\<class\\-string, array\\{module\\: class\\-string, local_path\\: string, resolved_path\\: string, hosts\\: array\\<int, string\\>\\}\\>\\) does not accept non\\-empty\\-array\\<string, array\\{module\\: string, local_path\\: string, resolved_path\\: string, hosts\\: array\\<int, string\\>\\}\\>\\.$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$controllerTokensList with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$lastLoadedAttributes with generic class ReflectionAttribute does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$moduleBranchPrefixMap \\(array\\<class\\-string, string\\>\\) does not accept array\\<string, string\\>\\.$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$moduleControllerTokensMap \\(array\\<class\\-string, array\\<ReflectionClass\\>\\>\\) does not accept array\\<string, array\\<ReflectionClass\\>\\>\\.$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$moduleControllerTokensMap with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/ControllerManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Events\\\\EventManager\\:\\:\\$eventQueues type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Events/EventManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ExecutionContext\\:\\:__construct\\(\\) has parameter \\$class with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/ExecutionContext.php
+
+		-
+			message: "#^Attribute class JetBrains\\\\PhpStorm\\\\ArrayShape does not exist\\.$#"
+			count: 1
+			path: src/Files/TempFile.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Files\\\\TempFile\\:\\:fromArray\\(\\) has parameter \\$array with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Files/TempFile.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Files\\\\TempFile\\:\\:fromArray\\(\\) should return static\\(Assegai\\\\Core\\\\Files\\\\TempFile\\) but returns Assegai\\\\Core\\\\Files\\\\TempFile\\.$#"
+			count: 1
+			path: src/Files/TempFile.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Files\\\\TempFile\\:\\:toArray\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Files/TempFile.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Files\\\\TempFile\\:\\:toJSON\\(\\) should return string but returns string\\|false\\.$#"
+			count: 1
+			path: src/Files/TempFile.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Interfaces\\\\RequestInterface\\:\\:allHeaders\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Interfaces/RequestInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Interfaces\\\\RequestInterface\\:\\:getCookies\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Interfaces/RequestInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Interfaces\\\\RequestInterface\\:\\:getFile\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Interfaces/RequestInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Interfaces\\\\RequestInterface\\:\\:getHostParams\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Interfaces/RequestInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Interfaces\\\\RequestInterface\\:\\:getParams\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Interfaces/RequestInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Interfaces\\\\RequestInterface\\:\\:setFile\\(\\) has parameter \\$file with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Interfaces/RequestInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Interfaces\\\\RequestInterface\\:\\:setHostParams\\(\\) has parameter \\$params with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Interfaces/RequestInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Interfaces\\\\RequestInterface\\:\\:setParams\\(\\) has parameter \\$params with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Interfaces/RequestInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Interfaces\\\\RequestInterface\\:\\:toArray\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Interfaces/RequestInterface.php
+
+		-
+			message: "#^Call to function is_int\\(\\) with array\\|string\\|null will always evaluate to false\\.$#"
+			count: 2
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Comparison operation \"\\<\" between 2 and 2 is always false\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Else branch is unreachable because ternary operator condition is always true\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:__serialize\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:accessToken\\(\\) should return stdClass\\|string\\|false\\|null but returns object\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:allHeaders\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:filterFormData\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:getCookies\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:getFile\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:getHostParams\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:getLang\\(\\) should return string but returns array\\|string\\|null\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:getParams\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:setFile\\(\\) has parameter \\$file with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:setHostParams\\(\\) has parameter \\$params with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:setParams\\(\\) has parameter \\$params with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:toArray\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 2
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:toArray\\(\\) should return array\\{app\\: Assegai\\\\Core\\\\App, body\\: mixed, cookies\\: string, fresh\\: bool, headers\\: array, host_name\\: string, method\\: string, remote_ip\\: string, \\.\\.\\.\\} but returns array\\{app\\: Assegai\\\\Core\\\\Interfaces\\\\AppInterface\\|null, body\\: stdClass\\|null, cookies\\: array\\|string, fresh\\: bool, headers\\: array, host_name\\: string, method\\: Assegai\\\\Core\\\\Enumerations\\\\Http\\\\RequestMethod, remote_ip\\: string, \\.\\.\\.\\}\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:toJSON\\(\\) should return string but returns string\\|false\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^PHPDoc tag @param for parameter \\$file with type mixed is not subtype of native type array\\|object\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Parameter \\#3 \\$subject of function str_replace expects array\\|string, string\\|null given\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:\\$allHeaders type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:\\$body \\(stdClass\\|null\\) does not accept object\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:\\$file type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:\\$hostParams type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:\\$params type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Http\\\\Requests\\\\Request\\:\\:\\$path \\(string\\) does not accept string\\|null\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Variable \\$host might not be defined\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Variable \\$path might not be defined\\.$#"
+			count: 1
+			path: src/Http/Requests/Request.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\RequestQuery\\:\\:__construct\\(\\) has parameter \\$props with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/RequestQuery.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\RequestQuery\\:\\:get\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/RequestQuery.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Requests\\\\RequestQuery\\:\\:toArray\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/RequestQuery.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Http\\\\Requests\\\\RequestQuery\\:\\:\\$props type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Requests/RequestQuery.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\ApiResponse\\:\\:toArray\\(\\) should return array\\{data\\: mixed, skip\\: int, limit\\: int, total\\: int\\} but returns array\\.$#"
+			count: 1
+			path: src/Http/Responses/ApiResponse.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\ApiResponse\\:\\:toJSON\\(\\) should return string but returns string\\|false\\.$#"
+			count: 2
+			path: src/Http/Responses/ApiResponse.php
+
+		-
+			message: "#^Instanceof between mixed and Closure will always evaluate to false\\.$#"
+			count: 1
+			path: src/Http/Responses/Enumerations/ResponderType.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Interfaces\\\\ResponseInterface\\:\\:getBody\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Interfaces/ResponseInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Interfaces\\\\ResponseInterface\\:\\:getHeaders\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Interfaces/ResponseInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Interfaces\\\\ResponseInterface\\:\\:json\\(\\) has parameter \\$body with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Interfaces/ResponseInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Interfaces\\\\ResponseInterface\\:\\:jsonRaw\\(\\) has parameter \\$body with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Interfaces/ResponseInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Interfaces\\\\ResponseInterface\\:\\:setBody\\(\\) has parameter \\$body with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Interfaces/ResponseInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Interfaces\\\\ResponseInterface\\:\\:toArray\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Interfaces/ResponseInterface.php
+
+		-
+			message: "#^Access to an undefined property object\\:\\:\\$affected\\.$#"
+			count: 1
+			path: src/Http/Responses/Responders/JsonResponder.php
+
+		-
+			message: "#^Call to an undefined method object\\:\\:getData\\(\\)\\.$#"
+			count: 1
+			path: src/Http/Responses/Responders/JsonResponder.php
+
+		-
+			message: "#^Call to function is_array\\(\\) with object will always evaluate to false\\.$#"
+			count: 1
+			path: src/Http/Responses/Responders/JsonResponder.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Responders\\\\JsonResponder\\:\\:encodePayload\\(\\) has parameter \\$payload with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Responders/JsonResponder.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Responders\\\\JsonResponder\\:\\:encodePayload\\(\\) should return string but returns string\\|false\\.$#"
+			count: 1
+			path: src/Http/Responses/Responders/JsonResponder.php
+
+		-
+			message: "#^Parameter \\#1 \\$body of method Assegai\\\\Core\\\\Http\\\\Responses\\\\Interfaces\\\\ResponseEmitterInterface\\:\\:emit\\(\\) expects string, string\\|false given\\.$#"
+			count: 1
+			path: src/Http/Responses/Responders/JsonResponder.php
+
+		-
+			message: "#^Attribute class JetBrains\\\\PhpStorm\\\\ArrayShape does not exist\\.$#"
+			count: 1
+			path: src/Http/Responses/Response.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Response\\:\\:getBody\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Response.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Response\\:\\:json\\(\\) has parameter \\$body with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Response.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Response\\:\\:jsonRaw\\(\\) has parameter \\$body with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Response.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Response\\:\\:setBody\\(\\) has parameter \\$body with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Response.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Response\\:\\:toArray\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Response.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Http\\\\Responses\\\\Response\\:\\:toJson\\(\\) should return string but returns string\\|false\\.$#"
+			count: 1
+			path: src/Http/Responses/Response.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Http\\\\Responses\\\\Response\\:\\:\\$body type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Http/Responses/Response.php
+
+		-
+			message: "#^Access to offset class\\-string\\<object\\> on an unknown class Assegai\\\\Core\\\\ReflectionAttribute\\.$#"
+			count: 19
+			path: src/Injector.php
+
+		-
+			message: "#^Call to function is_array\\(\\) with string will always evaluate to false\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Call to method getName\\(\\) on an unknown class Assegai\\\\Core\\\\ReflectionAttribute\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Call to method newInstance\\(\\) on an unknown class Assegai\\\\Core\\\\ReflectionAttribute\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Cannot call method getTypes\\(\\) on ReflectionType\\|null\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Cannot unset offset int on array\\<string, mixed\\>\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:capturesRequestScopedDependencies\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:getDeclaredScope\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:getDependencyScope\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:isComponent\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:isInjectable\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:isModule\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:isNotInjectable\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:resolve\\(\\) has parameter \\$attributeReflections with generic class ReflectionAttribute but does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:resolveComponent\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:resolveDependencies\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Injector\\:\\:resolveModule\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Offset string on array\\{\\} in isset\\(\\) does not exist\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^PHPDoc tag @param references unknown parameter\\: \\$id$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^PHPDoc tag @return with type Assegai\\\\Core\\\\Attributes\\\\Modules\\\\Module\\|null is not subtype of native type Assegai\\\\Core\\\\Attributes\\\\Component\\|null\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Parameter \\#1 \\$consumerModuleClass of method Assegai\\\\Core\\\\ModuleManager\\:\\:canModuleAccessProvider\\(\\) expects class\\-string, string given\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Parameter \\#1 \\$entryId of method Assegai\\\\Core\\\\Injector\\:\\:has\\(\\) expects string, int given\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Parameter \\#1 \\$id of method Assegai\\\\Core\\\\Injector\\:\\:getDependencyScope\\(\\) expects class\\-string, string given\\.$#"
+			count: 2
+			path: src/Injector.php
+
+		-
+			message: "#^Parameter \\#1 \\$object of static method Assegai\\\\Core\\\\Util\\\\TypeManager\\:\\:castObjectToUserType\\(\\) expects stdClass, object given\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Parameter \\#1 \\$objectOrClass of class ReflectionClass constructor expects class\\-string\\<T of object\\>\\|T of object, string given\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Parameter \\#1 \\$object_or_class of function method_exists expects object\\|string, ReflectionType\\|null given\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Parameter \\#2 \\$providerClass of method Assegai\\\\Core\\\\ModuleManager\\:\\:canModuleAccessProvider\\(\\) expects class\\-string, string given\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Parameter \\#2 \\$reflectionAttributes of method Assegai\\\\Core\\\\Injector\\:\\:bindHandlerAttributes\\(\\) expects array\\<Assegai\\\\Core\\\\ReflectionAttribute\\>, array\\<int, ReflectionAttribute\\<object\\>\\> given\\.$#"
+			count: 5
+			path: src/Injector.php
+
+		-
+			message: "#^Parameter \\$reflectionAttributes of method Assegai\\\\Core\\\\Injector\\:\\:bindHandlerAttributes\\(\\) has invalid type Assegai\\\\Core\\\\ReflectionAttribute\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Injector\\:\\:\\$attributeInstances type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Injector\\:\\:\\$reflectionAttributesCache \\(array\\<Assegai\\\\Core\\\\ReflectionAttribute\\>\\) does not accept default value of type array\\<string, array\\>\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Injector\\:\\:\\$reflectionAttributesCache has unknown class Assegai\\\\Core\\\\ReflectionAttribute as its type\\.$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Injector\\:\\:\\$reflectionClassCache with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/Injector.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interceptors\\\\FileInterceptorOptions\\:\\:__construct\\(\\) has parameter \\$limits with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interceptors/FileInterceptorOptions.php
+
+		-
+			message: "#^Call to an undefined method ReflectionType\\:\\:getName\\(\\)\\.$#"
+			count: 1
+			path: src/Interceptors/InterceptorsConsumer.php
+
+		-
+			message: "#^Call to an undefined method ReflectionType\\:\\:isBuiltin\\(\\)\\.$#"
+			count: 1
+			path: src/Interceptors/InterceptorsConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interceptors\\\\InterceptorsConsumer\\:\\:intercept\\(\\) has parameter \\$interceptors with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interceptors/InterceptorsConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interceptors\\\\InterceptorsConsumer\\:\\:resolveInterceptors\\(\\) has parameter \\$interceptors with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interceptors/InterceptorsConsumer.php
+
+		-
+			message: "#^Parameter \\#1 \\$interceptorClass of method Assegai\\\\Core\\\\Interceptors\\\\InterceptorsConsumer\\:\\:resolveInterceptor\\(\\) expects class\\-string\\<Assegai\\\\Core\\\\Interfaces\\\\IAssegaiInterceptor\\>, string given\\.$#"
+			count: 1
+			path: src/Interceptors/InterceptorsConsumer.php
+
+		-
+			message: "#^Unreachable statement \\- code above always terminates\\.$#"
+			count: 2
+			path: src/Interceptors/InterceptorsConsumer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\AppInterface\\:\\:useGlobalInterceptors\\(\\) has parameter \\$interceptors with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interfaces/AppInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\AppInterface\\:\\:useGlobalPipes\\(\\) has parameter \\$pipes with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interfaces/AppInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\ConsumerInterface\\:\\:apply\\(\\) has parameter \\$class with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interfaces/ConsumerInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\ConsumerInterface\\:\\:exclude\\(\\) has parameter \\$routes with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interfaces/ConsumerInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\ConsumerInterface\\:\\:forRoutes\\(\\) has parameter \\$routes with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interfaces/ConsumerInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\IArgumentHost\\:\\:getArgs\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interfaces/IArgumentHost.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\IArgumentHost\\:\\:getArgsByIndex\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interfaces/IArgumentHost.php
+
+		-
+			message: "#^PHPDoc tag @return with type mixed is not subtype of native type Assegai\\\\Core\\\\Http\\\\Responses\\\\Response\\.$#"
+			count: 1
+			path: src/Interfaces/ICallHandler.php
+
+		-
+			message: "#^PHPDoc tag @throws with type Assegai\\\\Core\\\\Interfaces\\\\IContainerException is not subtype of Throwable$#"
+			count: 1
+			path: src/Interfaces/IContainer.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\IHttpArgumentsHost\\:\\:getRequest\\(\\) has invalid return type Assegai\\\\Core\\\\Interfaces\\\\Request\\.$#"
+			count: 1
+			path: src/Interfaces/IHttpArgumentsHost.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\IHttpArgumentsHost\\:\\:getResponse\\(\\) has invalid return type Assegai\\\\Core\\\\Interfaces\\\\Response\\.$#"
+			count: 1
+			path: src/Interfaces/IHttpArgumentsHost.php
+
+		-
+			message: "#^PHPDoc tag @return with type Assegai\\\\Core\\\\Interfaces\\\\Request is not subtype of native type Assegai\\\\Core\\\\Http\\\\Requests\\\\Interfaces\\\\RequestInterface\\.$#"
+			count: 1
+			path: src/Interfaces/IHttpArgumentsHost.php
+
+		-
+			message: "#^PHPDoc tag @return with type Assegai\\\\Core\\\\Interfaces\\\\Response is not subtype of native type Assegai\\\\Core\\\\Http\\\\Responses\\\\Interfaces\\\\ResponseInterface\\.$#"
+			count: 1
+			path: src/Interfaces/IHttpArgumentsHost.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\IPipeTransform\\:\\:transform\\(\\) has parameter \\$metaData with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interfaces/IPipeTransform.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\IRpcArgumentsHost\\:\\:getArgs\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interfaces/IRpcArgumentsHost.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Interfaces\\\\IWsArgumentsHost\\:\\:getArgs\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Interfaces/IWsArgumentsHost.php
+
+		-
+			message: "#^Argument of an invalid type array\\<int, string\\>\\|null supplied for foreach, only iterables are supported\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ModuleManager\\:\\:getComponentAttribute\\(\\) has parameter \\$reflection with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ModuleManager\\:\\:getDeclaredReflections\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ModuleManager\\:\\:getModuleTokens\\(\\) return type with generic class ReflectionAttribute does not specify its types\\: T$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ModuleManager\\:\\:getProviderTokens\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ModuleManager\\:\\:isInjectable\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ModuleManager\\:\\:isValidModule\\(\\) has parameter \\$lastLoadedAttributes with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ModuleManager\\:\\:loadModuleAttributes\\(\\) has parameter \\$reflectionClass with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ModuleManager\\:\\:loadModuleAttributes\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\ModuleManager\\:\\:validateProvider\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Offset 'exports' on array\\{declarations\\: array\\<string\\>, imports\\: array\\<string\\>, exports\\: array\\<string\\>, providers\\: array\\<string\\>, controllers\\: array\\<string\\>, config\\: array\\<string, mixed\\>\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Offset 'imports' on array\\{declarations\\: array\\<string\\>, imports\\: array\\<string\\>, exports\\: array\\<string\\>, providers\\: array\\<string\\>, controllers\\: array\\<string\\>, config\\: array\\<string, mixed\\>\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Offset 'providers' on array\\{declarations\\: array\\<string\\>, imports\\: array\\<string\\>, exports\\: array\\<string\\>, providers\\: array\\<string\\>, controllers\\: array\\<string\\>, config\\: array\\<string, mixed\\>\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Offset 'providers' on array\\{imports\\: array\\<string\\>, exports\\: array\\<string\\>, providers\\: array\\<string\\>\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^PHPDoc tag @return with type ReflectionAttribute\\|null is not subtype of native type ReflectionClass\\|null\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Parameter \\#1 \\$id of method Assegai\\\\Core\\\\Injector\\:\\:getDependencyScope\\(\\) expects class\\-string, string given\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Parameter \\#1 \\$objectOrClass of class ReflectionClass constructor expects class\\-string\\<T of object\\>\\|T of object, string given\\.$#"
+			count: 3
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Parameter \\#1 \\$path of function dirname expects string, string\\|false given\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$attributesCache type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$declarationTokens \\(array\\<class\\-string\\>\\) does not accept array\\<string\\>\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$declaredReflections with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$lastLoadedAttributes with generic class ReflectionAttribute does not specify its types\\: T$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$loadedStyles type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$moduleExportsMap \\(array\\<class\\-string, array\\<class\\-string\\>\\>\\) does not accept array\\<string, array\\<string\\>\\>\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$moduleImportsMap \\(array\\<class\\-string, array\\<class\\-string\\>\\>\\) does not accept array\\<string, array\\<string\\>\\>\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$moduleParentMap \\(array\\<class\\-string, class\\-string\\|null\\>\\) does not accept array\\<string, null\\>\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$moduleParentMap \\(array\\<class\\-string, class\\-string\\|null\\>\\) does not accept array\\<string, string\\|null\\>\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$moduleTokens with generic class ReflectionAttribute does not specify its types\\: T$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$providerModuleMap \\(array\\<class\\-string, class\\-string\\>\\) does not accept array\\<string, \\(int\\|string\\)\\>\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$providerModuleMap \\(array\\<class\\-string, class\\-string\\>\\) does not accept array\\<string, string\\>\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$providerTokens \\(array\\<class\\-string\\>\\) does not accept array\\<class\\-string\\|ReflectionClass\\>\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$reflectionCache type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$rootModuleClass \\(class\\-string\\) does not accept default value of type string\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\ModuleManager\\:\\:\\$rootModuleClass \\(class\\-string\\) does not accept string\\.$#"
+			count: 1
+			path: src/ModuleManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Pipes\\\\MapProperties\\:\\:__construct\\(\\) has parameter \\$map with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Pipes/MapProperties.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Pipes\\\\MapProperties\\:\\:transform\\(\\) has parameter \\$metaData with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Pipes/MapProperties.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Pipes\\\\ParseArrayPipe\\:\\:transform\\(\\) has parameter \\$metaData with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Pipes/ParseArrayPipe.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Pipes\\\\ParseArrayPipe\\:\\:transform\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Pipes/ParseArrayPipe.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Pipes\\\\ParseBoolPipe\\:\\:transform\\(\\) has parameter \\$metaData with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Pipes/ParseBoolPipe.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Pipes\\\\ParseFilePipe\\:\\:transform\\(\\) has parameter \\$metaData with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Pipes/ParseFilePipe.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Pipes\\\\ParseFloatPipe\\:\\:transform\\(\\) has parameter \\$metaData with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Pipes/ParseFloatPipe.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Pipes\\\\ParseIntPipe\\:\\:transform\\(\\) has parameter \\$metaData with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Pipes/ParseIntPipe.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Pipes\\\\ValidationPipe\\:\\:transform\\(\\) has parameter \\$metaData with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Pipes/ValidationPipe.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Queues\\\\Attributes\\\\InjectQueue\\:\\:resolveParameterValue\\(\\) return type with generic interface Assegai\\\\Common\\\\Interfaces\\\\Queues\\\\QueueInterface does not specify its types\\: T$#"
+			count: 1
+			path: src/Queues/Attributes/InjectQueue.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Queues\\\\Attributes\\\\InjectQueue\\:\\:\\$queue with generic interface Assegai\\\\Common\\\\Interfaces\\\\Queues\\\\QueueInterface does not specify its types\\: T$#"
+			count: 1
+			path: src/Queues/Attributes/InjectQueue.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\RPC\\\\RpcArgumentsHost\\:\\:getArgs\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/RPC/RpcArgumentsHost.php
+
+		-
+			message: "#^Part \\$href \\(array\\<int, string\\>\\|string\\) of encapsed string cannot be cast to string\\.$#"
+			count: 1
+			path: src/Rendering/DocumentProperties.php
+
+		-
+			message: "#^Result of && is always false\\.$#"
+			count: 2
+			path: src/Rendering/DocumentProperties.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: src/Rendering/DocumentProperties.php
+
+		-
+			message: "#^Binary operation \"\\.\\=\" between '\\<script\\>' and non\\-empty\\-array\\<int, string\\> results in an error\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Binary operation \"\\.\\=\" between '\\<style\\>' and non\\-empty\\-array\\<int, string\\> results in an error\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Call to function is_string\\(\\) with array\\{\\} will always evaluate to false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'config' will always evaluate to false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'env' will always evaluate to false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'getLang' will always evaluate to false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'timeAgo' will always evaluate to false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'translate' will always evaluate to false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'wcProps' will always evaluate to false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'webComponentBundleU…' will always evaluate to false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'webComponentProps' will always evaluate to false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Cannot access property \\$meta on Assegai\\\\Core\\\\Attributes\\\\Component\\|null\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Cannot access property \\$templateUrl on Assegai\\\\Core\\\\Attributes\\\\Component\\|null\\.$#"
+			count: 2
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Cannot call method getAttribute\\(\\) on Assegai\\\\Core\\\\Components\\\\Interfaces\\\\ComponentInterface\\|null\\.$#"
+			count: 2
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Else branch is unreachable because ternary operator condition is always true\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\Engines\\\\DefaultTemplateEngine\\:\\:getGlobalStyles\\(\\) never returns false so it can be removed from the return type\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\Engines\\\\DefaultTemplateEngine\\:\\:getGlobalStyles\\(\\) should return string\\|false but returns string\\|null\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Method class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141\\:\\:__call\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Method class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141\\:\\:__call\\(\\) has parameter \\$arguments with no type specified\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Method class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141\\:\\:__call\\(\\) has parameter \\$name with no type specified\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Method class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:96\\:\\:load\\(\\) has parameter \\$class with no type specified\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Only iterables can be unpacked, array\\<string, mixed\\>\\|null given\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Parameter \\#1 \\$objectOrClass of class ReflectionClass constructor expects class\\-string\\<T of object\\>\\|T of object, Assegai\\\\Core\\\\Components\\\\Interfaces\\\\ComponentInterface\\|null given\\.$#"
+			count: 2
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Parameter \\#2 \\$to of static method Assegai\\\\Util\\\\Path\\:\\:relative\\(\\) expects string, string\\|false given\\.$#"
+			count: 2
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Parameter \\#2 \\.\\.\\.\\$paths of static method Assegai\\\\Util\\\\Path\\:\\:join\\(\\) expects string, string\\|null given\\.$#"
+			count: 2
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Parameter \\#3 \\$subject of function preg_replace expects array\\|string, string\\|false given\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Rendering\\\\Engines\\\\DefaultTemplateEngine\\:\\:\\$componentFilename \\(string\\) does not accept string\\|false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Property class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141\\:\\:\\$methods type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Result of && is always false\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Variable \\$author on left side of \\?\\? is never defined\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Variable \\$description on left side of \\?\\? is never defined\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Variable \\$htmxLink on left side of \\?\\?\\= is never defined\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Variable \\$keywords on left side of \\?\\? is never defined\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Variable \\$lang on left side of \\?\\?\\= is never defined\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Variable \\$props on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 2
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Variable \\$props on left side of \\?\\?\\= is never defined\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Variable \\$title on left side of \\?\\? is never defined\\.$#"
+			count: 1
+			path: src/Rendering/Engines/DefaultTemplateEngine.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\Engines\\\\TemplateEngine\\:\\:setData\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/Engines/TemplateEngine.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Rendering\\\\Engines\\\\TemplateEngine\\:\\:\\$data type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/Engines/TemplateEngine.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Rendering\\\\Engines\\\\TemplateEngine\\:\\:\\$links type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/Engines/TemplateEngine.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Rendering\\\\Engines\\\\TemplateEngine\\:\\:\\$meta type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/Engines/TemplateEngine.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Rendering\\\\Engines\\\\TemplateEngine\\:\\:\\$scripts type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/Engines/TemplateEngine.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Rendering\\\\Engines\\\\ViewEngine\\:\\:\\$declarations \\(array\\<array\\>\\) does not accept default value of type array\\<string, string\\>\\.$#"
+			count: 1
+			path: src/Rendering/Engines/ViewEngine.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Rendering\\\\Engines\\\\ViewEngine\\:\\:\\$declarations is never read, only written\\.$#"
+			count: 1
+			path: src/Rendering/Engines/ViewEngine.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Rendering\\\\Engines\\\\ViewEngine\\:\\:\\$declarations type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/Engines/ViewEngine.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\Interfaces\\\\TemplateEngineInterface\\:\\:setData\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/Interfaces/TemplateEngineInterface.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\View\\:\\:__construct\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/View.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\View\\:\\:__construct\\(\\) has parameter \\$props with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/View.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\View\\:\\:resolveComponentTemplatePath\\(\\) has parameter \\$componentReflection with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Rendering/View.php
+
+		-
+			message: "#^Parameter \\#1 \\$object of function get_object_vars expects object, Assegai\\\\Core\\\\Attributes\\\\Component\\|null given\\.$#"
+			count: 1
+			path: src/Rendering/View.php
+
+		-
+			message: "#^Parameter \\#1 \\$objectOrClass of class ReflectionClass constructor expects class\\-string\\<T of object\\>\\|T of object, string given\\.$#"
+			count: 1
+			path: src/Rendering/View.php
+
+		-
+			message: "#^Strict comparison using \\=\\=\\= between non\\-empty\\-string and '' will always evaluate to false\\.$#"
+			count: 1
+			path: src/Rendering/View.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\ViewMeta\\:\\:__construct\\(\\) has parameter \\$httpEquiv with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/ViewMeta.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\ViewMeta\\:\\:__construct\\(\\) has parameter \\$props with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/ViewMeta.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\ViewMeta\\:\\:fromArray\\(\\) has parameter \\$meta with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Rendering/ViewMeta.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\ViewMeta\\:\\:fromArray\\(\\) should return static\\(Assegai\\\\Core\\\\Rendering\\\\ViewMeta\\) but returns Assegai\\\\Core\\\\Rendering\\\\ViewMeta\\.$#"
+			count: 1
+			path: src/Rendering/ViewMeta.php
+
+		-
+			message: "#^Call to an undefined method ReflectionIntersectionType\\|ReflectionNamedType\\:\\:getName\\(\\)\\.$#"
+			count: 8
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Call to an undefined method ReflectionIntersectionType\\|ReflectionNamedType\\:\\:isBuiltin\\(\\)\\.$#"
+			count: 2
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Call to an undefined method ReflectionType\\:\\:getName\\(\\)\\.$#"
+			count: 8
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Call to an undefined method ReflectionType\\:\\:isBuiltin\\(\\)\\.$#"
+			count: 3
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Cannot call method getName\\(\\) on ReflectionType\\|null\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Cannot call method getTypes\\(\\) on ReflectionType\\|null\\.$#"
+			count: 3
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Instanceof between \\*NEVER\\* and Assegai\\\\Core\\\\Http\\\\Responses\\\\Response will always evaluate to false\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Invalid type object to throw\\.$#"
+			count: 2
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Match arm is unreachable because previous comparison is always true\\.$#"
+			count: 2
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Match expression does not handle remaining value\\: true$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:activateController\\(\\) has parameter \\$reflectionController with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:addGlobalFilters\\(\\) has parameter \\$filters with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:addGlobalInterceptors\\(\\) has parameter \\$interceptors with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:addGlobalPipes\\(\\) has parameter \\$pipes with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:attributeMatchesRequestMethod\\(\\) has parameter \\$attribute with generic class ReflectionAttribute but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:canActivateController\\(\\) has parameter \\$reflectionController with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:consumeControllerGuards\\(\\) has parameter \\$controllerReflection with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:consumeControllerInterceptors\\(\\) has parameter \\$controllerReflection with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:consumeControllerInterceptors\\(\\) should return array\\<Assegai\\\\Core\\\\Interceptors\\\\InterceptorsConsumer\\> but returns array\\<callable\\>\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:createContext\\(\\) has parameter \\$class with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getActivatedController\\(\\) has parameter \\$controllerTokensList with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getActivatedControllerToken\\(\\) has parameter \\$fallbackController with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getActivatedControllerToken\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getControllerCandidateMatchData\\(\\) has parameter \\$reflectionController with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getControllerHostMatchData\\(\\) has parameter \\$reflectionController with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getControllerMatchScore\\(\\) has parameter \\$reflectionController with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getControllerMatchScore\\(\\) is unused\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getDefaultStatusForRequestMapper\\(\\) has parameter \\$attribute with generic class ReflectionAttribute but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getHandlerPath\\(\\) is unused\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getPathMatchingPattern\\(\\) is unused\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getPathMatchingPattern\\(\\) should return string but returns string\\|null\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getRequestMapperAttribute\\(\\) return type with generic class ReflectionAttribute does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getRequestMapperPath\\(\\) has parameter \\$attribute with generic class ReflectionAttribute but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:handleActivatedRoute\\(\\) should return Assegai\\\\Core\\\\Http\\\\Responses\\\\Response but returns Assegai\\\\Core\\\\Http\\\\Responses\\\\Interfaces\\\\ResponseInterface\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:isRootController\\(\\) has parameter \\$controllerReflection with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:patternMatchesPath\\(\\) is unused\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:preferControllerMatch\\(\\) has parameter \\$candidate with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:preferControllerMatch\\(\\) has parameter \\$currentBest with generic class ReflectionClass but does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:preferControllerMatch\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:resolveMiddlewareInstance\\(\\) should return object but returns Assegai\\\\Core\\\\Interfaces\\\\MiddlewareInterface\\|\\(callable\\)\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:transformBody\\(\\) has parameter \\$metaData with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^PHPDoc tag @param for parameter \\$middleware with type Assegai\\\\Core\\\\Interfaces\\\\MiddlewareInterface\\|\\(callable\\)\\|class\\-string\\<Assegai\\\\Core\\\\Interfaces\\\\MiddlewareInterface\\> is not subtype of native type object\\|string\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Parameter \\#1 \\$middleware of method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:invokeMiddleware\\(\\) expects object\\|string, Assegai\\\\Core\\\\Interfaces\\\\MiddlewareInterface\\|\\(callable\\)\\|class\\-string\\<Assegai\\\\Core\\\\Interfaces\\\\MiddlewareInterface\\> given\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Parameter \\#1 \\$middlewareClass of method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:resolveMiddlewareInstance\\(\\) expects class\\-string\\<Assegai\\\\Core\\\\Interfaces\\\\MiddlewareInterface\\>, string given\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Parameter \\#1 \\$object of static method Assegai\\\\Core\\\\Util\\\\TypeManager\\:\\:castObjectToUserType\\(\\) expects stdClass, object given\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Parameter \\#2 \\$callback of function array_filter expects \\(callable\\(lowercase\\-string\\)\\: bool\\)\\|null, 'strlen' given\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Parameter \\#2 \\$subject of function preg_match expects string, string\\|null given\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Routing\\\\Router\\:\\:\\$globalInterceptors type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Routing\\\\Router\\:\\:\\$globalPipes type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Routing/Router.php
+
+		-
+			message: "#^Call to an undefined method object\\:\\:on\\(\\)\\.$#"
+			count: 1
+			path: src/Runtimes/OpenSwoole/NativeOpenSwooleHttpServerAdapter.php
+
+		-
+			message: "#^Call to an undefined method object\\:\\:start\\(\\)\\.$#"
+			count: 1
+			path: src/Runtimes/OpenSwoole/NativeOpenSwooleHttpServerAdapter.php
+
+		-
+			message: "#^Instantiated class \\\\OpenSwoole\\\\HTTP\\\\Server not found\\.$#"
+			count: 1
+			path: src/Runtimes/OpenSwoole/NativeOpenSwooleServerFactory.php
+
+		-
+			message: "#^Cannot call method create\\(\\) on Assegai\\\\Core\\\\Runtimes\\\\OpenSwoole\\\\Interfaces\\\\OpenSwooleServerFactoryInterface\\|null\\.$#"
+			count: 1
+			path: src/Runtimes/OpenSwooleHttpRuntime.php
+
+		-
+			message: "#^Constant Assegai\\\\Core\\\\Session\\:\\:KEY_LAST_REQUEST_TIME is unused\\.$#"
+			count: 1
+			path: src/Session.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Session\\:\\:getInstance\\(\\) should return static\\(Assegai\\\\Core\\\\Session\\) but returns Assegai\\\\Core\\\\Session\\.$#"
+			count: 1
+			path: src/Session.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Util\\\\ArrayHelper\\:\\:isAssociative\\(\\) has parameter \\$array with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Util/ArrayHelper.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Util\\\\ArrayHelper\\:\\:isNotAssociative\\(\\) has parameter \\$array with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Util/ArrayHelper.php
+
+		-
+			message: "#^Argument of an invalid type array\\|object supplied for foreach, only iterables are supported\\.$#"
+			count: 1
+			path: src/Util/Collections/Set.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Util\\\\Collections\\\\Set\\:\\:__construct\\(\\) has parameter \\$items with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Util/Collections/Set.php
+
+		-
+			message: "#^Property Assegai\\\\Core\\\\Util\\\\Collections\\\\Set\\:\\:\\$array type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Util/Collections/Set.php
+
+		-
+			message: "#^Strict comparison using \\=\\=\\= between non\\-empty\\-string and '' will always evaluate to false\\.$#"
+			count: 1
+			path: src/Util/Definitions.php
+
+		-
+			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
+			count: 2
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Function env\\(\\) has parameter \\$default with no type specified\\.$#"
+			count: 1
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Function env\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Function render\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Function render\\(\\) should return Assegai\\\\Core\\\\Components\\\\Interfaces\\\\ComponentInterface but returns object\\.$#"
+			count: 1
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Function str_split_by_last_needle\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Function translate\\(\\) has parameter \\$parameters with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Function view\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Function view\\(\\) has parameter \\$props with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Parameter \\#1 \\$datetime of class DateTime constructor expects string, int\\|string\\|null given\\.$#"
+			count: 1
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Parameter \\#2 \\$timezone of class DateTime constructor expects DateTimeZone\\|null, string\\|null given\\.$#"
+			count: 1
+			path: src/Util/Functions.php
+
+		-
+			message: "#^Argument of an invalid type stdClass supplied for foreach, only iterables are supported\\.$#"
+			count: 1
+			path: src/Util/TypeManager.php
+
+		-
+			message: "#^Cannot call method getName\\(\\) on ReflectionIntersectionType\\|ReflectionNamedType\\|ReflectionUnionType\\|null\\.$#"
+			count: 1
+			path: src/Util/TypeManager.php
+
+		-
+			message: "#^Cannot call method getName\\(\\) on ReflectionNamedType\\|null\\.$#"
+			count: 1
+			path: src/Util/TypeManager.php
+
+		-
+			message: "#^Match expression does not handle remaining value\\: true$#"
+			count: 1
+			path: src/Util/TypeManager.php
+
+		-
+			message: "#^Parameter \\#1 \\$enum of function enum_exists expects string, ReflectionIntersectionType\\|ReflectionNamedType\\|ReflectionUnionType\\|null given\\.$#"
+			count: 1
+			path: src/Util/TypeManager.php
+
+		-
+			message: "#^Parameter \\#1 \\$propertyReflectionType of static method Assegai\\\\Core\\\\Util\\\\TypeManager\\:\\:getValidPropertyValue\\(\\) expects ReflectionIntersectionType\\|ReflectionNamedType\\|ReflectionUnionType\\|null, ReflectionType\\|null given\\.$#"
+			count: 1
+			path: src/Util/TypeManager.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\Util\\\\Validator\\:\\:isValidRequestMapperAttribute\\(\\) has parameter \\$attribute with generic class ReflectionAttribute but does not specify its types\\: T$#"
+			count: 1
+			path: src/Util/Validator.php
+
+		-
+			message: "#^Offset 'enabled' on array\\<string, mixed\\> on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: src/WebComponents/WebComponentSupport.php
+
+		-
+			message: "#^Offset 'interval' on array\\{bundleUrl\\: string, interval\\: int, markerUrl\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: src/WebComponents/WebComponentSupport.php
+
+		-
+			message: "#^Method Assegai\\\\Core\\\\WebSockets\\\\WsArgumentsHost\\:\\:getArgs\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/WebSockets/WsArgumentsHost.php

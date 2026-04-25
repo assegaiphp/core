@@ -15,18 +15,18 @@ readonly class Component
    * Constructs a component attribute.
    *
    * @param string $selector The CSS selector that identifies this component in a template.
-   * @param string[]|null $providers Defines the set of injectable objects that are visible to its view DOM children.
+   * @param array<int, string>|null $providers Defines the set of injectable objects that are visible to its view DOM children.
    * @param string|null $moduleId The module ID of the module that contains the component. The component must be able
    * to resolve relative URLs for templates and styles.
    * @param string|null $templateUrl The URL of an external file containing an AssegaiPHP component template.
    * @param string|null $template An inline template for an AssegaiPHP component. If provided, do not supply a
    * template file using templateUrl.
-   * @param string[]|null $styleUrls One or more relative paths or absolute URLs for files containing CSS stylesheets
+   * @param array<int, string>|null $styleUrls One or more relative paths or absolute URLs for files containing CSS stylesheets
    * to use in this component.
-   * @param string[]|null $styles One or more inline CSS stylesheets to use in this component.
-   * @param array|null $scriptUrls One or more relative paths or absolute URLs for files containing JavaScript scripts
-   * @param array|null $scripts One or more inline JavaScript scripts
-   * @param array|null $meta An object containing metadata for the component. This can include any additional header properties.
+   * @param array<int, string>|null $styles One or more inline CSS stylesheets to use in this component.
+   * @param array<int, string>|null $scriptUrls One or more relative paths or absolute URLs for files containing JavaScript scripts
+   * @param array<int, string>|null $scripts One or more inline JavaScript scripts
+   * @param array<string, mixed>|null $meta An object containing metadata for the component. This can include any additional header properties.
    */
   public function __construct(
     public string   $selector,

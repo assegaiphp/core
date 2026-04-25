@@ -250,11 +250,13 @@ TS;
   private function schemaToTypeScript(array $schema): string
   {
     if (isset($schema['$ref']) && is_string($schema['$ref'])) {
-      return basename($schema['$ref']);
+      $typeName = basename($schema['$ref']);
+
+      return $typeName !== '' ? $typeName : 'unknown';
     }
 
     if (isset($schema['enum']) && is_array($schema['enum'])) {
-      return implode(' | ', array_map(static fn(mixed $value): string => json_encode($value), $schema['enum']));
+      return implode(' | ', array_map(static fn(mixed $value): string => json_encode($value) ?: 'null', $schema['enum']));
     }
 
     return match ($schema['type'] ?? 'unknown') {

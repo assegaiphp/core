@@ -20,7 +20,7 @@ readonly class UseInterceptors
   /**
    * The constructor for the UseInterceptors attribute.
    *
-   * @param IAssegaiInterceptor[]|string[]|IAssegaiInterceptor|string $interceptors
+   * @param array<int, IAssegaiInterceptor|string|array<int, IAssegaiInterceptor|string>>|IAssegaiInterceptor|string $interceptors
    * @throws InterceptorException
    */
   public function __construct(protected array|string|IAssegaiInterceptor $interceptors)
@@ -29,7 +29,7 @@ readonly class UseInterceptors
   }
 
   /**
-   * @param IAssegaiInterceptor[]|string[]|IAssegaiInterceptor|string $interceptors
+   * @param array<int, IAssegaiInterceptor|string|array<int, IAssegaiInterceptor|string>>|IAssegaiInterceptor|string $interceptors
    * @return array<int, IAssegaiInterceptor|string>
    * @throws InterceptorException
    */

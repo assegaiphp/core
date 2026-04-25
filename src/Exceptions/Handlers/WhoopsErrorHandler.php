@@ -136,7 +136,7 @@ class WhoopsErrorHandler implements ErrorHandlerInterface
             'plain' => Config::environment() === EnvironmentType::PRODUCTION
                 ? $status->name
                 : ($error->getMessage() !== '' ? $error->getMessage() : $status->name),
-            'json' => json_encode(match (Config::environment()) {
+            'json' => (json_encode(match (Config::environment()) {
                 EnvironmentType::PRODUCTION => [
                     'statusCode' => $status->code,
                     'message' => $status->name,
@@ -146,7 +146,7 @@ class WhoopsErrorHandler implements ErrorHandlerInterface
                     'message' => $error->getMessage() !== '' ? $error->getMessage() : $status->name,
                     'error' => $status->name,
                 ],
-            }),
+            }) ?: '{}'),
             default => FrameworkErrorPageRenderer::render(
                 statusCode: $status->code,
                 statusName: $status->name,

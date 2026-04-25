@@ -13,10 +13,11 @@ use Attribute;
 #[Attribute]
 class UseGuards
 {
+  /** @var array<int, ICanActivate|string> */
   public readonly array $guards;
 
   /**
-   * @param ICanActivate[]|string[]|ICanActivate|string $guard
+   * @param array<int, ICanActivate|string|array<int, ICanActivate|string>>|ICanActivate|string $guard
    * @throws GuardException
    */
   public function __construct(
@@ -30,7 +31,7 @@ class UseGuards
   /**
    * Returns a normalized flat list of guard definitions.
    *
-   * @param ICanActivate[]|string[]|ICanActivate|string $guardsList The list of guards.
+   * @param array<int, ICanActivate|string|array<int, ICanActivate|string>>|ICanActivate|string $guardsList The list of guards.
    * @return array<int, ICanActivate|string> Returns an array of guard definitions.
    * @throws GuardException
    */
