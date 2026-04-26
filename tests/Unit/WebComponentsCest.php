@@ -137,6 +137,21 @@ TWIG
     $I->assertSame('', web_component_bundle_tag($this->workspace));
   }
 
+  public function testTheWebComponentBundleHelpersSkipMissingLocalBundles(UnitTester $I): void
+  {
+    unlink($this->workspace . '/public/js/assegai-components.min.js');
+
+    $this->writeWorkspaceConfig([
+      'webComponents' => [
+        'enabled' => true,
+        'output' => 'public/js/assegai-components.min.js',
+      ],
+    ]);
+
+    $I->assertNull(web_component_bundle_url($this->workspace));
+    $I->assertSame('', web_component_bundle_tag($this->workspace));
+  }
+
   public function testTheWebComponentRuntimeTagsInjectHotReloadWhenWatchIsActive(UnitTester $I): void
   {
     $this->writeWorkspaceConfig([

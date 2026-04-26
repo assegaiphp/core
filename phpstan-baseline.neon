@@ -2026,11 +2026,6 @@ parameters:
 			path: src/Util/Validator.php
 
 		-
-			message: "#^Offset 'enabled' on array\\<string, mixed\\> on left side of \\?\\? always exists and is not nullable\\.$#"
-			count: 1
-			path: src/WebComponents/WebComponentSupport.php
-
-		-
 			message: "#^Offset 'interval' on array\\{bundleUrl\\: string, interval\\: int, markerUrl\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
 			count: 1
 			path: src/WebComponents/WebComponentSupport.php

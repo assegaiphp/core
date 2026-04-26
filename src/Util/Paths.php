@@ -136,7 +136,7 @@ final class Paths
       'txt' => 'text/plain',
       'wav' => 'audio/wav',
       'weba', 'webm' => 'audio/webm',
-      'webp' => 'audio/webp',
+      'webp' => 'image/webp',
       'woff' => 'font/woff',
       'woff2' => 'font/woff2',
       'xhtml' => 'application/xhtml+xml',

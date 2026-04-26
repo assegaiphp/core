@@ -80,7 +80,7 @@ final class WebComponentSupport
         );
 
         if ($configuredBundleUrl !== null) {
-            if (($config['enabled'] ?? null) === true || self::bundleExists($configuredBundleUrl, $workingDirectory)) {
+            if (filter_var($configuredBundleUrl, FILTER_VALIDATE_URL) || self::bundleExists($configuredBundleUrl, $workingDirectory)) {
                 return $configuredBundleUrl;
             }
 
