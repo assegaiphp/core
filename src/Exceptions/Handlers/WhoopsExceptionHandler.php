@@ -7,6 +7,7 @@ use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
+use Assegai\Core\Exceptions\Handlers\Concerns\LogsHandledExceptions;
 use Assegai\Core\Exceptions\Handlers\Support\FrameworkErrorPageRenderer;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
@@ -26,6 +27,7 @@ use Whoops\Run;
 class WhoopsExceptionHandler implements ExceptionHandlerInterface
 {
   use EmitsErrorResponses;
+  use LogsHandledExceptions;
 
   /**
    * WhoopsExceptionHandler constructor.
@@ -42,7 +44,7 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
   public function handle(Throwable $exception): void
   {
     $whoops = $this->createWhoopsRun();
-    $this->logger->error($exception->getMessage());
+    $this->logHandledException($exception);
 
     ob_start();
     $renderedBody = $whoops->handleException($exception);

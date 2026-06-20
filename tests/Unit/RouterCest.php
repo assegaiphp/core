@@ -18,6 +18,8 @@ use Codeception\Attribute\Skip;
 use Mocks\AllRoutesAppModule;
 use Mocks\MockController;
 use Mocks\ConstrainedRoutingAppModule;
+use Mocks\CyclicRoutingAppModule;
+use Mocks\CyclicVendorController;
 use Mocks\ConstrainedUsersController;
 use Mocks\InvalidConstraintAppModule;
 use Mocks\LegacyAppModule;
@@ -155,6 +157,21 @@ class RouterCest
 
     $I->assertInstanceOf(NestedFeaturesController::class, $controller);
     $I->assertSame('feature-1', $response->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testCyclicModuleImportsDoNotRecurseDuringControllerActivation(UnitTester $I): void
+  {
+    $result = $this->dispatch('/v1/workspaces/1/vendors/2', CyclicRoutingAppModule::class);
+
+    $I->assertInstanceOf(CyclicVendorController::class, $result['controller']);
+    $I->assertSame('vendor-1-2', $result['response']->getBody());
   }
 
   /**

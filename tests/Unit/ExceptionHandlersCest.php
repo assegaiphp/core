@@ -183,6 +183,82 @@ class ExceptionHandlersCest
     $I->assertSame('{"message":"rendered"}', $handler->emissions[0]['body']);
   }
 
+  public function testWhoopsExceptionHandlerLogsHttpClientErrorsAsDebug(UnitTester $I): void
+  {
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $records = [];
+    $logger = $this->createRecordingLogger($records);
+
+    $handler = new class($logger) extends WhoopsExceptionHandler {
+      public array $emissions = [];
+
+      public function __construct(LoggerInterface $logger)
+      {
+        parent::__construct($logger);
+      }
+
+      protected function isCliContext(): bool
+      {
+        return false;
+      }
+
+      protected function emitErrorResponse(string $body, ContentType $contentType, int $statusCode): void
+      {
+        $this->emissions[] = [
+          'body' => $body,
+          'status' => $statusCode,
+          'content_type' => $contentType->value,
+        ];
+      }
+    };
+
+    $handler->handle(new NotFoundException('/.well-known/appspecific/com.chrome.devtools.json'));
+
+    $I->assertCount(1, $handler->emissions);
+    $I->assertSame(404, $handler->emissions[0]['status']);
+    $I->assertCount(1, $records);
+    $I->assertSame('debug', $records[0]['level']);
+    $I->assertStringContainsString('/.well-known/appspecific/com.chrome.devtools.json', $records[0]['message']);
+  }
+
+  public function testWhoopsExceptionHandlerLogsUnexpectedFailuresAsErrors(UnitTester $I): void
+  {
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $records = [];
+    $logger = $this->createRecordingLogger($records);
+
+    $handler = new class($logger) extends WhoopsExceptionHandler {
+      public array $emissions = [];
+
+      public function __construct(LoggerInterface $logger)
+      {
+        parent::__construct($logger);
+      }
+
+      protected function isCliContext(): bool
+      {
+        return false;
+      }
+
+      protected function emitErrorResponse(string $body, ContentType $contentType, int $statusCode): void
+      {
+        $this->emissions[] = [
+          'body' => $body,
+          'status' => $statusCode,
+          'content_type' => $contentType->value,
+        ];
+      }
+    };
+
+    $handler->handle(new RuntimeException('Boom'));
+
+    $I->assertCount(1, $handler->emissions);
+    $I->assertSame(500, $handler->emissions[0]['status']);
+    $I->assertCount(1, $records);
+    $I->assertSame('error', $records[0]['level']);
+    $I->assertSame('Boom', $records[0]['message']);
+  }
+
   public function testFrameworkErrorPageRendererBuildsHtmlShell(UnitTester $I): void
   {
     $html = FrameworkErrorPageRenderer::render(404, 'Not Found', 'Page not found', 'The page you requested does not exist.');
@@ -262,6 +338,42 @@ class ExceptionHandlersCest
     $I->assertStringNotContainsString('Details', $handler->emissions[0]['body']);
   }
 
+  public function testHttpExceptionHandlerLogsHttpClientErrorsAsDebug(UnitTester $I): void
+  {
+    $_ENV['ENV'] = 'PROD';
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $_SERVER['CONTENT_TYPE'] = '';
+    $_SERVER['HTTP_ACCEPT'] = 'text/html';
+    $records = [];
+    $logger = $this->createRecordingLogger($records);
+
+    $handler = new class($logger) extends HttpExceptionHandler {
+      public array $emissions = [];
+
+      public function __construct(LoggerInterface $logger)
+      {
+        parent::__construct($logger);
+      }
+
+      protected function emitErrorResponse(string $body, ContentType $contentType, int $statusCode): void
+      {
+        $this->emissions[] = [
+          'body' => $body,
+          'status' => $statusCode,
+          'content_type' => $contentType->value,
+        ];
+      }
+    };
+
+    $handler->handle(new NotFoundException('missing-style.css'));
+
+    $I->assertCount(1, $handler->emissions);
+    $I->assertSame(404, $handler->emissions[0]['status']);
+    $I->assertCount(1, $records);
+    $I->assertSame('debug', $records[0]['level']);
+    $I->assertStringContainsString('/missing-style.css', $records[0]['message']);
+  }
+
   public function testHttpExceptionHandlerShowsForbiddenFor403(UnitTester $I): void
   {
     $_ENV['ENV'] = 'PROD';
@@ -303,6 +415,29 @@ class ExceptionHandlersCest
     return new class extends AbstractLogger {
       public function log($level, string|\Stringable $message, array $context = []): void
       {
+      }
+    };
+  }
+
+  /**
+   * @param array<int, array{level: mixed, message: string}> $records
+   */
+  private function createRecordingLogger(array &$records): LoggerInterface
+  {
+    return new class($records) extends AbstractLogger {
+      /**
+       * @param array<int, array{level: mixed, message: string}> $records
+       */
+      public function __construct(private array &$records)
+      {
+      }
+
+      public function log($level, string|\Stringable $message, array $context = []): void
+      {
+        $this->records[] = [
+          'level' => $level,
+          'message' => (string)$message,
+        ];
       }
     };
   }

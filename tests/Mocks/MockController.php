@@ -166,6 +166,53 @@ class NestedAppModule
 {
 }
 
+#[Controller('v1/workspaces')]
+class CyclicWorkspaceController
+{
+  #[Get(':workspace_id')]
+  public function findById(#[Param('workspace_id')] int $workspaceId): string
+  {
+    return "workspace-$workspaceId";
+  }
+}
+
+#[Controller(':workspace_id/vendors')]
+class CyclicVendorController
+{
+  #[Get(':vendor_id')]
+  public function findById(
+    #[Param('workspace_id')] int $workspaceId,
+    #[Param('vendor_id')] int $vendorId,
+  ): string
+  {
+    return "vendor-$workspaceId-$vendorId";
+  }
+}
+
+#[Module(
+  controllers: [CyclicWorkspaceController::class],
+  imports: [CyclicVendorModule::class],
+)]
+class CyclicWorkspaceModule
+{
+}
+
+#[Module(
+  controllers: [CyclicVendorController::class],
+  imports: [CyclicWorkspaceModule::class],
+)]
+class CyclicVendorModule
+{
+}
+
+#[Module(
+  controllers: [NestedRootController::class],
+  imports: [CyclicWorkspaceModule::class],
+)]
+class CyclicRoutingAppModule
+{
+}
+
 #[Controller('users')]
 class ConstrainedUsersController
 {

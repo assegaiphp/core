@@ -317,6 +317,50 @@ TWIG
     $I->assertStringContainsString('<html lang="fr">', $html);
   }
 
+  public function testDefaultTemplateEngineUsesStructuredComponentDocumentProps(UnitTester $I): void
+  {
+    $componentClass = $this->writeComponentWithMeta('StructuredProps', <<<'PHP'
+[
+  'props' => [
+    'headScriptUrls' => ['/js/page.js'],
+    'bodyScriptUrls' => ['/js/page-body.js'],
+    'lang' => 'es',
+    'htmxLink' => '',
+  ],
+]
+PHP);
+
+    $component = new $componentClass();
+    $engine = new DefaultTemplateEngine();
+
+    $html = $engine
+      ->setRootComponent($component)
+      ->render();
+
+    $I->assertStringContainsString("<script defer src='/js/page.js'></script>", $html);
+    $I->assertStringContainsString("<script src='/js/page-body.js' defer></script>", $html);
+    $I->assertStringContainsString('<html lang="es">', $html);
+  }
+
+  public function testDefaultTemplateEnginePreservesLegacyRawHeadProps(UnitTester $I): void
+  {
+    $componentClass = $this->writeComponentWithMeta('RawHeadProps', <<<'PHP'
+[
+  'props' => '<meta name="legacy-head" content="ok">',
+  'htmxLink' => '',
+]
+PHP);
+
+    $component = new $componentClass();
+    $engine = new DefaultTemplateEngine();
+
+    $html = $engine
+      ->setRootComponent($component)
+      ->render();
+
+    $I->assertStringContainsString('<meta name="legacy-head" content="ok">', $html);
+  }
+
   public function testTheDefaultTemplateEngineSkipsEmptyConfiguredBodyScriptUrls(UnitTester $I): void
   {
     unset($_ENV['app']);
@@ -342,6 +386,42 @@ TWIG
 
     $I->assertStringNotContainsString("<script src='' defer></script>", $html);
     $I->assertStringNotContainsString('<script src=""></script>', $html);
+  }
+
+  private function writeComponentWithMeta(string $suffix, string $meta): string
+  {
+    $componentBasename = 'TestWebComponent' . preg_replace('/[^A-Za-z0-9]/', '', $suffix) . str_replace('.', '', uniqid('', true));
+    $componentFilename = $componentBasename . '.php';
+    $templateFilename = $componentBasename . '.twig';
+    $selector = strtolower(preg_replace('/(?<!^)[A-Z]/', '-$0', $suffix));
+    $componentClass = "Tests\\WebComponents\\$componentBasename";
+
+    file_put_contents($this->workspace . '/src/' . $templateFilename, '<p>{{ name }}</p>');
+    file_put_contents(
+      $this->workspace . '/src/' . $componentFilename,
+      <<<PHP
+<?php
+
+namespace Tests\WebComponents;
+
+use Assegai\Core\Attributes\Component;
+use Assegai\Core\Components\AssegaiComponent;
+
+#[Component(
+  selector: 'app-$selector',
+  templateUrl: '$templateFilename',
+  meta: $meta
+)]
+class $componentBasename extends AssegaiComponent
+{
+  public string \$name = 'Ada';
+}
+PHP
+    );
+
+    require_once $this->workspace . '/src/' . $componentFilename;
+
+    return $componentClass;
   }
 
   /**

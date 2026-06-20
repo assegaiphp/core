@@ -1351,51 +1351,6 @@ parameters:
 			path: src/Rendering/Engines/DefaultTemplateEngine.php
 
 		-
-			message: "#^Call to function is_string\\(\\) with array\\{\\} will always evaluate to false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'config' will always evaluate to false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'env' will always evaluate to false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'getLang' will always evaluate to false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'timeAgo' will always evaluate to false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'translate' will always evaluate to false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'wcProps' will always evaluate to false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'webComponentBundleU…' will always evaluate to false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Call to function method_exists\\(\\) with class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141 and 'webComponentProps' will always evaluate to false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
 			message: "#^Cannot access property \\$meta on Assegai\\\\Core\\\\Attributes\\\\Component\\|null\\.$#"
 			count: 1
 			path: src/Rendering/Engines/DefaultTemplateEngine.php
@@ -1411,11 +1366,6 @@ parameters:
 			path: src/Rendering/Engines/DefaultTemplateEngine.php
 
 		-
-			message: "#^Else branch is unreachable because ternary operator condition is always true\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
 			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
 			count: 1
 			path: src/Rendering/Engines/DefaultTemplateEngine.php
@@ -1427,26 +1377,6 @@ parameters:
 
 		-
 			message: "#^Method Assegai\\\\Core\\\\Rendering\\\\Engines\\\\DefaultTemplateEngine\\:\\:getGlobalStyles\\(\\) should return string\\|false but returns string\\|null\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Method class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141\\:\\:__call\\(\\) has no return type specified\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Method class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141\\:\\:__call\\(\\) has parameter \\$arguments with no type specified\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Method class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141\\:\\:__call\\(\\) has parameter \\$name with no type specified\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Method class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:96\\:\\:load\\(\\) has parameter \\$class with no type specified\\.$#"
 			count: 1
 			path: src/Rendering/Engines/DefaultTemplateEngine.php
 
@@ -1477,56 +1407,6 @@ parameters:
 
 		-
 			message: "#^Property Assegai\\\\Core\\\\Rendering\\\\Engines\\\\DefaultTemplateEngine\\:\\:\\$componentFilename \\(string\\) does not accept string\\|false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Property class@anonymous/Rendering/Engines/DefaultTemplateEngine\\.php\\:141\\:\\:\\$methods type has no value type specified in iterable type array\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Result of && is always false\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Variable \\$author on left side of \\?\\? is never defined\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Variable \\$description on left side of \\?\\? is never defined\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Variable \\$htmxLink on left side of \\?\\?\\= is never defined\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Variable \\$keywords on left side of \\?\\? is never defined\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Variable \\$lang on left side of \\?\\?\\= is never defined\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Variable \\$props on left side of \\?\\? always exists and is not nullable\\.$#"
-			count: 2
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Variable \\$props on left side of \\?\\?\\= is never defined\\.$#"
-			count: 1
-			path: src/Rendering/Engines/DefaultTemplateEngine.php
-
-		-
-			message: "#^Variable \\$title on left side of \\?\\? is never defined\\.$#"
 			count: 1
 			path: src/Rendering/Engines/DefaultTemplateEngine.php
 

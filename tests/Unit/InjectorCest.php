@@ -20,11 +20,15 @@ use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Session;
 use Mocks\AttributeResolvedService;
+use Mocks\ChildUsesParentExportedService;
+use Mocks\ChildUsesParentPrivateService;
 use Mocks\ExplicitRequestScopedService;
 use Mocks\ExportVisibilityAppModule;
 use Mocks\FrameworkAwareAppModule;
 use Mocks\FrameworkAwareContractsService;
 use Mocks\FrameworkAwareService;
+use Mocks\ParentExportVisibilityAppModule;
+use Mocks\ParentPrivateVisibilityAppModule;
 use Mocks\ProviderOwnershipOrderingAppModule;
 use Mocks\RequestCapturingService;
 use Mocks\ResolverAwareAppModule;
@@ -32,6 +36,8 @@ use Mocks\ResolverOnlyAwareAppModule;
 use Mocks\ResolverResolvedService;
 use Mocks\RootPrivateConsumerService;
 use Mocks\RootPublicConsumerService;
+use Mocks\SharedChildMixedParentsAppModule;
+use Mocks\SharedChildMixedParentsReversedAppModule;
 use ReflectionException;
 use ReflectionProperty;
 use Tests\Support\UnitTester;
@@ -344,6 +350,44 @@ class InjectorCest
     $I->assertSame(Request::current(), $secondExplicitScoped->request);
     $I->assertNull($injector->get(RequestCapturingService::class));
     $I->assertNull($injector->get(ExplicitRequestScopedService::class));
+  }
+
+  public function testChildModulesCanInjectParentModuleExports(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(ParentExportVisibilityAppModule::class);
+    $app->boot();
+
+    $service = Injector::getInstance()->resolve(ChildUsesParentExportedService::class);
+
+    $I->assertInstanceOf(ChildUsesParentExportedService::class, $service);
+    $I->assertSame('parent-export', $service->parentService->value);
+  }
+
+  public function testChildModulesCannotInjectParentPrivateProviders(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(ParentPrivateVisibilityAppModule::class);
+    $app->boot();
+
+    $I->expectThrowable(
+      \Assegai\Core\Exceptions\Container\ResolveException::class,
+      fn() => Injector::getInstance()->resolve(ChildUsesParentPrivateService::class),
+    );
+  }
+
+  public function testSharedChildModulesCannotInjectParentExportsFromOnlyOneBranch(UnitTester $I): void
+  {
+    $I->expectThrowable(
+      \Assegai\Core\Exceptions\Container\ResolveException::class,
+      fn() => AssegaiFactory::create(SharedChildMixedParentsAppModule::class)->boot(),
+    );
+  }
+
+  public function testSharedChildParentExportChecksAreImportOrderIndependent(UnitTester $I): void
+  {
+    $I->expectThrowable(
+      \Assegai\Core\Exceptions\Container\ResolveException::class,
+      fn() => AssegaiFactory::create(SharedChildMixedParentsReversedAppModule::class)->boot(),
+    );
   }
 
   public function testImportedModulesOnlyExposeExportedProviders(UnitTester $I): void
