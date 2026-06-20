@@ -303,6 +303,110 @@ class ProviderOwnershipOrderingAppModule
 {
 }
 
+
+#[Injectable]
+class ParentExportedService
+{
+  public string $value = 'parent-export';
+}
+
+#[Injectable]
+class ChildUsesParentExportedService
+{
+  public function __construct(
+    public ParentExportedService $parentService,
+  ) {
+  }
+}
+
+#[Module(
+  providers: [
+    ChildUsesParentExportedService::class,
+  ],
+  controllers: [],
+  imports: [],
+)]
+class ChildConsumesParentExportModule
+{
+}
+
+#[Module(
+  providers: [
+    ParentExportedService::class,
+  ],
+  controllers: [],
+  imports: [
+    ChildConsumesParentExportModule::class,
+  ],
+  exports: [
+    ParentExportedService::class,
+  ],
+)]
+class ParentExportModule
+{
+}
+
+#[Module(
+  providers: [],
+  controllers: [],
+  imports: [
+    ParentExportModule::class,
+  ],
+)]
+class ParentExportVisibilityAppModule
+{
+}
+
+#[Injectable]
+class ParentPrivateService
+{
+  public string $value = 'parent-private';
+}
+
+#[Injectable(options: ['scope' => Scope::TRANSIENT, 'durable' => false])]
+class ChildUsesParentPrivateService
+{
+  public function __construct(
+    public ParentPrivateService $parentService,
+  ) {
+  }
+}
+
+#[Module(
+  providers: [
+    ChildUsesParentPrivateService::class,
+  ],
+  controllers: [],
+  imports: [],
+)]
+class ChildConsumesParentPrivateModule
+{
+}
+
+#[Module(
+  providers: [
+    ParentPrivateService::class,
+  ],
+  controllers: [],
+  imports: [
+    ChildConsumesParentPrivateModule::class,
+  ],
+)]
+class ParentPrivateModule
+{
+}
+
+#[Module(
+  providers: [],
+  controllers: [],
+  imports: [
+    ParentPrivateModule::class,
+  ],
+)]
+class ParentPrivateVisibilityAppModule
+{
+}
+
 #[Module(
   providers: [
     FrameworkAwareService::class,

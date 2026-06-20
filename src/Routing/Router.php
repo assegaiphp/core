@@ -264,6 +264,7 @@ final class Router
      * @param Request $request
      * @param string $moduleClass
      * @param ReflectionClass|null $fallbackController
+     * @param array<string, bool> $visitedModules
      * @return ReflectionClass|null
      * @throws HttpException
      * @throws ReflectionException
@@ -271,9 +272,15 @@ final class Router
     private function getActivatedControllerToken(
         Request          $request,
         string           $moduleClass,
-        ?ReflectionClass $fallbackController = null
+        ?ReflectionClass $fallbackController = null,
+        array            $visitedModules = []
     ): ?ReflectionClass
     {
+        if (isset($visitedModules[$moduleClass])) {
+            return null;
+        }
+
+        $visitedModules[$moduleClass] = true;
         $bestMatch = $fallbackController;
 
         if (!is_null($bestMatch) && !$this->canActivateController($bestMatch, $request)) {
@@ -289,6 +296,10 @@ final class Router
         }
 
         foreach ($this->moduleManager->getImportedModules($moduleClass) as $importedModuleClass) {
+            if (isset($visitedModules[$importedModuleClass])) {
+                continue;
+            }
+
             if (!$this->requestMatchesModuleBranch($request, $importedModuleClass)) {
                 continue;
             }
@@ -297,6 +308,7 @@ final class Router
                 request: $request,
                 moduleClass: $importedModuleClass,
                 fallbackController: $bestMatch,
+                visitedModules: $visitedModules,
             );
 
             $bestMatch = $this->preferControllerMatch($request, $bestMatch, $branchMatch);

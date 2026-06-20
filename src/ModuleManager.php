@@ -53,6 +53,10 @@ class ModuleManager implements SingletonInterface
    */
   protected array $moduleParentMap = [];
   /**
+   * @var array<string, bool> Cached module provider access decisions keyed by consumer and provider class.
+   */
+  protected array $moduleProviderAccessCache = [];
+  /**
    * @var array<class-string> A list of all the controller tokens
    */
   protected array $controllerTokensList = [];
@@ -188,6 +192,7 @@ class ModuleManager implements SingletonInterface
       $this->moduleExportsMap = [];
       $this->providerModuleMap = [];
       $this->moduleParentMap = [$rootToken => null];
+      $this->moduleProviderAccessCache = [];
       $this->config = [];
       $this->declarationTokens = [];
       $stack = [$rootToken]; // Stack to simulate recursion
@@ -441,6 +446,7 @@ class ModuleManager implements SingletonInterface
   {
     $this->providerTokens = [];
     $this->providerModuleMap = [];
+    $this->moduleProviderAccessCache = [];
 
     foreach ($this->moduleTokens as $moduleClass => $module) {
       /** @var array{providers?: string[]} $args */
@@ -640,14 +646,35 @@ class ModuleManager implements SingletonInterface
   /**
    * Determines whether the consumer module can access the given provider.
    *
-   * Providers are visible within their declaring module and across imports only when the
-   * imported module explicitly exports them, either directly or through a re-exported module.
+   * Providers are visible within their declaring module, across imported module exports,
+   * and from a child module to exports declared by its ancestor modules.
    *
    * @param class-string $consumerModuleClass
    * @param class-string $providerClass
    * @return bool
    */
   public function canModuleAccessProvider(string $consumerModuleClass, string $providerClass): bool
+  {
+    $cacheKey = $consumerModuleClass . '::' . $providerClass;
+
+    if (array_key_exists($cacheKey, $this->moduleProviderAccessCache)) {
+      return $this->moduleProviderAccessCache[$cacheKey];
+    }
+
+    return $this->moduleProviderAccessCache[$cacheKey] = $this->resolveModuleProviderAccess(
+      consumerModuleClass: $consumerModuleClass,
+      providerClass: $providerClass,
+    );
+  }
+
+  /**
+   * Resolves whether the consumer module can access the given provider.
+   *
+   * @param class-string $consumerModuleClass
+   * @param class-string $providerClass
+   * @return bool
+   */
+  private function resolveModuleProviderAccess(string $consumerModuleClass, string $providerClass): bool
   {
     $ownerModule = $this->getProviderOwnerModule($providerClass);
 
@@ -663,6 +690,19 @@ class ModuleManager implements SingletonInterface
       if ($this->moduleExportsProvider($importedModule, $providerClass)) {
         return true;
       }
+    }
+
+    $parentModule = $this->getParentModule($consumerModuleClass);
+    $visitedParents = [];
+
+    while (null !== $parentModule && !in_array($parentModule, $visitedParents, true)) {
+      $visitedParents[] = $parentModule;
+
+      if ($this->moduleExportsProvider($parentModule, $providerClass)) {
+        return true;
+      }
+
+      $parentModule = $this->getParentModule($parentModule);
     }
 
     return false;
