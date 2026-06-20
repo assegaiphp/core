@@ -94,7 +94,7 @@ class DefaultTemplateEngine extends TemplateEngine
         $this->twig = new Environment($this->loader);
         $this->twig->addExtension(new MarkdownExtension());
         $this->twig->addRuntimeLoader(new class implements RuntimeLoaderInterface {
-            public function load($class): ?MarkdownRuntime
+            public function load(string $class): ?MarkdownRuntime
             {
                 if (MarkdownRuntime::class === $class) {
                     return new MarkdownRuntime(new DefaultMarkdown());
@@ -121,7 +121,6 @@ class DefaultTemplateEngine extends TemplateEngine
     public function render(): string
     {
         # Get component attribute instance
-        $props ??= [];
         $componentAttributeInstance = $this->rootComponentAttributeInstance;
         $componentReflection = new ReflectionClass($this->rootComponent);
         $this->componentFilename = $componentReflection->getFileName();
@@ -139,6 +138,7 @@ class DefaultTemplateEngine extends TemplateEngine
         $data = [];
 
         $ctx = new class {
+            /** @var array<string, callable> */
             private array $methods = [];
 
             public function addMethod(string $name, callable $method): void
@@ -146,7 +146,15 @@ class DefaultTemplateEngine extends TemplateEngine
                 $this->methods[$name] = $method;
             }
 
-            public function __call($name, $arguments)
+            public function hasMethod(string $name): bool
+            {
+                return isset($this->methods[$name]);
+            }
+
+            /**
+             * @param array<int, mixed> $arguments
+             */
+            public function __call(string $name, array $arguments): mixed
             {
                 if (isset($this->methods[$name])) {
                     return call_user_func_array($this->methods[$name], $arguments);
@@ -171,37 +179,37 @@ class DefaultTemplateEngine extends TemplateEngine
             $ctx->addMethod($methodName, fn(...$args) => $method->invoke($this->rootComponent, ...$args));
         }
 
-        if (!method_exists($ctx, 'config')) {
+        if (!$ctx->hasMethod('config')) {
             $ctx->addMethod('config', fn(string $path, mixed $default = null, ?string $dirname = null) => config($path, $default, $dirname));
         }
 
-        if (!method_exists($ctx, 'translate')) {
+        if (!$ctx->hasMethod('translate')) {
             $ctx->addMethod('translate', fn(string $id, array $parameters = [], string $domain = '', ?string $locale = null) => translate($id, $parameters, $domain, $locale));
         }
 
-        if (!method_exists($ctx, 'timeAgo')) {
+        if (!$ctx->hasMethod('timeAgo')) {
             $ctx->addMethod('timeAgo', fn(int|string|null $timestamp, ?string $timezone = null) => time_ago($timestamp, $timezone));
         }
 
-        if (!method_exists($ctx, 'env')) {
+        if (!$ctx->hasMethod('env')) {
             $ctx->addMethod('env', fn(string $key, mixed $default = null) => env($key, $default));
         }
 
-        if (!method_exists($ctx, 'getLang')) {
+        if (!$ctx->hasMethod('getLang')) {
             $ctx->addMethod('getLang', fn() => Request::current()->getLang());
         }
 
         $webComponentPropsMethod = fn(mixed $props = []) => new Markup(wc_props($props), 'UTF-8');
 
-        if (!method_exists($ctx, 'webComponentProps')) {
+        if (!$ctx->hasMethod('webComponentProps')) {
             $ctx->addMethod('webComponentProps', $webComponentPropsMethod);
         }
 
-        if (!method_exists($ctx, 'wcProps')) {
+        if (!$ctx->hasMethod('wcProps')) {
             $ctx->addMethod('wcProps', $webComponentPropsMethod);
         }
 
-        if (!method_exists($ctx, 'webComponentBundleUrl')) {
+        if (!$ctx->hasMethod('webComponentBundleUrl')) {
             $ctx->addMethod('webComponentBundleUrl', fn() => web_component_bundle_url());
         }
 
@@ -219,32 +227,29 @@ class DefaultTemplateEngine extends TemplateEngine
 
         $this->setData($data);
 
-        if ($this->meta) {
-            extract($this->meta);
-        }
-
         if (!$this->title) {
-            $this->title = $title ?? $_ENV['DOCUMENT_TITLE'] ?? $this->getAppDocumentConfigValue('title', 'AssegaiPHP');
+            $this->title = $this->getMetaString('title') ?? $_ENV['DOCUMENT_TITLE'] ?? $this->getAppDocumentConfigValue('title', 'AssegaiPHP');
         }
 
         if (!$this->description) {
-            $this->description = $description ?? $_ENV['DOCUMENT_DESCRIPTION'] ?? $this->getAppDocumentConfigValue('description', 'AssegaiPHP Application');
+            $this->description = $this->getMetaString('description') ?? $_ENV['DOCUMENT_DESCRIPTION'] ?? $this->getAppDocumentConfigValue('description', 'AssegaiPHP Application');
         }
 
         if (!$this->keywords) {
-            $this->keywords = $keywords ?? $_ENV['DOCUMENT_KEYWORDS'] ?? $this->getAppDocumentConfigValue('keywords', 'AssegaiPHP, PHP, Framework');
+            $this->keywords = $this->getMetaString('keywords') ?? $_ENV['DOCUMENT_KEYWORDS'] ?? $this->getAppDocumentConfigValue('keywords', 'AssegaiPHP, PHP, Framework');
         }
 
         if (!$this->author) {
-            $this->author = $author ?? $_ENV['DOCUMENT_AUTHOR'] ?? $this->getAppDocumentConfigValue('author', '');
+            $this->author = $this->getMetaString('author') ?? $_ENV['DOCUMENT_AUTHOR'] ?? $this->getAppDocumentConfigValue('author', '');
         }
 
-        $documentProps = DocumentProperties::fromArray(is_array($props ?? null) ? $props : []);
-        $lang ??= $documentProps->lang ?: Request::current()->getLang();
+        $rawDocumentProps = $this->meta['props'] ?? [];
+        $documentProps = DocumentProperties::fromArray(is_array($rawDocumentProps) ? $rawDocumentProps : []);
+        $lang = $this->getMetaString('lang') ?? ($documentProps->lang ?: Request::current()->getLang());
         $headAssets = $documentProps->generateHeadAssetTags();
 
-        if (is_string($props ?? null) && trim($props) !== '') {
-            $headAssets .= trim($props) . PHP_EOL;
+        if (is_string($rawDocumentProps) && trim($rawDocumentProps) !== '') {
+            $headAssets .= trim($rawDocumentProps) . PHP_EOL;
         }
 
         # Render template
@@ -256,7 +261,7 @@ class DefaultTemplateEngine extends TemplateEngine
         $bodyScripts = $documentProps->generateBodyScriptTags() . $documentProps->generateBodyScriptImportTags();
         $webComponentBundleTag = $this->loadWebComponentBundle();
         $escapedTitle = htmlspecialchars($this->title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $htmxLink ??= $documentProps->htmxLink ?? '';
+        $htmxLink = $this->getMetaString('htmxLink') ?? $documentProps->htmxLink;
         $htmxScriptTag = is_string($htmxLink) && trim($htmxLink) !== ''
             ? '<script src="' . htmlspecialchars(trim($htmxLink), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"></script>'
             : '';
@@ -280,6 +285,13 @@ class DefaultTemplateEngine extends TemplateEngine
   </body>
 </html>
 START;
+    }
+
+    private function getMetaString(string $key): ?string
+    {
+        $value = $this->meta[$key] ?? null;
+
+        return is_scalar($value) || $value instanceof \Stringable ? (string)$value : null;
     }
 
     private function getAppDocumentConfigValue(string $key, mixed $default = null): mixed
