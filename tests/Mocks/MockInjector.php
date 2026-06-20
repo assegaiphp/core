@@ -408,6 +408,41 @@ class ParentPrivateVisibilityAppModule
 }
 
 #[Module(
+  providers: [],
+  controllers: [],
+  imports: [
+    ChildConsumesParentExportModule::class,
+  ],
+)]
+class ParentWithoutExportModule
+{
+}
+
+#[Module(
+  providers: [],
+  controllers: [],
+  imports: [
+    ParentExportModule::class,
+    ParentWithoutExportModule::class,
+  ],
+)]
+class SharedChildMixedParentsAppModule
+{
+}
+
+#[Module(
+  providers: [],
+  controllers: [],
+  imports: [
+    ParentWithoutExportModule::class,
+    ParentExportModule::class,
+  ],
+)]
+class SharedChildMixedParentsReversedAppModule
+{
+}
+
+#[Module(
   providers: [
     FrameworkAwareService::class,
     FrameworkAwareContractsService::class,

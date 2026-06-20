@@ -53,6 +53,10 @@ class ModuleManager implements SingletonInterface
    */
   protected array $moduleParentMap = [];
   /**
+   * @var array<string, string[]> A map of all direct parent modules keyed by child module class.
+   */
+  protected array $moduleParentsMap = [];
+  /**
    * @var array<string, bool> Cached module provider access decisions keyed by consumer and provider class.
    */
   protected array $moduleProviderAccessCache = [];
@@ -192,6 +196,7 @@ class ModuleManager implements SingletonInterface
       $this->moduleExportsMap = [];
       $this->providerModuleMap = [];
       $this->moduleParentMap = [$rootToken => null];
+      $this->moduleParentsMap = [$rootToken => []];
       $this->moduleProviderAccessCache = [];
       $this->config = [];
       $this->declarationTokens = [];
@@ -257,6 +262,12 @@ class ModuleManager implements SingletonInterface
 
         // Push imports onto the stack for later processing
         foreach ($imports as $import) {
+          $this->moduleParentsMap[$import] ??= [];
+
+          if (!in_array($currentToken, $this->moduleParentsMap[$import], true)) {
+            $this->moduleParentsMap[$import][] = $currentToken;
+          }
+
           if (!array_key_exists($import, $this->moduleParentMap)) {
             $this->moduleParentMap[$import] = $currentToken;
           }
@@ -368,6 +379,17 @@ class ModuleManager implements SingletonInterface
   public function getParentModule(string $moduleClass): ?string
   {
     return $this->moduleParentMap[$moduleClass] ?? null;
+  }
+
+  /**
+   * Returns all direct parent modules for the given module class.
+   *
+   * @param string $moduleClass
+   * @return string[]
+   */
+  public function getParentModules(string $moduleClass): array
+  {
+    return $this->moduleParentsMap[$moduleClass] ?? [];
   }
 
   /**
@@ -692,28 +714,80 @@ class ModuleManager implements SingletonInterface
       }
     }
 
-    $parentModule = $this->getParentModule($consumerModuleClass);
-    $visitedParents = [];
+    return $this->ancestorBranchesExportProvider($consumerModuleClass, $providerClass);
+  }
 
-    while (null !== $parentModule && !in_array($parentModule, $visitedParents, true)) {
-      $visitedParents[] = $parentModule;
+  /**
+   * Determines whether all possible parent branches expose the provider to this module.
+   *
+   * A module class may be imported by multiple parents. Since providers are keyed by class,
+   * parent-derived visibility must be true for every parent branch to avoid import-order leaks.
+   *
+   * @param string $moduleClass
+   * @param string $providerClass
+   * @return bool
+   */
+  private function ancestorBranchesExportProvider(string $moduleClass, string $providerClass): bool
+  {
+    $parents = $this->getParentModules($moduleClass);
 
-      if ($this->moduleExportsProvider($parentModule, $providerClass)) {
-        return true;
-      }
-
-      $parentModule = $this->getParentModule($parentModule);
+    if ([] === $parents) {
+      return false;
     }
 
-    return false;
+    foreach ($parents as $parentModule) {
+      if (!$this->moduleOrAncestorBranchesExportProvider($parentModule, $providerClass)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Determines whether the module or every possible parent branch exports the provider.
+   *
+   * @param string $moduleClass
+   * @param string $providerClass
+   * @param array<int, string> $visitedModules
+   * @return bool
+   */
+  private function moduleOrAncestorBranchesExportProvider(
+    string $moduleClass,
+    string $providerClass,
+    array $visitedModules = [],
+  ): bool
+  {
+    if ($this->moduleExportsProvider($moduleClass, $providerClass)) {
+      return true;
+    }
+
+    if (in_array($moduleClass, $visitedModules, true)) {
+      return false;
+    }
+
+    $visitedModules[] = $moduleClass;
+    $parents = $this->getParentModules($moduleClass);
+
+    if ([] === $parents) {
+      return false;
+    }
+
+    foreach ($parents as $parentModule) {
+      if (!$this->moduleOrAncestorBranchesExportProvider($parentModule, $providerClass, $visitedModules)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /**
    * Determines whether the given module exports the provider directly or through a re-exported module.
    *
-   * @param class-string $moduleClass
-   * @param class-string $providerClass
-   * @param array<int, class-string> $visitedModules
+   * @param string $moduleClass
+   * @param string $providerClass
+   * @param array<int, string> $visitedModules
    * @return bool
    */
   private function moduleExportsProvider(string $moduleClass, string $providerClass, array $visitedModules = []): bool

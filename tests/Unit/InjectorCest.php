@@ -36,6 +36,8 @@ use Mocks\ResolverOnlyAwareAppModule;
 use Mocks\ResolverResolvedService;
 use Mocks\RootPrivateConsumerService;
 use Mocks\RootPublicConsumerService;
+use Mocks\SharedChildMixedParentsAppModule;
+use Mocks\SharedChildMixedParentsReversedAppModule;
 use ReflectionException;
 use ReflectionProperty;
 use Tests\Support\UnitTester;
@@ -369,6 +371,22 @@ class InjectorCest
     $I->expectThrowable(
       \Assegai\Core\Exceptions\Container\ResolveException::class,
       fn() => Injector::getInstance()->resolve(ChildUsesParentPrivateService::class),
+    );
+  }
+
+  public function testSharedChildModulesCannotInjectParentExportsFromOnlyOneBranch(UnitTester $I): void
+  {
+    $I->expectThrowable(
+      \Assegai\Core\Exceptions\Container\ResolveException::class,
+      fn() => AssegaiFactory::create(SharedChildMixedParentsAppModule::class)->boot(),
+    );
+  }
+
+  public function testSharedChildParentExportChecksAreImportOrderIndependent(UnitTester $I): void
+  {
+    $I->expectThrowable(
+      \Assegai\Core\Exceptions\Container\ResolveException::class,
+      fn() => AssegaiFactory::create(SharedChildMixedParentsReversedAppModule::class)->boot(),
     );
   }
 
