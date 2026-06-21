@@ -581,7 +581,7 @@ class OpenApiGenerator
     $servers = [];
 
     foreach ($hosts as $host) {
-      if (str_contains($host, ':')) {
+      if ($this->hasDynamicHostPlaceholder($host)) {
         $servers[] = $this->buildServerForDynamicHost($scheme, $host);
         continue;
       }
@@ -592,27 +592,77 @@ class OpenApiGenerator
     return $servers;
   }
 
+  private function hasDynamicHostPlaceholder(string $host): bool
+  {
+    foreach (explode('.', $host) as $label) {
+      if (str_starts_with($label, ':') && strlen($label) > 1) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /**
    * @return array<string, mixed>
    */
   private function buildServerForDynamicHost(string $scheme, string $hostPattern): array
   {
     $variables = [];
-    $urlHost = preg_replace_callback(
-      '/:([A-Za-z_][A-Za-z0-9_]*)/',
-      static function (array $matches) use (&$variables): string {
-        $variables[$matches[1]] = [
-          'default' => $matches[1],
-        ];
+    $labels = explode('.', $hostPattern);
 
-        return '{' . $matches[1] . '}';
-      },
-      $hostPattern
-    );
+    foreach ($labels as $index => $label) {
+      $dynamicLabel = $this->getDynamicHostLabel($label);
+
+      if ($dynamicLabel === null) {
+        continue;
+      }
+
+      $placeholderName = $dynamicLabel['name'];
+      $variables[$placeholderName] = [
+        'default' => $placeholderName,
+      ];
+      $labels[$index] = '{' . $placeholderName . '}' . $dynamicLabel['port'];
+    }
 
     return [
-      'url' => sprintf('%s://%s', $scheme, $urlHost),
+      'url' => sprintf('%s://%s', $scheme, implode('.', $labels)),
       'variables' => $variables,
+    ];
+  }
+
+  /**
+   * @return array{name: string, port: string}|null
+   */
+  private function getDynamicHostLabel(string $label): ?array
+  {
+    if (!str_starts_with($label, ':') || strlen($label) === 1) {
+      return null;
+    }
+
+    $port = '';
+
+    if (preg_match('/^(?<label>.+)(?<port>:\d+)$/', $label, $matches)) {
+      $label = $matches['label'];
+      $port = $matches['port'];
+    }
+
+    $placeholder = substr($label, 1);
+
+    if (preg_match('/^(?<name>[^<>]+)<[A-Za-z][A-Za-z0-9_]*>$/', $placeholder, $matches)) {
+      return [
+        'name' => $matches['name'],
+        'port' => $port,
+      ];
+    }
+
+    if (str_contains($placeholder, '<') || str_contains($placeholder, '>')) {
+      return null;
+    }
+
+    return [
+      'name' => $placeholder,
+      'port' => $port,
     ];
   }
 
@@ -1249,6 +1299,11 @@ class OpenApiGenerator
     $segments = array_values(array_filter(explode('/', trim($routePath, '/')), static fn(string $segment): bool => $segment !== ''));
 
     foreach ($segments as $segment) {
+      if ($segment === '*') {
+        $placeholders['wildcard'] = null;
+        continue;
+      }
+
       if (!preg_match('/^:([A-Za-z_][A-Za-z0-9_-]*)(?:<([^>]+)>)?$/', $segment, $matches)) {
         continue;
       }

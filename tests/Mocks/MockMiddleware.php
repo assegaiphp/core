@@ -7,6 +7,7 @@ use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Post;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Modules\Module;
+use Assegai\Core\Attributes\Param;
 use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Http\Requests\Request;
@@ -68,6 +69,17 @@ class StopRequestMiddleware implements MiddlewareInterface
   }
 }
 
+#[Injectable]
+class LegacyRouteMiddleware implements MiddlewareInterface
+{
+  public function use(Request $request, Response $response, callable $next): void
+  {
+    MiddlewareTrace::$events[] = 'legacy:before';
+    $next();
+    MiddlewareTrace::$events[] = 'legacy:after';
+  }
+}
+
 #[Controller('middleware')]
 class MiddlewareTestController
 {
@@ -85,6 +97,14 @@ class MiddlewareTestController
     MiddlewareTrace::$events[] = 'controller:show';
 
     return "show-$id";
+  }
+
+  #[Get('legacy/:tenant-id')]
+  public function legacyTenant(#[Param('tenant-id')] string $tenantId): string
+  {
+    MiddlewareTrace::$events[] = 'controller:legacy';
+
+    return "legacy-$tenantId";
   }
 
   #[Post]
@@ -123,6 +143,10 @@ class MiddlewareFeatureModule implements AssegaiModuleInterface
     $consumer
       ->apply(PostOnlyMiddleware::class)
       ->forRoutes(new Route('/middleware', RequestMethod::POST));
+
+    $consumer
+      ->apply(LegacyRouteMiddleware::class)
+      ->forRoutes(new Route('/middleware/legacy/:tenant-id', RequestMethod::GET));
   }
 }
 

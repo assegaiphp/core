@@ -69,15 +69,6 @@ use Twig\Error\SyntaxError;
  */
 final class Router
 {
-    private const array ROUTE_CONSTRAINT_PATTERNS = [
-        'int' => '/^-?\d+$/',
-        'slug' => '/^[A-Za-z][A-Za-z0-9_-]*$/',
-        'uuid' => '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/',
-        'alpha' => '/^[A-Za-z]+$/',
-        'alnum' => '/^[A-Za-z0-9]+$/',
-        'hex' => '/^[A-Fa-f0-9]+$/',
-        'ulid' => '/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i',
-    ];
     private const int STATIC_ROUTE_PRIORITY = 300;
     private const int CONSTRAINED_DYNAMIC_ROUTE_PRIORITY = 200;
     private const int DYNAMIC_ROUTE_PRIORITY = 100;
@@ -429,6 +420,9 @@ final class Router
             $segmentMeta = $this->parseRouteSegment($routeSegment);
 
             if ($segmentMeta['type'] === 'wildcard') {
+                $wildcardPath = implode('/', array_slice($pathSegments, $index));
+                $params[$paramIndex++] = $wildcardPath;
+                $params['*'] = $wildcardPath;
                 return $params;
             }
 
@@ -487,37 +481,12 @@ final class Router
      * Supported constrained dynamic syntax uses angle brackets, for example `:id<int>` or `:slug<uuid>`.
      *
      * @param string $segment
-     * @return array{constraint: string|null, name: string|null, type: string, value: string}
+     * @return array{constraint: string|null, name: string|null, type: 'dynamic'|'static'|'wildcard', value: string}
      * @throws HttpException
      */
     private function parseRouteSegment(string $segment): array
     {
-        if ($segment === '*') {
-            return ['constraint' => null, 'name' => null, 'type' => 'wildcard', 'value' => $segment];
-        }
-
-        if (!str_starts_with($segment, ':')) {
-            return ['constraint' => null, 'name' => null, 'type' => 'static', 'value' => $segment];
-        }
-
-        if (!preg_match('/^:(?<name>[A-Za-z_][A-Za-z0-9_]*)(?:<(?<constraint>[A-Za-z][A-Za-z0-9_]*)>)?$/', $segment, $matches)) {
-            throw new HttpException(
-                "Invalid constrained route segment '$segment'. Use ':name' or ':name<constraint>'."
-            );
-        }
-
-        $constraint = $matches['constraint'] ?? null;
-
-        if ($constraint && !array_key_exists($constraint, self::ROUTE_CONSTRAINT_PATTERNS)) {
-            throw new HttpException("Unknown route constraint '$constraint' in segment '$segment'.");
-        }
-
-        return [
-            'constraint' => $constraint ?: null,
-            'name' => $matches['name'],
-            'type' => 'dynamic',
-            'value' => $segment,
-        ];
+        return RoutePattern::parseSegment($segment);
     }
 
     /**
@@ -529,7 +498,7 @@ final class Router
      */
     private function matchesRouteConstraint(string $constraint, string $value): bool
     {
-        return preg_match(self::ROUTE_CONSTRAINT_PATTERNS[$constraint], $value) === 1;
+        return RoutePattern::matchesConstraint($constraint, $value);
     }
 
     /**
@@ -591,24 +560,28 @@ final class Router
         foreach ($patternLabels as $index => $patternLabel) {
             $hostLabel = $hostLabels[$index];
 
-            if ($patternLabel === '*') {
+            $labelMeta = $this->parseHostLabel($patternLabel);
+
+            if ($labelMeta['type'] === 'wildcard') {
                 continue;
             }
 
-            if (str_starts_with($patternLabel, ':')) {
-                $key = substr($patternLabel, 1);
-
-                if ($key === '') {
+            if ($labelMeta['type'] === 'dynamic') {
+                if (
+                    !empty($labelMeta['constraint']) &&
+                    !$this->matchesRouteConstraint($labelMeta['constraint'], $hostLabel)
+                ) {
                     return null;
                 }
 
+                $key = $labelMeta['name'];
                 $params[$paramIndex++] = $hostLabel;
                 $params[$key] = $hostLabel;
-                $specificity += 10;
+                $specificity += empty($labelMeta['constraint']) ? 10 : 20;
                 continue;
             }
 
-            if ($patternLabel !== $hostLabel) {
+            if ($labelMeta['value'] !== $hostLabel) {
                 return null;
             }
 
@@ -619,6 +592,18 @@ final class Router
             'params' => $params,
             'specificity' => $specificity,
         ];
+    }
+
+    /**
+     * Parses a host pattern label and returns its matching metadata.
+     *
+     * @param string $label
+     * @return array{constraint: string|null, name: string|null, type: 'dynamic'|'static'|'wildcard', value: string}
+     * @throws HttpException
+     */
+    private function parseHostLabel(string $label): array
+    {
+        return RoutePattern::parseHostLabel($label);
     }
 
     /**
@@ -858,10 +843,27 @@ final class Router
                 $this->getRouteConstraintDefinitions($handlerPath),
             ),
             'matched_segments' => count($this->getPathSegments($handlerRoute)),
-            'params' => array_merge($controllerParams ?? [], $handlerParams ?? []),
+            'params' => $this->mergeRouteParams($controllerParams ?? [], $handlerParams ?? []),
             'route_length' => strlen($handlerRoute),
             'specificity' => $this->getRouteSpecificityScore($handlerRoute),
         ];
+    }
+
+    /**
+     * Merges controller and handler route params without letting an empty handler wildcard hide a
+     * wildcard captured by a controller-level route prefix.
+     *
+     * @param array<int|string, string> $controllerParams
+     * @param array<int|string, string> $handlerParams
+     * @return array<int|string, string>
+     */
+    private function mergeRouteParams(array $controllerParams, array $handlerParams): array
+    {
+        if (($handlerParams['*'] ?? null) === '' && array_key_exists('*', $controllerParams)) {
+            unset($handlerParams['*']);
+        }
+
+        return array_merge($controllerParams, $handlerParams);
     }
 
     /**

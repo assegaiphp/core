@@ -27,6 +27,7 @@ use Mocks\MismatchedConstraintAppModule;
 use Mocks\ExactWildcardController;
 use Mocks\HostRoutingAppModule;
 use Mocks\ImportOnlyRootAppModule;
+use Mocks\LegacyTenantDashboardController;
 use Mocks\NestedApiController;
 use Mocks\NestedAppModule;
 use Mocks\NestedFeaturesController;
@@ -36,6 +37,8 @@ use Mocks\RequestAwarePipelineAppModule;
 use Mocks\RequestAwarePrivateProviderAppModule;
 use Mocks\RequestAwareProviderAppModule;
 use Mocks\ResponseMetadataAppModule;
+use Mocks\RuntimeHostController;
+use Mocks\RuntimeHostRoutingAppModule;
 use Mocks\UnknownConstraintAppModule;
 use Mocks\WildcardControllerAppModule;
 use Mocks\WildcardHandlerAppModule;
@@ -187,6 +190,37 @@ class RouterCest
 
     $I->assertInstanceOf(MockController::class, $result['controller']);
     $I->assertSame('This action returns a #12 users', $result['response']->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testUnconstrainedParameterRoutesDoNotCaptureTrailingPaths(UnitTester $I): void
+  {
+    try {
+      $this->dispatch('/test/12/extra', LegacyAppModule::class);
+      $I->fail('Expected trailing path after a single-segment parameter to be rejected.');
+    } catch (NotFoundException $exception) {
+      $I->assertStringContainsString('/test/12/extra', $exception->getMessage());
+    }
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testLegacyHyphenatedRouteParameterNamesStillWork(UnitTester $I): void
+  {
+    $result = $this->dispatch('/test/legacy/acme', LegacyAppModule::class);
+
+    $I->assertSame('legacy-tenant-acme', $result['response']->getBody());
+    $I->assertSame('acme', $result['request']->getParams()['tenant-id']);
   }
 
   /**
@@ -404,7 +438,8 @@ class RouterCest
     $nestedResult = $this->dispatch('/handler-wildcards/anything/here', WildcardHandlerAppModule::class);
 
     $I->assertSame('exact-handler', $baseResult['response']->getBody());
-    $I->assertSame('wildcard-handler', $nestedResult['response']->getBody());
+    $I->assertSame('wildcard-handler:anything/here', $nestedResult['response']->getBody());
+    $I->assertSame('anything/here', $nestedResult['request']->getParams()['*']);
   }
 
   /**
@@ -542,6 +577,70 @@ class RouterCest
 
     $I->assertSame('tenant-acme', $result['response']->getBody());
     $I->assertSame('acme', $result['request']->getHostParams()['account']);
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testDynamicHostControllersPreserveLegacyHyphenatedHostParamNames(UnitTester $I): void
+  {
+    $result = $this->dispatch('/legacy-dashboard', HostRoutingAppModule::class, 'acme.example.com');
+
+    $I->assertInstanceOf(LegacyTenantDashboardController::class, $result['controller']);
+    $I->assertSame('legacy-tenant-acme', $result['response']->getBody());
+    $I->assertSame('acme', $result['request']->getHostParams()['tenant-id']);
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testConstrainedHostParamsAndWildcardParamsCanDriveRuntimeRoutes(UnitTester $I): void
+  {
+    $result = $this->dispatch('/me/media', RuntimeHostRoutingAppModule::class, 'x.runtime.localhost:4032');
+
+    $I->assertInstanceOf(RuntimeHostController::class, $result['controller']);
+    $I->assertSame('runtime-x:me/media', $result['response']->getBody());
+    $I->assertSame('x', $result['request']->getHostParams()['vendor_runtime_slug']);
+    $I->assertSame('me/media', $result['request']->getParams()['*']);
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testConstrainedHostParamsRejectInvalidHostLabels(UnitTester $I): void
+  {
+    try {
+      $this->dispatch('/me/media', RuntimeHostRoutingAppModule::class, '1.runtime.localhost');
+      $I->fail('Expected invalid constrained host label to be rejected.');
+    } catch (NotFoundException $exception) {
+      $I->assertStringContainsString('/me/media', $exception->getMessage());
+    }
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testRuntimeWildcardFallbackStillHandlesRootRuntimeRequests(UnitTester $I): void
+  {
+    $result = $this->dispatch('/', RuntimeHostRoutingAppModule::class, 'x.runtime.localhost');
+
+    $I->assertSame('runtime-x:', $result['response']->getBody());
+    $I->assertSame('x', $result['request']->getHostParams()['vendor_runtime_slug']);
   }
 
   /**

@@ -47,6 +47,12 @@ class MockController
     return "This action returns a #$id users";
   }
 
+  #[Get('legacy/:tenant-id')]
+  public function findLegacyTenant(#[Param('tenant-id')] string $tenantId): string
+  {
+    return "legacy-tenant-$tenantId";
+  }
+
   #[Patch(':id')]
   public function update(int $id)
   {
@@ -70,9 +76,9 @@ class WildcardHandlerController
   }
 
   #[Get('*')]
-  public function catchAll(): string
+  public function catchAll(#[Param('*')] string $wildcard): string
   {
-    return 'wildcard-handler';
+    return "wildcard-handler:$wildcard";
   }
 }
 
@@ -351,6 +357,16 @@ class TenantDashboardController
   }
 }
 
+#[Controller(path: 'legacy-dashboard', host: ':tenant-id.example.com')]
+class LegacyTenantDashboardController
+{
+  #[Get]
+  public function index(#[HostParam('tenant-id')] string $tenantId): string
+  {
+    return "legacy-tenant-$tenantId";
+  }
+}
+
 #[Controller(path: 'dashboard', host: 'admin.example.com')]
 class AdminDashboardController
 {
@@ -368,6 +384,19 @@ class MultiHostReportsController
   public function index(): string
   {
     return 'reports-dashboard';
+  }
+}
+
+#[Controller(host: ':vendor_runtime_slug<slug>.runtime.localhost')]
+class RuntimeHostController
+{
+  #[Get('*')]
+  public function handle(
+    #[HostParam('vendor_runtime_slug')] string $vendorRuntimeSlug,
+    #[Param('*')] string $vendorPath,
+  ): string
+  {
+    return "runtime-$vendorRuntimeSlug:$vendorPath";
   }
 }
 
@@ -576,11 +605,19 @@ class MismatchedConstraintModule
   controllers: [
     PublicDashboardController::class,
     TenantDashboardController::class,
+    LegacyTenantDashboardController::class,
     AdminDashboardController::class,
     MultiHostReportsController::class,
   ],
 )]
 class HostRoutingAppModule
+{
+}
+
+#[Module(
+  controllers: [RuntimeHostController::class],
+)]
+class RuntimeHostRoutingAppModule
 {
 }
 

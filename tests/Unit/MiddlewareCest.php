@@ -103,6 +103,29 @@ class MiddlewareCest
    * @throws ContainerException
    * @throws EntryNotFoundException
    */
+  public function testMiddlewareTargetsCanMatchLegacyHyphenatedRouteParameterNames(UnitTester $I): void
+  {
+    $result = $this->dispatch('/middleware/legacy/acme', MiddlewareAppModule::class);
+
+    $I->assertSame('legacy-acme', $result['response']->getBody());
+    $I->assertSame([
+      'first:before',
+      'second:before',
+      'legacy:before',
+      'controller:legacy',
+      'legacy:after',
+      'second:after',
+      'first:after',
+    ], MiddlewareTrace::$events);
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
   public function testRouteTargetsCanRestrictMiddlewareByHttpMethod(UnitTester $I): void
   {
     $result = $this->dispatch('/middleware', MiddlewareAppModule::class, 'POST');

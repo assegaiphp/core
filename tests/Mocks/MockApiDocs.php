@@ -3,6 +3,7 @@
 namespace Mocks;
 
 use Assegai\Core\Attributes\Controller;
+use Assegai\Core\Attributes\HostParam;
 use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Post;
@@ -89,8 +90,45 @@ class ApiDocsNodesController
   }
 }
 
+#[Controller(path: 'runtime', host: ':vendor_runtime_slug<slug>.runtime.localhost')]
+class ApiDocsRuntimeController
+{
+  #[Get('status')]
+  public function status(#[HostParam('vendor_runtime_slug')] string $vendorRuntimeSlug): array
+  {
+    return ['vendor' => $vendorRuntimeSlug];
+  }
+}
+
+#[Controller(path: 'legacy-host', host: ':tenant-id.example.com')]
+class ApiDocsLegacyHostController
+{
+  #[Get('status')]
+  public function status(#[HostParam('tenant-id')] string $tenantId): array
+  {
+    return ['tenant' => $tenantId];
+  }
+}
+
+#[Controller(path: 'port-host', host: [':tenant:8080', 'api.:tenant:8080', 'api.:tenant<slug>:8081'])]
+class ApiDocsPortHostController
+{
+  #[Get('status')]
+  public function status(#[HostParam('tenant')] string $tenant): array
+  {
+    return ['tenant' => $tenant];
+  }
+}
+
 #[Module(
-  controllers: [ApiDocsPostsController::class, ApiDocsPagesController::class, ApiDocsNodesController::class],
+  controllers: [
+    ApiDocsPostsController::class,
+    ApiDocsPagesController::class,
+    ApiDocsNodesController::class,
+    ApiDocsRuntimeController::class,
+    ApiDocsLegacyHostController::class,
+    ApiDocsPortHostController::class,
+  ],
 )]
 class ApiDocsAppModule
 {
