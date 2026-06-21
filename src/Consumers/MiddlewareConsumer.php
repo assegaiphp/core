@@ -10,6 +10,7 @@ use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Interfaces\ConsumerInterface;
 use Assegai\Core\Interfaces\MiddlewareInterface;
 use Assegai\Core\Routing\Route;
+use Assegai\Core\Routing\RoutePattern;
 use Assegai\Core\Util\Validator;
 use ReflectionClass;
 use ReflectionException;
@@ -22,16 +23,6 @@ use ReflectionMethod;
  */
 class MiddlewareConsumer implements ConsumerInterface
 {
-  private const array ROUTE_CONSTRAINT_PATTERNS = [
-    'int' => '/^-?\d+$/',
-    'slug' => '/^[A-Za-z][A-Za-z0-9_-]*$/',
-    'uuid' => '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/',
-    'alpha' => '/^[A-Za-z]+$/',
-    'alnum' => '/^[A-Za-z0-9]+$/',
-    'hex' => '/^[A-Fa-f0-9]+$/',
-    'ulid' => '/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i',
-  ];
-
   /**
    * @var array<int, MiddlewareInterface|callable|class-string<MiddlewareInterface>>
    */
@@ -437,32 +428,7 @@ class MiddlewareConsumer implements ConsumerInterface
    */
   private function parseRouteSegment(string $segment): array
   {
-    if ($segment === '*') {
-      return ['constraint' => null, 'name' => null, 'type' => 'wildcard', 'value' => $segment];
-    }
-
-    if (!str_starts_with($segment, ':')) {
-      return ['constraint' => null, 'name' => null, 'type' => 'static', 'value' => $segment];
-    }
-
-    if (!preg_match('/^:(?<name>[A-Za-z_][A-Za-z0-9_]*)(?:<(?<constraint>[A-Za-z][A-Za-z0-9_]*)>)?$/', $segment, $matches)) {
-      throw new HttpException(
-        "Invalid constrained route segment '$segment'. Use ':name' or ':name<constraint>'."
-      );
-    }
-
-    $constraint = $matches['constraint'] ?? null;
-
-    if ($constraint && !array_key_exists($constraint, self::ROUTE_CONSTRAINT_PATTERNS)) {
-      throw new HttpException("Unknown route constraint '$constraint' in segment '$segment'.");
-    }
-
-    return [
-      'constraint' => $constraint ?: null,
-      'name' => $matches['name'] ?? null,
-      'type' => 'dynamic',
-      'value' => $segment,
-    ];
+    return RoutePattern::parseSegment($segment);
   }
 
   /**
@@ -474,11 +440,7 @@ class MiddlewareConsumer implements ConsumerInterface
    */
   private function matchesRouteConstraint(string $constraint, string $value): bool
   {
-    if (!isset(self::ROUTE_CONSTRAINT_PATTERNS[$constraint])) {
-      return false;
-    }
-
-    return preg_match(self::ROUTE_CONSTRAINT_PATTERNS[$constraint], $value) === 1;
+    return RoutePattern::matchesConstraint($constraint, $value);
   }
 
   /**

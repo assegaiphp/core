@@ -335,10 +335,6 @@ parameters:
 			count: 1
 			path: src/Consumers/MiddlewareConsumer.php
 
-		-
-			message: "#^Offset 'name' on array\\{0\\: string, name\\: non\\-falsy\\-string, 1\\: non\\-falsy\\-string, constraint\\?\\: non\\-falsy\\-string, 2\\?\\: non\\-falsy\\-string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
-			count: 1
-			path: src/Consumers/MiddlewareConsumer.php
 
 		-
 			message: "#^Parameter \\#1 \\$controllerClass of method Assegai\\\\Core\\\\Consumers\\\\MiddlewareConsumer\\:\\:controllerMatchesRequest\\(\\) expects class\\-string, string given\\.$#"

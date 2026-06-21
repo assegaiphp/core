@@ -69,15 +69,6 @@ use Twig\Error\SyntaxError;
  */
 final class Router
 {
-    private const array ROUTE_CONSTRAINT_PATTERNS = [
-        'int' => '/^-?\d+$/',
-        'slug' => '/^[A-Za-z][A-Za-z0-9_-]*$/',
-        'uuid' => '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/',
-        'alpha' => '/^[A-Za-z]+$/',
-        'alnum' => '/^[A-Za-z0-9]+$/',
-        'hex' => '/^[A-Fa-f0-9]+$/',
-        'ulid' => '/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i',
-    ];
     private const int STATIC_ROUTE_PRIORITY = 300;
     private const int CONSTRAINED_DYNAMIC_ROUTE_PRIORITY = 200;
     private const int DYNAMIC_ROUTE_PRIORITY = 100;
@@ -495,43 +486,7 @@ final class Router
      */
     private function parseRouteSegment(string $segment): array
     {
-        if ($segment === '*') {
-            return ['constraint' => null, 'name' => null, 'type' => 'wildcard', 'value' => $segment];
-        }
-
-        if (!str_starts_with($segment, ':')) {
-            return ['constraint' => null, 'name' => null, 'type' => 'static', 'value' => $segment];
-        }
-
-        $placeholder = substr($segment, 1);
-        if ($placeholder === '') {
-            throw new HttpException(
-                "Invalid constrained route segment '$segment'. Use ':name' or ':name<constraint>'."
-            );
-        }
-
-        if (preg_match('/^(?<name>[^<>]+)<(?<constraint>[A-Za-z][A-Za-z0-9_]*)>$/', $placeholder, $matches)) {
-            $name = $matches['name'];
-            $constraint = $matches['constraint'];
-        } elseif (str_contains($placeholder, '<') || str_contains($placeholder, '>')) {
-            throw new HttpException(
-                "Invalid constrained route segment '$segment'. Use ':name' or ':name<constraint>'."
-            );
-        } else {
-            $name = $placeholder;
-            $constraint = null;
-        }
-
-        if ($constraint && !array_key_exists($constraint, self::ROUTE_CONSTRAINT_PATTERNS)) {
-            throw new HttpException("Unknown route constraint '$constraint' in segment '$segment'.");
-        }
-
-        return [
-            'constraint' => $constraint ?: null,
-            'name' => $name,
-            'type' => 'dynamic',
-            'value' => $segment,
-        ];
+        return RoutePattern::parseSegment($segment);
     }
 
     /**
@@ -543,7 +498,7 @@ final class Router
      */
     private function matchesRouteConstraint(string $constraint, string $value): bool
     {
-        return preg_match(self::ROUTE_CONSTRAINT_PATTERNS[$constraint], $value) === 1;
+        return RoutePattern::matchesConstraint($constraint, $value);
     }
 
     /**
@@ -648,43 +603,7 @@ final class Router
      */
     private function parseHostLabel(string $label): array
     {
-        if ($label === '*') {
-            return ['constraint' => null, 'name' => null, 'type' => 'wildcard', 'value' => $label];
-        }
-
-        if (!str_starts_with($label, ':')) {
-            return ['constraint' => null, 'name' => null, 'type' => 'static', 'value' => $label];
-        }
-
-        $placeholder = substr($label, 1);
-        if ($placeholder === '') {
-            throw new HttpException(
-                "Invalid constrained host label '$label'. Use ':name' or ':name<constraint>'."
-            );
-        }
-
-        if (preg_match('/^(?<name>[^<>]+)<(?<constraint>[A-Za-z][A-Za-z0-9_]*)>$/', $placeholder, $matches)) {
-            $name = $matches['name'];
-            $constraint = $matches['constraint'];
-        } elseif (str_contains($placeholder, '<') || str_contains($placeholder, '>')) {
-            throw new HttpException(
-                "Invalid constrained host label '$label'. Use ':name' or ':name<constraint>'."
-            );
-        } else {
-            $name = $placeholder;
-            $constraint = null;
-        }
-
-        if ($constraint && !array_key_exists($constraint, self::ROUTE_CONSTRAINT_PATTERNS)) {
-            throw new HttpException("Unknown host constraint '$constraint' in label '$label'.");
-        }
-
-        return [
-            'constraint' => $constraint ?: null,
-            'name' => $name,
-            'type' => 'dynamic',
-            'value' => $label,
-        ];
+        return RoutePattern::parseHostLabel($label);
     }
 
     /**
