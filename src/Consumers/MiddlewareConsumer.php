@@ -390,6 +390,9 @@ class MiddlewareConsumer implements ConsumerInterface
       $segmentMeta = $this->parseRouteSegment($routeSegment);
 
       if ($segmentMeta['type'] === 'wildcard') {
+        $wildcardPath = implode('/', array_slice($pathSegments, $index));
+        $params[$paramIndex++] = $wildcardPath;
+        $params['*'] = $wildcardPath;
         return $params;
       }
 

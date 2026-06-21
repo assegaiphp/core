@@ -429,6 +429,9 @@ final class Router
             $segmentMeta = $this->parseRouteSegment($routeSegment);
 
             if ($segmentMeta['type'] === 'wildcard') {
+                $wildcardPath = implode('/', array_slice($pathSegments, $index));
+                $params[$paramIndex++] = $wildcardPath;
+                $params['*'] = $wildcardPath;
                 return $params;
             }
 
@@ -487,7 +490,7 @@ final class Router
      * Supported constrained dynamic syntax uses angle brackets, for example `:id<int>` or `:slug<uuid>`.
      *
      * @param string $segment
-     * @return array{constraint: string|null, name: string|null, type: string, value: string}
+     * @return array{constraint: string|null, name: string|null, type: 'dynamic'|'static'|'wildcard', value: string}
      * @throws HttpException
      */
     private function parseRouteSegment(string $segment): array
@@ -591,24 +594,28 @@ final class Router
         foreach ($patternLabels as $index => $patternLabel) {
             $hostLabel = $hostLabels[$index];
 
-            if ($patternLabel === '*') {
+            $labelMeta = $this->parseHostLabel($patternLabel);
+
+            if ($labelMeta['type'] === 'wildcard') {
                 continue;
             }
 
-            if (str_starts_with($patternLabel, ':')) {
-                $key = substr($patternLabel, 1);
-
-                if ($key === '') {
+            if ($labelMeta['type'] === 'dynamic') {
+                if (
+                    !empty($labelMeta['constraint']) &&
+                    !$this->matchesRouteConstraint($labelMeta['constraint'], $hostLabel)
+                ) {
                     return null;
                 }
 
+                $key = $labelMeta['name'];
                 $params[$paramIndex++] = $hostLabel;
                 $params[$key] = $hostLabel;
-                $specificity += 10;
+                $specificity += empty($labelMeta['constraint']) ? 10 : 20;
                 continue;
             }
 
-            if ($patternLabel !== $hostLabel) {
+            if ($labelMeta['value'] !== $hostLabel) {
                 return null;
             }
 
@@ -618,6 +625,43 @@ final class Router
         return [
             'params' => $params,
             'specificity' => $specificity,
+        ];
+    }
+
+    /**
+     * Parses a host pattern label and returns its matching metadata.
+     *
+     * @param string $label
+     * @return array{constraint: string|null, name: string|null, type: 'dynamic'|'static'|'wildcard', value: string}
+     * @throws HttpException
+     */
+    private function parseHostLabel(string $label): array
+    {
+        if ($label === '*') {
+            return ['constraint' => null, 'name' => null, 'type' => 'wildcard', 'value' => $label];
+        }
+
+        if (!str_starts_with($label, ':')) {
+            return ['constraint' => null, 'name' => null, 'type' => 'static', 'value' => $label];
+        }
+
+        if (!preg_match('/^:(?<name>[A-Za-z_][A-Za-z0-9_]*)(?:<(?<constraint>[A-Za-z][A-Za-z0-9_]*)>)?$/', $label, $matches)) {
+            throw new HttpException(
+                "Invalid constrained host label '$label'. Use ':name' or ':name<constraint>'."
+            );
+        }
+
+        $constraint = $matches['constraint'] ?? null;
+
+        if ($constraint && !array_key_exists($constraint, self::ROUTE_CONSTRAINT_PATTERNS)) {
+            throw new HttpException("Unknown host constraint '$constraint' in label '$label'.");
+        }
+
+        return [
+            'constraint' => $constraint ?: null,
+            'name' => $matches['name'],
+            'type' => 'dynamic',
+            'value' => $label,
         ];
     }
 
@@ -858,10 +902,27 @@ final class Router
                 $this->getRouteConstraintDefinitions($handlerPath),
             ),
             'matched_segments' => count($this->getPathSegments($handlerRoute)),
-            'params' => array_merge($controllerParams ?? [], $handlerParams ?? []),
+            'params' => $this->mergeRouteParams($controllerParams ?? [], $handlerParams ?? []),
             'route_length' => strlen($handlerRoute),
             'specificity' => $this->getRouteSpecificityScore($handlerRoute),
         ];
+    }
+
+    /**
+     * Merges controller and handler route params without letting an empty handler wildcard hide a
+     * wildcard captured by a controller-level route prefix.
+     *
+     * @param array<int|string, string> $controllerParams
+     * @param array<int|string, string> $handlerParams
+     * @return array<int|string, string>
+     */
+    private function mergeRouteParams(array $controllerParams, array $handlerParams): array
+    {
+        if (($handlerParams['*'] ?? null) === '' && array_key_exists('*', $controllerParams)) {
+            unset($handlerParams['*']);
+        }
+
+        return array_merge($controllerParams, $handlerParams);
     }
 
     /**

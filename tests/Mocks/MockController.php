@@ -70,9 +70,9 @@ class WildcardHandlerController
   }
 
   #[Get('*')]
-  public function catchAll(): string
+  public function catchAll(#[Param('*')] string $wildcard): string
   {
-    return 'wildcard-handler';
+    return "wildcard-handler:$wildcard";
   }
 }
 
@@ -371,6 +371,19 @@ class MultiHostReportsController
   }
 }
 
+#[Controller(host: ':vendor_runtime_slug<slug>.runtime.localhost')]
+class RuntimeHostController
+{
+  #[Get('*')]
+  public function handle(
+    #[HostParam('vendor_runtime_slug')] string $vendorRuntimeSlug,
+    #[Param('*')] string $vendorPath,
+  ): string
+  {
+    return "runtime-$vendorRuntimeSlug:$vendorPath";
+  }
+}
+
 #[Controller(path: 'response-metadata')]
 class ResponseMetadataController
 {
@@ -581,6 +594,13 @@ class MismatchedConstraintModule
   ],
 )]
 class HostRoutingAppModule
+{
+}
+
+#[Module(
+  controllers: [RuntimeHostController::class],
+)]
+class RuntimeHostRoutingAppModule
 {
 }
 

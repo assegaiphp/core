@@ -1249,6 +1249,11 @@ class OpenApiGenerator
     $segments = array_values(array_filter(explode('/', trim($routePath, '/')), static fn(string $segment): bool => $segment !== ''));
 
     foreach ($segments as $segment) {
+      if ($segment === '*') {
+        $placeholders['wildcard'] = null;
+        continue;
+      }
+
       if (!preg_match('/^:([A-Za-z_][A-Za-z0-9_-]*)(?:<([^>]+)>)?$/', $segment, $matches)) {
         continue;
       }
