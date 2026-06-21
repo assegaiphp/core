@@ -612,16 +612,17 @@ class OpenApiGenerator
     $labels = explode('.', $hostPattern);
 
     foreach ($labels as $index => $label) {
-      $placeholderName = $this->getDynamicHostPlaceholderName($label);
+      $dynamicLabel = $this->getDynamicHostLabel($label);
 
-      if ($placeholderName === null) {
+      if ($dynamicLabel === null) {
         continue;
       }
 
+      $placeholderName = $dynamicLabel['name'];
       $variables[$placeholderName] = [
         'default' => $placeholderName,
       ];
-      $labels[$index] = '{' . $placeholderName . '}';
+      $labels[$index] = '{' . $placeholderName . '}' . $dynamicLabel['port'];
     }
 
     return [
@@ -630,23 +631,39 @@ class OpenApiGenerator
     ];
   }
 
-  private function getDynamicHostPlaceholderName(string $label): ?string
+  /**
+   * @return array{name: string, port: string}|null
+   */
+  private function getDynamicHostLabel(string $label): ?array
   {
     if (!str_starts_with($label, ':') || strlen($label) === 1) {
       return null;
     }
 
+    $port = '';
+
+    if (preg_match('/^(?<label>.+)(?<port>:\d+)$/', $label, $matches)) {
+      $label = $matches['label'];
+      $port = $matches['port'];
+    }
+
     $placeholder = substr($label, 1);
 
     if (preg_match('/^(?<name>[^<>]+)<[A-Za-z][A-Za-z0-9_]*>$/', $placeholder, $matches)) {
-      return $matches['name'];
+      return [
+        'name' => $matches['name'],
+        'port' => $port,
+      ];
     }
 
     if (str_contains($placeholder, '<') || str_contains($placeholder, '>')) {
       return null;
     }
 
-    return $placeholder;
+    return [
+      'name' => $placeholder,
+      'port' => $port,
+    ];
   }
 
   /**

@@ -110,6 +110,16 @@ class ApiDocsLegacyHostController
   }
 }
 
+#[Controller(path: 'port-host', host: [':tenant:8080', 'api.:tenant:8080', 'api.:tenant<slug>:8081'])]
+class ApiDocsPortHostController
+{
+  #[Get('status')]
+  public function status(#[HostParam('tenant')] string $tenant): array
+  {
+    return ['tenant' => $tenant];
+  }
+}
+
 #[Module(
   controllers: [
     ApiDocsPostsController::class,
@@ -117,6 +127,7 @@ class ApiDocsLegacyHostController
     ApiDocsNodesController::class,
     ApiDocsRuntimeController::class,
     ApiDocsLegacyHostController::class,
+    ApiDocsPortHostController::class,
   ],
 )]
 class ApiDocsAppModule

@@ -180,6 +180,7 @@ class ApiDocsCest
     $document = $generator->generate(ApiDocsAppModule::class);
     $servers = $document['paths']['/runtime/status']['get']['servers'] ?? [];
     $legacyServers = $document['paths']['/legacy-host/status']['get']['servers'] ?? [];
+    $portServers = $document['paths']['/port-host/status']['get']['servers'] ?? [];
 
     $I->assertSame('http://{vendor_runtime_slug}.runtime.localhost', $servers[0]['url'] ?? null);
     $I->assertArrayHasKey('vendor_runtime_slug', $servers[0]['variables'] ?? []);
@@ -187,6 +188,11 @@ class ApiDocsCest
     $I->assertSame('http://{tenant-id}.example.com', $legacyServers[0]['url'] ?? null);
     $I->assertArrayHasKey('tenant-id', $legacyServers[0]['variables'] ?? []);
     $I->assertSame('tenant-id', $legacyServers[0]['variables']['tenant-id']['default'] ?? null);
+    $I->assertSame('http://{tenant}:8080', $portServers[0]['url'] ?? null);
+    $I->assertSame('http://api.{tenant}:8080', $portServers[1]['url'] ?? null);
+    $I->assertSame('http://api.{tenant}:8081', $portServers[2]['url'] ?? null);
+    $I->assertArrayHasKey('tenant', $portServers[0]['variables'] ?? []);
+    $I->assertSame('tenant', $portServers[0]['variables']['tenant']['default'] ?? null);
   }
 
   public function testSwaggerUiRendererTargetsTheGeneratedSpec(UnitTester $I): void
