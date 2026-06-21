@@ -3,6 +3,7 @@
 namespace Mocks;
 
 use Assegai\Core\Attributes\Controller;
+use Assegai\Core\Attributes\HostParam;
 use Assegai\Core\Attributes\Http\Body;
 use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\Http\Post;
@@ -89,8 +90,18 @@ class ApiDocsNodesController
   }
 }
 
+#[Controller(path: 'runtime', host: ':vendor_runtime_slug<slug>.runtime.localhost')]
+class ApiDocsRuntimeController
+{
+  #[Get('status')]
+  public function status(#[HostParam('vendor_runtime_slug')] string $vendorRuntimeSlug): array
+  {
+    return ['vendor' => $vendorRuntimeSlug];
+  }
+}
+
 #[Module(
-  controllers: [ApiDocsPostsController::class, ApiDocsPagesController::class, ApiDocsNodesController::class],
+  controllers: [ApiDocsPostsController::class, ApiDocsPagesController::class, ApiDocsNodesController::class, ApiDocsRuntimeController::class],
 )]
 class ApiDocsAppModule
 {

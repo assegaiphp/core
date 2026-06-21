@@ -18,6 +18,7 @@ use Assegai\Core\Http\Responses\Responders\JsonResponder;
 use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\ModuleManager;
 use Mocks\ApiDocsAppModule;
+use ReflectionClass;
 use ReflectionProperty;
 use Tests\Support\UnitTester;
 
@@ -162,6 +163,28 @@ class ApiDocsCest
     $I->assertArrayNotHasKey('View', $document['components']['schemas'] ?? []);
   }
 
+  public function testConstrainedHostPatternsRenderValidOpenApiServerUrls(UnitTester $I): void
+  {
+    $this->resetSingleton(ModuleManager::class);
+    $this->resetSingleton(ControllerManager::class);
+    $this->resetRequestSingleton();
+
+    $generator = new OpenApiGenerator(
+      ControllerManager::getInstance(),
+      ModuleManager::getInstance(),
+      Request::getInstance(),
+      new ComposerConfig(),
+      new ProjectConfig(),
+    );
+
+    $document = $generator->generate(ApiDocsAppModule::class);
+    $servers = $document['paths']['/runtime/status']['get']['servers'] ?? [];
+
+    $I->assertSame('http://{vendor_runtime_slug}.runtime.localhost', $servers[0]['url'] ?? null);
+    $I->assertArrayHasKey('vendor_runtime_slug', $servers[0]['variables'] ?? []);
+    $I->assertSame('vendor_runtime_slug', $servers[0]['variables']['vendor_runtime_slug']['default'] ?? null);
+  }
+
   public function testSwaggerUiRendererTargetsTheGeneratedSpec(UnitTester $I): void
   {
     $renderer = new SwaggerUiRenderer();
@@ -270,7 +293,13 @@ class ApiDocsCest
 
   private function resetSingleton(string $className): void
   {
-    $reflection = new ReflectionProperty($className, 'instance');
-    $reflection->setValue(null, null);
+    $reflection = new ReflectionClass($className);
+
+    if (!$reflection->hasProperty('instance')) {
+      return;
+    }
+
+    $property = $reflection->getProperty('instance');
+    $property->setValue(null, null);
   }
 }

@@ -599,7 +599,7 @@ class OpenApiGenerator
   {
     $variables = [];
     $urlHost = preg_replace_callback(
-      '/:([A-Za-z_][A-Za-z0-9_]*)/',
+      '/:([A-Za-z_][A-Za-z0-9_]*)(?:<[A-Za-z][A-Za-z0-9_]*>)?/',
       static function (array $matches) use (&$variables): string {
         $variables[$matches[1]] = [
           'default' => $matches[1],
