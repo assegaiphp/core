@@ -47,6 +47,12 @@ class MockController
     return "This action returns a #$id users";
   }
 
+  #[Get('legacy/:tenant-id')]
+  public function findLegacyTenant(#[Param('tenant-id')] string $tenantId): string
+  {
+    return "legacy-tenant-$tenantId";
+  }
+
   #[Patch(':id')]
   public function update(int $id)
   {
@@ -351,6 +357,16 @@ class TenantDashboardController
   }
 }
 
+#[Controller(path: 'legacy-dashboard', host: ':tenant-id.example.com')]
+class LegacyTenantDashboardController
+{
+  #[Get]
+  public function index(#[HostParam('tenant-id')] string $tenantId): string
+  {
+    return "legacy-tenant-$tenantId";
+  }
+}
+
 #[Controller(path: 'dashboard', host: 'admin.example.com')]
 class AdminDashboardController
 {
@@ -589,6 +605,7 @@ class MismatchedConstraintModule
   controllers: [
     PublicDashboardController::class,
     TenantDashboardController::class,
+    LegacyTenantDashboardController::class,
     AdminDashboardController::class,
     MultiHostReportsController::class,
   ],

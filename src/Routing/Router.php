@@ -503,13 +503,24 @@ final class Router
             return ['constraint' => null, 'name' => null, 'type' => 'static', 'value' => $segment];
         }
 
-        if (!preg_match('/^:(?<name>[A-Za-z_][A-Za-z0-9_]*)(?:<(?<constraint>[A-Za-z][A-Za-z0-9_]*)>)?$/', $segment, $matches)) {
+        $placeholder = substr($segment, 1);
+        if ($placeholder === '') {
             throw new HttpException(
                 "Invalid constrained route segment '$segment'. Use ':name' or ':name<constraint>'."
             );
         }
 
-        $constraint = $matches['constraint'] ?? null;
+        if (preg_match('/^(?<name>[^<>]+)<(?<constraint>[A-Za-z][A-Za-z0-9_]*)>$/', $placeholder, $matches)) {
+            $name = $matches['name'];
+            $constraint = $matches['constraint'];
+        } elseif (str_contains($placeholder, '<') || str_contains($placeholder, '>')) {
+            throw new HttpException(
+                "Invalid constrained route segment '$segment'. Use ':name' or ':name<constraint>'."
+            );
+        } else {
+            $name = $placeholder;
+            $constraint = null;
+        }
 
         if ($constraint && !array_key_exists($constraint, self::ROUTE_CONSTRAINT_PATTERNS)) {
             throw new HttpException("Unknown route constraint '$constraint' in segment '$segment'.");
@@ -517,7 +528,7 @@ final class Router
 
         return [
             'constraint' => $constraint ?: null,
-            'name' => $matches['name'],
+            'name' => $name,
             'type' => 'dynamic',
             'value' => $segment,
         ];
@@ -645,13 +656,24 @@ final class Router
             return ['constraint' => null, 'name' => null, 'type' => 'static', 'value' => $label];
         }
 
-        if (!preg_match('/^:(?<name>[A-Za-z_][A-Za-z0-9_]*)(?:<(?<constraint>[A-Za-z][A-Za-z0-9_]*)>)?$/', $label, $matches)) {
+        $placeholder = substr($label, 1);
+        if ($placeholder === '') {
             throw new HttpException(
                 "Invalid constrained host label '$label'. Use ':name' or ':name<constraint>'."
             );
         }
 
-        $constraint = $matches['constraint'] ?? null;
+        if (preg_match('/^(?<name>[^<>]+)<(?<constraint>[A-Za-z][A-Za-z0-9_]*)>$/', $placeholder, $matches)) {
+            $name = $matches['name'];
+            $constraint = $matches['constraint'];
+        } elseif (str_contains($placeholder, '<') || str_contains($placeholder, '>')) {
+            throw new HttpException(
+                "Invalid constrained host label '$label'. Use ':name' or ':name<constraint>'."
+            );
+        } else {
+            $name = $placeholder;
+            $constraint = null;
+        }
 
         if ($constraint && !array_key_exists($constraint, self::ROUTE_CONSTRAINT_PATTERNS)) {
             throw new HttpException("Unknown host constraint '$constraint' in label '$label'.");
@@ -659,7 +681,7 @@ final class Router
 
         return [
             'constraint' => $constraint ?: null,
-            'name' => $matches['name'],
+            'name' => $name,
             'type' => 'dynamic',
             'value' => $label,
         ];

@@ -581,7 +581,7 @@ class OpenApiGenerator
     $servers = [];
 
     foreach ($hosts as $host) {
-      if (str_contains($host, ':')) {
+      if ($this->hasDynamicHostPlaceholder($host)) {
         $servers[] = $this->buildServerForDynamicHost($scheme, $host);
         continue;
       }
@@ -592,28 +592,61 @@ class OpenApiGenerator
     return $servers;
   }
 
+  private function hasDynamicHostPlaceholder(string $host): bool
+  {
+    foreach (explode('.', $host) as $label) {
+      if (str_starts_with($label, ':') && strlen($label) > 1) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /**
    * @return array<string, mixed>
    */
   private function buildServerForDynamicHost(string $scheme, string $hostPattern): array
   {
     $variables = [];
-    $urlHost = preg_replace_callback(
-      '/:([A-Za-z_][A-Za-z0-9_]*)(?:<[A-Za-z][A-Za-z0-9_]*>)?/',
-      static function (array $matches) use (&$variables): string {
-        $variables[$matches[1]] = [
-          'default' => $matches[1],
-        ];
+    $labels = explode('.', $hostPattern);
 
-        return '{' . $matches[1] . '}';
-      },
-      $hostPattern
-    );
+    foreach ($labels as $index => $label) {
+      $placeholderName = $this->getDynamicHostPlaceholderName($label);
+
+      if ($placeholderName === null) {
+        continue;
+      }
+
+      $variables[$placeholderName] = [
+        'default' => $placeholderName,
+      ];
+      $labels[$index] = '{' . $placeholderName . '}';
+    }
 
     return [
-      'url' => sprintf('%s://%s', $scheme, $urlHost),
+      'url' => sprintf('%s://%s', $scheme, implode('.', $labels)),
       'variables' => $variables,
     ];
+  }
+
+  private function getDynamicHostPlaceholderName(string $label): ?string
+  {
+    if (!str_starts_with($label, ':') || strlen($label) === 1) {
+      return null;
+    }
+
+    $placeholder = substr($label, 1);
+
+    if (preg_match('/^(?<name>[^<>]+)<[A-Za-z][A-Za-z0-9_]*>$/', $placeholder, $matches)) {
+      return $matches['name'];
+    }
+
+    if (str_contains($placeholder, '<') || str_contains($placeholder, '>')) {
+      return null;
+    }
+
+    return $placeholder;
   }
 
   /**

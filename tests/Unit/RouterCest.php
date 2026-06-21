@@ -27,6 +27,7 @@ use Mocks\MismatchedConstraintAppModule;
 use Mocks\ExactWildcardController;
 use Mocks\HostRoutingAppModule;
 use Mocks\ImportOnlyRootAppModule;
+use Mocks\LegacyTenantDashboardController;
 use Mocks\NestedApiController;
 use Mocks\NestedAppModule;
 use Mocks\NestedFeaturesController;
@@ -205,6 +206,21 @@ class RouterCest
     } catch (NotFoundException $exception) {
       $I->assertStringContainsString('/test/12/extra', $exception->getMessage());
     }
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testLegacyHyphenatedRouteParameterNamesStillWork(UnitTester $I): void
+  {
+    $result = $this->dispatch('/test/legacy/acme', LegacyAppModule::class);
+
+    $I->assertSame('legacy-tenant-acme', $result['response']->getBody());
+    $I->assertSame('acme', $result['request']->getParams()['tenant-id']);
   }
 
   /**
@@ -561,6 +577,22 @@ class RouterCest
 
     $I->assertSame('tenant-acme', $result['response']->getBody());
     $I->assertSame('acme', $result['request']->getHostParams()['account']);
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testDynamicHostControllersPreserveLegacyHyphenatedHostParamNames(UnitTester $I): void
+  {
+    $result = $this->dispatch('/legacy-dashboard', HostRoutingAppModule::class, 'acme.example.com');
+
+    $I->assertInstanceOf(LegacyTenantDashboardController::class, $result['controller']);
+    $I->assertSame('legacy-tenant-acme', $result['response']->getBody());
+    $I->assertSame('acme', $result['request']->getHostParams()['tenant-id']);
   }
 
   /**

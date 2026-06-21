@@ -100,8 +100,24 @@ class ApiDocsRuntimeController
   }
 }
 
+#[Controller(path: 'legacy-host', host: ':tenant-id.example.com')]
+class ApiDocsLegacyHostController
+{
+  #[Get('status')]
+  public function status(#[HostParam('tenant-id')] string $tenantId): array
+  {
+    return ['tenant' => $tenantId];
+  }
+}
+
 #[Module(
-  controllers: [ApiDocsPostsController::class, ApiDocsPagesController::class, ApiDocsNodesController::class, ApiDocsRuntimeController::class],
+  controllers: [
+    ApiDocsPostsController::class,
+    ApiDocsPagesController::class,
+    ApiDocsNodesController::class,
+    ApiDocsRuntimeController::class,
+    ApiDocsLegacyHostController::class,
+  ],
 )]
 class ApiDocsAppModule
 {
