@@ -570,13 +570,11 @@ final class Injector implements ITokenStoreOwner, IContainer
       return;
     }
 
-    $ownerModule = $moduleManager->getProviderOwnerModule($dependencyId) ?? 'an inaccessible module';
-
     throw new ContainerException(sprintf(
-      "%s cannot access %s because %s does not export it.",
+      "%s cannot access %s: %s",
       $consumerId,
       $dependencyId,
-      $ownerModule,
+      $moduleManager->describeProviderAccessFailure($consumerModule, $dependencyId),
     ));
   }
 

@@ -27,7 +27,13 @@ use Mocks\ExportVisibilityAppModule;
 use Mocks\FrameworkAwareAppModule;
 use Mocks\FrameworkAwareContractsService;
 use Mocks\FrameworkAwareService;
+use Mocks\LibraryCatalogModule;
+use Mocks\LibraryFeatureAppModule;
+use Mocks\LibraryFeatureModule;
+use Mocks\LibraryReaderModule;
+use Mocks\LibraryReaderService;
 use Mocks\ParentExportVisibilityAppModule;
+use Mocks\ParentPrivateModule;
 use Mocks\ParentPrivateVisibilityAppModule;
 use Mocks\ProviderOwnershipOrderingAppModule;
 use Mocks\RequestCapturingService;
@@ -368,10 +374,33 @@ class InjectorCest
     $app = AssegaiFactory::create(ParentPrivateVisibilityAppModule::class);
     $app->boot();
 
-    $I->expectThrowable(
-      \Assegai\Core\Exceptions\Container\ResolveException::class,
-      fn() => Injector::getInstance()->resolve(ChildUsesParentPrivateService::class),
-    );
+    try {
+      Injector::getInstance()->resolve(ChildUsesParentPrivateService::class);
+      $I->fail('Expected private parent provider resolution to fail.');
+    } catch (\Assegai\Core\Exceptions\Container\ResolveException $exception) {
+      $I->assertStringContainsString(ParentPrivateModule::class, $exception->getMessage());
+      $I->assertStringContainsString('declares', $exception->getMessage());
+      $I->assertStringContainsString('does not export', $exception->getMessage());
+    }
+  }
+
+  public function testExportedSiblingProvidersReportMissingParentReExport(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(LibraryFeatureAppModule::class);
+    $app->boot();
+
+    try {
+      Injector::getInstance()->resolve(LibraryReaderService::class);
+      $I->fail('Expected sibling provider resolution without a parent re-export to fail.');
+    } catch (\Assegai\Core\Exceptions\Container\ResolveException $exception) {
+      $I->assertStringContainsString(LibraryCatalogModule::class, $exception->getMessage());
+      $I->assertStringContainsString(LibraryReaderModule::class, $exception->getMessage());
+      $I->assertStringContainsString(LibraryFeatureModule::class, $exception->getMessage());
+      $I->assertStringContainsString('exports', $exception->getMessage());
+      $I->assertStringContainsString('not visible', $exception->getMessage());
+      $I->assertStringContainsString('Re-export', $exception->getMessage());
+      $I->assertStringNotContainsString('does not export it', $exception->getMessage());
+    }
   }
 
   public function testSharedChildModulesCannotInjectParentExportsFromOnlyOneBranch(UnitTester $I): void
