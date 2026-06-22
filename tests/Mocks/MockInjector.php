@@ -442,6 +442,68 @@ class SharedChildMixedParentsReversedAppModule
 {
 }
 
+#[Injectable]
+class LibraryCatalogService
+{
+  public string $value = 'catalog';
+}
+
+#[Module(
+  providers: [
+    LibraryCatalogService::class,
+  ],
+  controllers: [],
+  imports: [],
+  exports: [
+    LibraryCatalogService::class,
+  ],
+)]
+class LibraryCatalogModule
+{
+}
+
+#[Injectable(options: ['scope' => Scope::TRANSIENT, 'durable' => false])]
+class LibraryReaderService
+{
+  public function __construct(
+    public LibraryCatalogService $catalogService,
+  ) {
+  }
+}
+
+#[Module(
+  providers: [
+    LibraryReaderService::class,
+  ],
+  controllers: [],
+  imports: [],
+)]
+class LibraryReaderModule
+{
+}
+
+#[Module(
+  providers: [],
+  controllers: [],
+  imports: [
+    LibraryCatalogModule::class,
+    LibraryReaderModule::class,
+  ],
+)]
+class LibraryFeatureModule
+{
+}
+
+#[Module(
+  providers: [],
+  controllers: [],
+  imports: [
+    LibraryFeatureModule::class,
+  ],
+)]
+class LibraryFeatureAppModule
+{
+}
 #[Module(
   providers: [
     FrameworkAwareService::class,

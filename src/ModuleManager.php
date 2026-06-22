@@ -690,10 +690,62 @@ class ModuleManager implements SingletonInterface
   }
 
   /**
+   * Describes why a module provider access check failed.
+   *
+   * @param string $consumerModuleClass
+   * @param string $providerClass
+   * @return string
+   */
+  public function describeProviderAccessFailure(string $consumerModuleClass, string $providerClass): string
+  {
+    $ownerModule = $this->getProviderOwnerModule($providerClass);
+
+    if (null === $ownerModule) {
+      return sprintf(
+        "%s is not registered as a provider in the active module graph.",
+        $providerClass,
+      );
+    }
+
+    if (!$this->moduleExportsProvider($ownerModule, $providerClass)) {
+      return sprintf(
+        "%s declares %s but does not export it.",
+        $ownerModule,
+        $providerClass,
+      );
+    }
+
+    $hiddenParentBranches = [];
+
+    foreach ($this->getParentModules($consumerModuleClass) as $parentModule) {
+      if (!$this->moduleOrAncestorBranchesExportProvider($parentModule, $providerClass)) {
+        $hiddenParentBranches[] = $parentModule;
+      }
+    }
+
+    if ([] !== $hiddenParentBranches) {
+      return sprintf(
+        "%s exports %s, but it is not visible to %s through every parent branch. Re-export it from %s or one of its ancestors.",
+        $ownerModule,
+        $providerClass,
+        $consumerModuleClass,
+        implode(', ', $hiddenParentBranches),
+      );
+    }
+
+    return sprintf(
+      "%s exports %s, but %s does not import a module that exports it and no ancestor module re-exports it.",
+      $ownerModule,
+      $providerClass,
+      $consumerModuleClass,
+    );
+  }
+
+  /**
    * Resolves whether the consumer module can access the given provider.
    *
-   * @param class-string $consumerModuleClass
-   * @param class-string $providerClass
+   * @param string $consumerModuleClass
+   * @param string $providerClass
    * @return bool
    */
   private function resolveModuleProviderAccess(string $consumerModuleClass, string $providerClass): bool
