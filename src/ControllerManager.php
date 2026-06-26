@@ -41,7 +41,11 @@ class ControllerManager
    */
   protected array $moduleBranchPrefixMap = [];
   /**
-   * @var array<class-string, array{module: class-string, local_path: string, resolved_path: string, hosts: array<int, string>}>
+   * @var array<string, array<int, array<int, string>>> A map of inherited host constraint groups keyed by module class.
+   */
+  protected array $moduleBranchHostGroupsMap = [];
+  /**
+   * @var array<string, array{module: string, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>}>
    */
   protected array $controllerRouteMetadata = [];
 
@@ -122,6 +126,17 @@ class ControllerManager
   }
 
   /**
+   * Returns the precomputed host constraint groups inherited by the given module branch.
+   *
+   * @param string $moduleClass
+   * @return array<int, array<int, string>>
+   */
+  public function getModuleBranchHostGroups(string $moduleClass): array
+  {
+    return $this->moduleBranchHostGroupsMap[$moduleClass] ?? [];
+  }
+
+  /**
    * Returns the owning module class for the given controller.
    *
    * @param string $controllerClass
@@ -152,6 +167,17 @@ class ControllerManager
   public function getControllerHosts(string $controllerClass): array
   {
     return $this->controllerRouteMetadata[$controllerClass]['hosts'] ?? [];
+  }
+
+  /**
+   * Returns the precomputed effective host constraint groups for the given controller.
+   *
+   * @param string $controllerClass
+   * @return array<int, array<int, string>>
+   */
+  public function getControllerHostGroups(string $controllerClass): array
+  {
+    return $this->controllerRouteMetadata[$controllerClass]['host_groups'] ?? [];
   }
 
   /**
@@ -216,6 +242,7 @@ class ControllerManager
     $this->controllerPathTokenIdMap = [];
     $this->moduleControllerTokensMap = [];
     $this->moduleBranchPrefixMap = [];
+    $this->moduleBranchHostGroupsMap = [];
     $this->controllerRouteMetadata = [];
 
     if (empty($moduleTokensList)) {
@@ -226,6 +253,7 @@ class ControllerManager
     $this->buildModuleControllerTokens(
       moduleClass: $this->moduleManager->getRootModuleClass(),
       inheritedPrefix: '/',
+      inheritedHostGroups: [],
       visitedModules: $visitedModules,
     );
 
@@ -259,11 +287,12 @@ class ControllerManager
    *
    * @param string $moduleClass
    * @param string $inheritedPrefix
+   * @param array<int, array<int, string>> $inheritedHostGroups
    * @param array<string, bool> $visitedModules
    * @return void
    * @throws EntryNotFoundException
    */
-  private function buildModuleControllerTokens(string $moduleClass, string $inheritedPrefix, array &$visitedModules): void
+  private function buildModuleControllerTokens(string $moduleClass, string $inheritedPrefix, array $inheritedHostGroups, array &$visitedModules): void
   {
     if (!isset($this->moduleManager->getModuleTokens()[$moduleClass]) || isset($visitedModules[$moduleClass])) {
       return;
@@ -277,6 +306,7 @@ class ControllerManager
     $controllers = $args['controllers'] ?? [];
     $moduleControllers = [];
     $moduleBranchPrefix = $this->normalizePath($inheritedPrefix);
+    $moduleBranchHostGroups = $inheritedHostGroups;
     $isFirstController = true;
 
     foreach ($controllers as $tokenId) {
@@ -285,7 +315,11 @@ class ControllerManager
       }
 
       $localPath = $this->getControllerPath($controllerReflection);
+      $localHosts = $this->getControllerHostsFromReflection($controllerReflection);
       $resolvedPath = $this->combinePaths($inheritedPrefix, $localPath);
+      $effectiveHostGroups = $isFirstController
+        ? $this->mergeHostGroups($inheritedHostGroups, $localHosts)
+        : $this->mergeHostGroups($moduleBranchHostGroups, $localHosts);
 
       $this->controllerTokensList[$tokenId] = $controllerReflection;
       $this->controllerPathTokenIdMap[$tokenId] = $resolvedPath;
@@ -293,27 +327,92 @@ class ControllerManager
         'module' => $moduleClass,
         'local_path' => $localPath,
         'resolved_path' => $resolvedPath,
-        'hosts' => $this->getControllerHostsFromReflection($controllerReflection),
+        'hosts' => $localHosts,
+        'host_groups' => $effectiveHostGroups,
       ];
 
       $moduleControllers[$tokenId] = $controllerReflection;
 
       if ($isFirstController) {
         $moduleBranchPrefix = $resolvedPath;
+        if (!empty($localHosts)) {
+          $moduleBranchHostGroups = $effectiveHostGroups;
+        }
         $isFirstController = false;
       }
     }
 
     $this->moduleControllerTokensMap[$moduleClass] = $moduleControllers;
     $this->moduleBranchPrefixMap[$moduleClass] = $moduleBranchPrefix;
+    $this->moduleBranchHostGroupsMap[$moduleClass] = $moduleBranchHostGroups;
 
     foreach ($this->moduleManager->getImportedModules($moduleClass) as $importedModuleClass) {
       $this->buildModuleControllerTokens(
         moduleClass: $importedModuleClass,
         inheritedPrefix: $moduleBranchPrefix,
+        inheritedHostGroups: $moduleBranchHostGroups,
         visitedModules: $visitedModules,
       );
     }
+  }
+
+  /**
+   * Merges inherited branch host constraints with local controller host alternatives.
+   *
+   * @param array<int, array<int, string>> $inheritedHostGroups
+   * @param array<int, string> $localHosts
+   * @return array<int, array<int, string>>
+   */
+  private function mergeHostGroups(array $inheritedHostGroups, array $localHosts): array
+  {
+    $localHosts = array_values(array_unique(array_filter($localHosts, static fn(string $host): bool => $host !== '')));
+
+    if (empty($localHosts)) {
+      return $this->dedupeHostGroups($inheritedHostGroups);
+    }
+
+    if (empty($inheritedHostGroups)) {
+      return array_map(static fn(string $host): array => [$host], $localHosts);
+    }
+
+    $mergedGroups = [];
+
+    foreach ($inheritedHostGroups as $hostGroup) {
+      foreach ($localHosts as $localHost) {
+        $mergedGroups[] = array_values(array_unique([...$hostGroup, $localHost]));
+      }
+    }
+
+    return $this->dedupeHostGroups($mergedGroups);
+  }
+
+  /**
+   * @param array<int, array<int, string>> $hostGroups
+   * @return array<int, array<int, string>>
+   */
+  private function dedupeHostGroups(array $hostGroups): array
+  {
+    $uniqueGroups = [];
+    $seen = [];
+
+    foreach ($hostGroups as $hostGroup) {
+      $hostGroup = array_values(array_unique(array_filter($hostGroup, static fn(string $host): bool => $host !== '')));
+
+      if (empty($hostGroup)) {
+        continue;
+      }
+
+      $key = implode("\n", $hostGroup);
+
+      if (isset($seen[$key])) {
+        continue;
+      }
+
+      $seen[$key] = true;
+      $uniqueGroups[] = $hostGroup;
+    }
+
+    return $uniqueGroups;
   }
 
   /**

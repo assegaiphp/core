@@ -510,9 +510,24 @@ final class Router
      */
     private function getControllerHostMatchData(ReflectionClass $reflectionController, Request $request): ?array
     {
-        $hosts = $this->controllerManager->getControllerHosts($reflectionController->getName());
+        return $this->matchHostGroups(
+            $this->controllerManager->getControllerHostGroups($reflectionController->getName()),
+            $request,
+        );
+    }
 
-        if (empty($hosts)) {
+    /**
+     * Matches precomputed host constraint groups against the current request host.
+     *
+     * Each group is an AND of host patterns; groups themselves are OR alternatives.
+     *
+     * @param array<int, array<int, string>> $hostGroups
+     * @param Request $request
+     * @return array{params: array<int|string, string>, specificity: int}|null
+     */
+    private function matchHostGroups(array $hostGroups, Request $request): ?array
+    {
+        if (empty($hostGroups)) {
             return [
                 'params' => [],
                 'specificity' => 0,
@@ -522,12 +537,31 @@ final class Router
         $bestMatch = null;
         $requestHost = $request->getHostName();
 
-        foreach ($hosts as $hostPattern) {
-            $match = $this->matchHostPattern($hostPattern, $requestHost);
+        foreach ($hostGroups as $hostGroup) {
+            $groupParams = [];
+            $groupSpecificity = 0;
+            $groupMatched = true;
 
-            if (is_null($match)) {
+            foreach ($hostGroup as $hostPattern) {
+                $match = $this->matchHostPattern($hostPattern, $requestHost);
+
+                if (is_null($match)) {
+                    $groupMatched = false;
+                    break;
+                }
+
+                $groupParams = array_merge($groupParams, $match['params']);
+                $groupSpecificity += $match['specificity'];
+            }
+
+            if (!$groupMatched) {
                 continue;
             }
+
+            $match = [
+                'params' => $groupParams,
+                'specificity' => $groupSpecificity,
+            ];
 
             if (is_null($bestMatch) || $match['specificity'] > $bestMatch['specificity']) {
                 $bestMatch = $match;
@@ -738,11 +772,20 @@ final class Router
      */
     private function requestMatchesModuleBranch(Request $request, string $moduleClass): bool
     {
-        return !is_null(
+        if (is_null(
             $this->matchRoutePath(
                 route: $this->controllerManager->getModuleBranchPrefix($moduleClass),
                 path: $request->getPath(),
                 allowPartial: true,
+            )
+        )) {
+            return false;
+        }
+
+        return !is_null(
+            $this->matchHostGroups(
+                $this->controllerManager->getModuleBranchHostGroups($moduleClass),
+                $request,
             )
         );
     }

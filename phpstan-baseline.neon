@@ -421,10 +421,6 @@ parameters:
 			count: 1
 			path: src/ControllerManager.php
 
-		-
-			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$controllerRouteMetadata \\(array\\<class\\-string, array\\{module\\: class\\-string, local_path\\: string, resolved_path\\: string, hosts\\: array\\<int, string\\>\\}\\>\\) does not accept non\\-empty\\-array\\<string, array\\{module\\: string, local_path\\: string, resolved_path\\: string, hosts\\: array\\<int, string\\>\\}\\>\\.$#"
-			count: 1
-			path: src/ControllerManager.php
 
 		-
 			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$controllerTokensList with generic class ReflectionClass does not specify its types\\: T$#"

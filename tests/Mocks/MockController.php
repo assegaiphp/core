@@ -400,6 +400,76 @@ class RuntimeHostController
   }
 }
 
+#[Controller(path: '/', host: ['console.localhost', 'admin.localhost'])]
+class HostScopedConsoleController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'host-scoped-console';
+  }
+}
+
+#[Controller(path: 'dashboard')]
+class HostScopedDashboardController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'host-scoped-dashboard';
+  }
+}
+
+#[Controller(path: 'help')]
+class HostScopedHelpController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'host-scoped-help';
+  }
+}
+
+#[Module(
+  controllers: [HostScopedHelpController::class],
+)]
+class HostScopedHelpModule
+{
+}
+
+#[Module(
+  controllers: [HostScopedDashboardController::class],
+)]
+class HostScopedDashboardModule
+{
+}
+
+#[Module(
+  controllers: [HostScopedConsoleController::class],
+  imports: [HostScopedDashboardModule::class, HostScopedHelpModule::class],
+)]
+class HostScopedConsoleModule
+{
+}
+
+#[Controller(path: '')]
+class HostScopedAppController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'host-scoped-app';
+  }
+}
+
+#[Module(
+  controllers: [HostScopedAppController::class],
+  imports: [HostScopedConsoleModule::class],
+)]
+class HostScopedAppModule
+{
+}
+
 #[Controller(path: 'response-metadata')]
 class ResponseMetadataController
 {
