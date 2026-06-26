@@ -773,12 +773,15 @@ final class Router
                 try {
                     $dependencies[] = $this->injector->resolveForConsumer($reflectionController->getName(), $param->getType()->getName());
                 } catch (Exception $exception) {
-                    throw new ContainerException(sprintf(
-                        'Failed to resolve %s for controller %s: %s',
-                        $param->getType()?->getName() ?? '$unknown',
-                        $reflectionController->getName(),
-                        $exception->getMessage(),
-                    ));
+                    throw new ContainerException(
+                        sprintf(
+                            'Failed to resolve %s for controller %s: %s',
+                            $param->getType()?->getName() ?? '$unknown',
+                            $reflectionController->getName(),
+                            $exception->getMessage(),
+                        ),
+                        previous: $exception,
+                    );
                 }
             }
         }

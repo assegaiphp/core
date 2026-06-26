@@ -109,7 +109,7 @@ class TypeManager
       try {
         return new DateTime($value);
       } catch (Exception $e) {
-        throw new HttpException($e->getMessage(), HttpStatus::BadRequest());
+        throw new HttpException($e->getMessage(), HttpStatus::BadRequest(), previous: $e);
       }
     } elseif (enum_exists($enum = $propertyReflectionType)) {
       $reflectionEnum = new ReflectionEnum($enum);

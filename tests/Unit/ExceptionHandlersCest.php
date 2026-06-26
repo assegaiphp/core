@@ -87,6 +87,48 @@ class ExceptionHandlersCest
     $I->assertSame('json', $handler->exposeResponseMode());
   }
 
+  public function testWhoopsErrorHandlerLogsRuntimeErrorsWithStackTrace(UnitTester $I): void
+  {
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $records = [];
+    $logger = $this->createRecordingLogger($records);
+
+    $handler = new class($logger) extends WhoopsErrorHandler {
+      public array $emissions = [];
+
+      public function __construct(LoggerInterface $logger)
+      {
+        parent::__construct($logger);
+      }
+
+      protected function isCliContext(): bool
+      {
+        return false;
+      }
+
+      protected function emitErrorResponse(string $body, ContentType $contentType, int $statusCode): void
+      {
+        $this->emissions[] = [
+          'body' => $body,
+          'status' => $statusCode,
+          'content_type' => $contentType->value,
+        ];
+      }
+    };
+
+    $handler->handleError(new RuntimeException('Runtime failure'));
+
+    $I->assertCount(1, $handler->emissions);
+    $I->assertSame(500, $handler->emissions[0]['status']);
+    $I->assertCount(1, $records);
+    $I->assertSame('error', $records[0]['level']);
+    $I->assertStringContainsString('Application frame:', $records[0]['message']);
+    $I->assertStringContainsString('ExceptionHandlersCest.php', $records[0]['message']);
+    $I->assertStringContainsString(RuntimeException::class, $records[0]['message']);
+    $I->assertStringContainsString('Runtime failure', $records[0]['message']);
+    $I->assertStringContainsString('Stack trace:', $records[0]['message']);
+  }
+
   public function testWhoopsExceptionHandlerAlsoChoosesJsonForNonGetRequests(UnitTester $I): void
   {
     $_SERVER['REQUEST_METHOD'] = 'POST';
@@ -256,7 +298,53 @@ class ExceptionHandlersCest
     $I->assertSame(500, $handler->emissions[0]['status']);
     $I->assertCount(1, $records);
     $I->assertSame('error', $records[0]['level']);
-    $I->assertSame('Boom', $records[0]['message']);
+    $I->assertStringContainsString('Application frame:', $records[0]['message']);
+    $I->assertStringContainsString('ExceptionHandlersCest.php', $records[0]['message']);
+    $I->assertStringContainsString(RuntimeException::class, $records[0]['message']);
+    $I->assertStringContainsString('Boom', $records[0]['message']);
+    $I->assertStringContainsString('Stack trace:', $records[0]['message']);
+  }
+
+  public function testWhoopsExceptionHandlerLogsPreviousThrowableChain(UnitTester $I): void
+  {
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $records = [];
+    $logger = $this->createRecordingLogger($records);
+
+    $handler = new class($logger) extends WhoopsExceptionHandler {
+      public array $emissions = [];
+
+      public function __construct(LoggerInterface $logger)
+      {
+        parent::__construct($logger);
+      }
+
+      protected function isCliContext(): bool
+      {
+        return false;
+      }
+
+      protected function emitErrorResponse(string $body, ContentType $contentType, int $statusCode): void
+      {
+        $this->emissions[] = [
+          'body' => $body,
+          'status' => $statusCode,
+          'content_type' => $contentType->value,
+        ];
+      }
+    };
+
+    $handler->handle(new RuntimeException('Outer failure', 0, new RuntimeException('Inner failure')));
+
+    $I->assertCount(1, $handler->emissions);
+    $I->assertCount(1, $records);
+    $I->assertSame('error', $records[0]['level']);
+    $I->assertStringContainsString('Application frame:', $records[0]['message']);
+    $I->assertStringContainsString('ExceptionHandlersCest.php', $records[0]['message']);
+    $I->assertStringContainsString('Outer failure', $records[0]['message']);
+    $I->assertStringContainsString('Previous exception #1 ' . RuntimeException::class, $records[0]['message']);
+    $I->assertStringContainsString('Inner failure', $records[0]['message']);
+    $I->assertStringContainsString('Stack trace:', $records[0]['message']);
   }
 
   public function testFrameworkErrorPageRendererBuildsHtmlShell(UnitTester $I): void

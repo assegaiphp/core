@@ -71,11 +71,12 @@ class WhoopsExceptionHandler implements ExceptionHandlerInterface
   {
     $whoops = new Run();
     $whoops->allowQuit(false);
-    $whoops->pushHandler(match ($this->getResponseMode()) {
+    $handler = match ($this->getResponseMode()) {
       'plain' => new PlainTextHandler(),
       'json' => new JsonResponseHandler(),
       default => new PrettyPageHandler(),
-    });
+    };
+    $whoops->pushHandler($handler);
 
     return $whoops;
   }

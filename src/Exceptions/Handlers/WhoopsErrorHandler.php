@@ -7,6 +7,7 @@ use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
+use Assegai\Core\Exceptions\Handlers\Concerns\LogsHandledExceptions;
 use Assegai\Core\Exceptions\Handlers\Support\FrameworkErrorPageRenderer;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
@@ -27,6 +28,7 @@ use Whoops\Run;
 class WhoopsErrorHandler implements ErrorHandlerInterface
 {
     use EmitsErrorResponses;
+    use LogsHandledExceptions;
 
     /**
      * WhoopsExceptionHandler constructor.
@@ -48,6 +50,8 @@ class WhoopsErrorHandler implements ErrorHandlerInterface
      */
     public function handleError(Throwable $error): void
     {
+        $this->logHandledException($error);
+
         $whoops = $this->createWhoopsRun();
 
         ob_start();
@@ -75,11 +79,12 @@ class WhoopsErrorHandler implements ErrorHandlerInterface
     {
         $whoops = new Run();
         $whoops->allowQuit(false);
-        $whoops->pushHandler(match ($this->getResponseMode()) {
+        $handler = match ($this->getResponseMode()) {
             'plain' => new PlainTextHandler(),
             'json' => new JsonResponseHandler(),
             default => new PrettyPageHandler(),
-        });
+        };
+        $whoops->pushHandler($handler);
 
         return $whoops;
     }
