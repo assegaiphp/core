@@ -166,6 +166,22 @@ class RouterCest
     $I->assertSame('feature-1', $response->getBody());
   }
 
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testDeepNestedDynamicRoutesResolveToTheClosestController(UnitTester $I): void
+  {
+    $result = $this->dispatch('/api/v1/workspaces/1/vendors/16/endpoints/5/versions/3', \Mocks\DeepRoutingAppModule::class);
+
+    $I->assertInstanceOf(\Mocks\DeepVersionController::class, $result['controller']);
+    $I->assertSame('version-1-16-5-3', $result['response']->getBody());
+  }
+
   /**
    * @throws ReflectionException
    * @throws NotFoundException

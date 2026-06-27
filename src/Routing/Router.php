@@ -113,6 +113,10 @@ final class Router
      */
     private array $globalFilters = [];
     private ?MiddlewareConsumer $middlewareConsumer = null;
+    /**
+     * @var array<string, array<string, mixed>|null> Controller match metadata cached for the active request.
+     */
+    private array $controllerCandidateMatchCache = [];
 
     private final function __construct(
         ?Injector $injector = null,
@@ -209,6 +213,7 @@ final class Router
      */
     public function getActivatedController(Request $request, array $controllerTokensList): object
     {
+        $this->controllerCandidateMatchCache = [];
         $rootController = null;
 
         foreach ($controllerTokensList as $reflectionController) {
@@ -323,31 +328,54 @@ final class Router
     /**
      * Returns controller match metadata for the current request, including host-level constraints.
      *
+     * Prefix-only matches are still returned so unknown child paths can fall back to the last matched
+     * ancestor controller. When a controller has a matching handler, the full controller+handler route
+     * is used for ranking so a prefix-only child controller cannot shadow a valid parent handler.
+     *
      * @param ReflectionClass $reflectionController
      * @param Request $request
-     * @return array{matched_segments: int, route_length: int, specificity: int, host_specificity: int, host_params: array<int|string, string>}|null
+     * @return array{matched_segments: int, route_length: int, specificity: int, host_specificity: int, host_params: array<int|string, string>, has_handler_match: bool}|null
      */
     private function getControllerCandidateMatchData(ReflectionClass $reflectionController, Request $request): ?array
     {
+        $cacheKey = implode("\0", [
+            $reflectionController->getName(),
+            $request->getMethod()->value,
+            $request->getHostName(),
+            $request->getPath(),
+        ]);
+
+        if (array_key_exists($cacheKey, $this->controllerCandidateMatchCache)) {
+            return $this->controllerCandidateMatchCache[$cacheKey];
+        }
+
         $controllerPrefix = $this->getControllerPrefix($reflectionController);
         $pathMatch = $this->matchRoutePath(route: $controllerPrefix, path: $request->getPath(), allowPartial: true);
 
         if (is_null($pathMatch)) {
-            return null;
+            return $this->controllerCandidateMatchCache[$cacheKey] = null;
         }
 
         $hostMatch = $this->getControllerHostMatchData($reflectionController, $request);
 
         if (is_null($hostMatch)) {
-            return null;
+            return $this->controllerCandidateMatchCache[$cacheKey] = null;
         }
 
-        return [
+        $handlerMatch = $this->getBestHandlerMatchData($reflectionController, $request);
+        $routeMatch = $handlerMatch ?? [
             'matched_segments' => count($this->getPathSegments($controllerPrefix)),
             'route_length' => strlen($controllerPrefix),
             'specificity' => $this->getRouteSpecificityScore($controllerPrefix),
+        ];
+
+        return $this->controllerCandidateMatchCache[$cacheKey] = [
+            'matched_segments' => $routeMatch['matched_segments'],
+            'route_length' => $routeMatch['route_length'],
+            'specificity' => $routeMatch['specificity'],
             'host_specificity' => $hostMatch['specificity'],
             'host_params' => $hostMatch['params'],
+            'has_handler_match' => !is_null($handlerMatch),
         ];
     }
 
@@ -727,12 +755,19 @@ final class Router
     /**
      * Determines whether a candidate route match is more specific than the current best match.
      *
-     * @param array{matched_segments: int, route_length: int, specificity: int, host_specificity?: int} $candidate
-     * @param array{matched_segments: int, route_length: int, specificity: int, host_specificity?: int} $currentBest
+     * @param array{matched_segments: int, route_length: int, specificity: int, host_specificity?: int, has_handler_match?: bool} $candidate
+     * @param array{matched_segments: int, route_length: int, specificity: int, host_specificity?: int, has_handler_match?: bool} $currentBest
      * @return bool
      */
     private function isBetterRouteMatch(array $candidate, array $currentBest): bool
     {
+        $candidateHasHandlerMatch = $candidate['has_handler_match'] ?? false;
+        $currentBestHasHandlerMatch = $currentBest['has_handler_match'] ?? false;
+
+        if ($candidateHasHandlerMatch !== $currentBestHasHandlerMatch) {
+            return $candidateHasHandlerMatch;
+        }
+
         if ($candidate['specificity'] > $currentBest['specificity']) {
             return true;
         }
@@ -830,6 +865,34 @@ final class Router
         }
 
         return $reflectionController->newInstanceArgs($dependencies);
+    }
+
+    /**
+     * Returns the best matching handler metadata for a controller candidate without activating it.
+     *
+     * @param ReflectionClass $reflectionController
+     * @param Request $request
+     * @return array{constraints: array<string, string>, matched_segments: int, params: array<int|string, string>, route_length: int, specificity: int}|null
+     * @throws HttpException
+     * @throws ReflectionException
+     */
+    private function getBestHandlerMatchData(ReflectionClass $reflectionController, Request $request): ?array
+    {
+        $bestMatch = null;
+
+        foreach ($this->getControllerHandlerMethods($reflectionController) as $handler) {
+            $matchData = $this->getHandlerMatchData(handler: $handler, controller: $reflectionController, request: $request);
+
+            if (is_null($matchData)) {
+                continue;
+            }
+
+            if (is_null($bestMatch) || $this->isBetterRouteMatch($matchData, $bestMatch)) {
+                $bestMatch = $matchData;
+            }
+        }
+
+        return $bestMatch;
     }
 
     /**
@@ -1087,8 +1150,18 @@ final class Router
      */
     public function getControllerHandlers(object $controller): array
     {
+        $reflectionClass = $controller instanceof ReflectionClass ? $controller : new ReflectionClass($controller);
+
+        return $this->getControllerHandlerMethods($reflectionClass);
+    }
+
+    /**
+     * @param ReflectionClass $reflectionClass
+     * @return ReflectionMethod[] Returns a list of request handlers belonging to the given controller.
+     */
+    private function getControllerHandlerMethods(ReflectionClass $reflectionClass): array
+    {
         $handlers = [];
-        $reflectionClass = new ReflectionClass($controller);
         $reflectionMethods = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
 
         foreach ($reflectionMethods as $reflectionMethod) {
