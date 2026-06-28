@@ -1863,36 +1863,6 @@ parameters:
 			path: src/Util/Functions.php
 
 		-
-			message: "#^Argument of an invalid type stdClass supplied for foreach, only iterables are supported\\.$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
-			message: "#^Cannot call method getName\\(\\) on ReflectionIntersectionType\\|ReflectionNamedType\\|ReflectionUnionType\\|null\\.$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
-			message: "#^Cannot call method getName\\(\\) on ReflectionNamedType\\|null\\.$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
-			message: "#^Match expression does not handle remaining value\\: true$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
-			message: "#^Parameter \\#1 \\$enum of function enum_exists expects string, ReflectionIntersectionType\\|ReflectionNamedType\\|ReflectionUnionType\\|null given\\.$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
-			message: "#^Parameter \\#1 \\$propertyReflectionType of static method Assegai\\\\Core\\\\Util\\\\TypeManager\\:\\:getValidPropertyValue\\(\\) expects ReflectionIntersectionType\\|ReflectionNamedType\\|ReflectionUnionType\\|null, ReflectionType\\|null given\\.$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
 			message: "#^Method Assegai\\\\Core\\\\Util\\\\Validator\\:\\:isValidRequestMapperAttribute\\(\\) has parameter \\$attribute with generic class ReflectionAttribute but does not specify its types\\: T$#"
 			count: 1
 			path: src/Util/Validator.php
