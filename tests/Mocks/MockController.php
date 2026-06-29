@@ -568,6 +568,33 @@ class HostScopedAppModule
 {
 }
 
+#[Controller(path: 'admin', host: 'admin.example.com')]
+class HostScopedSiblingAdminController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'sibling-admin';
+  }
+}
+
+#[Controller(path: 'health')]
+class HostScopedSiblingHealthController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'sibling-health';
+  }
+}
+
+#[Module(
+  controllers: [HostScopedSiblingAdminController::class, HostScopedSiblingHealthController::class],
+)]
+class HostScopedSiblingModule
+{
+}
+
 #[Controller(path: 'response-metadata')]
 class ResponseMetadataController
 {

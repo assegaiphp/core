@@ -317,9 +317,7 @@ class ControllerManager
       $localPath = $this->getControllerPath($controllerReflection);
       $localHosts = $this->getControllerHostsFromReflection($controllerReflection);
       $resolvedPath = $this->combinePaths($inheritedPrefix, $localPath);
-      $effectiveHostGroups = $isFirstController
-        ? $this->mergeHostGroups($inheritedHostGroups, $localHosts)
-        : $this->mergeHostGroups($moduleBranchHostGroups, $localHosts);
+      $effectiveHostGroups = $this->mergeHostGroups($inheritedHostGroups, $localHosts);
 
       $this->controllerTokensList[$tokenId] = $controllerReflection;
       $this->controllerPathTokenIdMap[$tokenId] = $resolvedPath;
