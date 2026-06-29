@@ -26,6 +26,7 @@ use Assegai\Core\Http\Responses\ApiResponse;
 use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\ModuleManager;
 use Assegai\Core\Rendering\View;
+use Assegai\Core\Routing\RoutePattern;
 use Assegai\Core\Util\Validator;
 use Assegai\Core\Components\Interfaces\ComponentInterface;
 use Assegai\Validation\Attributes\IsAlpha;
@@ -107,7 +108,7 @@ class OpenApiGenerator
     foreach ($this->controllerManager->getControllerTokenList() as $controllerReflection) {
       $controllerClass = $controllerReflection->getName();
       $controllerPath = $this->controllerManager->getResolvedControllerPath($controllerClass) ?? '/';
-      $controllerHosts = $this->controllerManager->getControllerHosts($controllerClass);
+      $controllerHostGroups = $this->controllerManager->getControllerHostGroups($controllerClass);
       $tagName = $this->buildTagName($controllerReflection->getShortName());
 
       foreach ($controllerReflection->getMethods(ReflectionMethod::IS_PUBLIC) as $handler) {
@@ -124,7 +125,7 @@ class OpenApiGenerator
 
           $routePath = $this->joinPaths($controllerPath, $this->getRouteAttributePath($attribute));
           $openApiPath = $this->toOpenApiPath($routePath);
-          $operation = $this->buildOperation($controllerReflection, $handler, $routePath, $controllerHosts, $tagName);
+          $operation = $this->buildOperation($controllerReflection, $handler, $routePath, $controllerHostGroups, $tagName);
 
           $paths[$openApiPath][strtolower($httpMethod)] = $operation;
         }
@@ -157,27 +158,30 @@ class OpenApiGenerator
 
   private function ensureControllerGraphResolved(string $rootModuleClass): void
   {
+    $shouldRebuildModules = $this->moduleManager->getRootModuleClass() !== $rootModuleClass
+      || $this->moduleManager->getModuleTokens() === [];
+
     $this->moduleManager->setRootModuleClass($rootModuleClass);
 
-    if ($this->moduleManager->getModuleTokens() === []) {
+    if ($shouldRebuildModules) {
       $this->moduleManager->buildModuleTokensList($rootModuleClass);
     }
 
-    if ($this->controllerManager->getControllerTokenList() === []) {
+    if ($shouldRebuildModules || $this->controllerManager->getControllerTokenList() === []) {
       $this->controllerManager->buildControllerTokensList($this->moduleManager->getModuleTokens());
     }
   }
 
   /**
    * @param ReflectionClass<object> $controllerReflection
-   * @param array<int, string> $controllerHosts
+   * @param array<int, array<int, string>> $controllerHostGroups
    * @return array<string, mixed>
    */
   private function buildOperation(
     ReflectionClass $controllerReflection,
     ReflectionMethod $handler,
     string $routePath,
-    array $controllerHosts,
+    array $controllerHostGroups,
     string $tagName,
   ): array
   {
@@ -264,8 +268,8 @@ class OpenApiGenerator
       $operation['requestBody'] = $requestBody;
     }
 
-    if ($controllerHosts !== []) {
-      $servers = $this->buildServersForHosts($controllerHosts);
+    if ($controllerHostGroups !== []) {
+      $servers = $this->buildServersForHostGroups($controllerHostGroups);
 
       if ($servers !== []) {
         $operation['servers'] = $servers;
@@ -572,6 +576,27 @@ class OpenApiGenerator
   }
 
   /**
+   * @param array<int, array<int, string>> $hostGroups
+   * @return array<int, array<string, mixed>>
+   */
+  private function buildServersForHostGroups(array $hostGroups): array
+  {
+    $hosts = [];
+
+    foreach ($hostGroups as $hostGroup) {
+      $host = $this->resolveHostGroupPattern($hostGroup);
+
+      if ($host === null || $host === '') {
+        continue;
+      }
+
+      $hosts[] = $host;
+    }
+
+    return $this->buildServersForHosts(array_values(array_unique($hosts)));
+  }
+
+  /**
    * @param array<int, string> $hosts
    * @return array<int, array<string, mixed>>
    */
@@ -590,6 +615,161 @@ class OpenApiGenerator
     }
 
     return $servers;
+  }
+
+  /**
+   * @param array<int, string> $hostGroup
+   * @return string|null
+   */
+  private function resolveHostGroupPattern(array $hostGroup): ?string
+  {
+    $patterns = [];
+
+    foreach ($hostGroup as $hostPattern) {
+      $hostPattern = trim($hostPattern);
+
+      if ($hostPattern === '') {
+        continue;
+      }
+
+      $patterns[] = $this->parseHostPatternForDocs($hostPattern);
+    }
+
+    if ($patterns === []) {
+      return null;
+    }
+
+    $labelCount = count($patterns[0]['labels']);
+    $resolvedLabels = [];
+
+    foreach ($patterns as $pattern) {
+      if (count($pattern['labels']) !== $labelCount) {
+        return null;
+      }
+    }
+
+    for ($index = 0; $index < $labelCount; $index++) {
+      $staticLabel = null;
+      $dynamicLabel = null;
+      $hasWildcard = false;
+
+      foreach ($patterns as $pattern) {
+        $label = $pattern['labels'][$index];
+
+        if ($label['type'] === 'static') {
+          if ($staticLabel !== null && $staticLabel !== $label['value']) {
+            return null;
+          }
+
+          $staticLabel = $label['value'];
+          continue;
+        }
+
+        if ($label['type'] === 'dynamic') {
+          $dynamicLabel = $this->preferDynamicHostLabel($dynamicLabel, $label);
+          continue;
+        }
+
+        $hasWildcard = true;
+      }
+
+      if ($staticLabel !== null) {
+        foreach ($patterns as $pattern) {
+          $label = $pattern['labels'][$index];
+
+          if (
+            $label['type'] === 'dynamic' &&
+            is_string($label['constraint']) &&
+            !RoutePattern::matchesConstraint($label['constraint'], $staticLabel)
+          ) {
+            return null;
+          }
+        }
+
+        $resolvedLabels[] = $staticLabel;
+        continue;
+      }
+
+      if ($dynamicLabel !== null) {
+        $resolvedLabels[] = $this->formatDynamicHostLabel($dynamicLabel);
+        continue;
+      }
+
+      if ($hasWildcard) {
+        $resolvedLabels[] = '*';
+      }
+    }
+
+    $port = '';
+
+    foreach ($patterns as $pattern) {
+      if ($pattern['port'] !== '') {
+        $port = $pattern['port'];
+      }
+    }
+
+    return implode('.', $resolvedLabels) . $port;
+  }
+
+  /**
+   * @return array{labels: array<int, array{constraint: string|null, name: string|null, type: 'dynamic'|'static'|'wildcard', value: string}>, port: string}
+   */
+  private function parseHostPatternForDocs(string $hostPattern): array
+  {
+    $port = '';
+
+    if (preg_match('/^(?<host>.+?)(?<port>:\d+)$/', $hostPattern, $matches)) {
+      $hostPattern = $matches['host'];
+      $port = $matches['port'];
+    }
+
+    return [
+      'labels' => array_map(
+        static fn(string $label): array => RoutePattern::parseHostLabel($label),
+        explode('.', $hostPattern),
+      ),
+      'port' => $port,
+    ];
+  }
+
+  /**
+   * @param array{constraint: string|null, name: string|null, type: 'dynamic'|'static'|'wildcard', value: string}|null $current
+   * @param array{constraint: string|null, name: string|null, type: 'dynamic'|'static'|'wildcard', value: string} $candidate
+   * @return array{constraint: string|null, name: string|null, type: 'dynamic'|'static'|'wildcard', value: string}
+   */
+  private function preferDynamicHostLabel(?array $current, array $candidate): array
+  {
+    if ($current === null) {
+      return $candidate;
+    }
+
+    if (
+      $current['name'] === $candidate['name'] &&
+      $current['constraint'] === null &&
+      $candidate['constraint'] !== null
+    ) {
+      return $candidate;
+    }
+
+    return $current;
+  }
+
+  /**
+   * @param array{constraint: string|null, name: string|null, type: 'dynamic'|'static'|'wildcard', value: string} $label
+   */
+  private function formatDynamicHostLabel(array $label): string
+  {
+    $name = $label['name'] ?? '';
+
+    if ($name === '') {
+      return $label['value'];
+    }
+
+    if ($label['constraint'] === null) {
+      return ':' . $name;
+    }
+
+    return sprintf(':%s<%s>', $name, $label['constraint']);
   }
 
   private function hasDynamicHostPlaceholder(string $host): bool

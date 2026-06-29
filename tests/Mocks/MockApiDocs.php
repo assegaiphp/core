@@ -120,6 +120,41 @@ class ApiDocsPortHostController
   }
 }
 
+#[Controller(path: 'console', host: ':tenant<slug>.console.example.com')]
+class ApiDocsHostScopedConsoleController
+{
+  #[Get('status')]
+  public function status(#[HostParam('tenant')] string $tenant): array
+  {
+    return ['tenant' => $tenant];
+  }
+}
+
+#[Controller(path: 'child')]
+class ApiDocsInheritedHostChildController
+{
+  #[Get('status')]
+  public function status(#[HostParam('tenant')] string $tenant): array
+  {
+    return ['tenant' => $tenant];
+  }
+}
+
+#[Module(
+  controllers: [ApiDocsInheritedHostChildController::class],
+)]
+class ApiDocsInheritedHostChildModule
+{
+}
+
+#[Module(
+  controllers: [ApiDocsHostScopedConsoleController::class],
+  imports: [ApiDocsInheritedHostChildModule::class],
+)]
+class ApiDocsInheritedHostAppModule
+{
+}
+
 #[Module(
   controllers: [
     ApiDocsPostsController::class,
