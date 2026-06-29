@@ -1317,15 +1317,7 @@ parameters:
 			count: 1
 			path: src/RPC/RpcArgumentsHost.php
 
-		-
-			message: "#^Part \\$href \\(array\\<int, string\\>\\|string\\) of encapsed string cannot be cast to string\\.$#"
-			count: 1
-			path: src/Rendering/DocumentProperties.php
 
-		-
-			message: "#^Result of && is always false\\.$#"
-			count: 2
-			path: src/Rendering/DocumentProperties.php
 
 		-
 			message: "#^Unsafe usage of new static\\(\\)\\.$#"
@@ -1614,11 +1606,6 @@ parameters:
 
 		-
 			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getActivatedControllerToken\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
-			count: 1
-			path: src/Routing/Router.php
-
-		-
-			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getControllerCandidateMatchData\\(\\) has parameter \\$reflectionController with generic class ReflectionClass but does not specify its types\\: T$#"
 			count: 1
 			path: src/Routing/Router.php
 

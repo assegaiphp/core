@@ -266,6 +266,33 @@ TWIG
     $I->assertSame(['/js/runtime.js', '/js/home.js'], $props->headScriptUrls);
   }
 
+  public function testDocumentPropertiesAllowLinkAttributeMaps(UnitTester $I): void
+  {
+    unset($_ENV['app']);
+    $GLOBALS['config']['app'] = [
+      'links' => [
+        '/css/site.css',
+        ['preconnect', 'https://cdn.example.test'],
+        [
+          'rel' => 'search',
+          'type' => 'application/opensearchdescription+xml',
+          'title' => 'AssegaiPHP',
+          'href' => '/opensearch.xml',
+        ],
+      ],
+      'headScriptUrls' => [],
+      'bodyScriptUrls' => [],
+      'htmxLink' => '',
+    ];
+
+    $props = DocumentProperties::fromArray([]);
+    $headTags = $props->generateHeadAssetTags();
+
+    $I->assertStringContainsString("<link rel='stylesheet' href='/css/site.css' />", $headTags);
+    $I->assertStringContainsString("<link rel='preconnect' href='https://cdn.example.test' />", $headTags);
+    $I->assertStringContainsString("<link rel='search' type='application/opensearchdescription+xml' title='AssegaiPHP' href='/opensearch.xml' />", $headTags);
+  }
+
   public function testDocumentPropertiesAllowScriptAttributeMaps(UnitTester $I): void
   {
     unset($_ENV['app']);

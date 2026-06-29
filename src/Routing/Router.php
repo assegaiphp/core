@@ -114,7 +114,7 @@ final class Router
     private array $globalFilters = [];
     private ?MiddlewareConsumer $middlewareConsumer = null;
     /**
-     * @var array<string, array<string, mixed>|null> Controller match metadata cached for the active request.
+     * @var array<string, array{matched_segments: int, route_length: int, specificity: int, host_specificity: int, host_params: array<int|string, string>, has_handler_match: bool}|null> Controller match metadata cached for the active request.
      */
     private array $controllerCandidateMatchCache = [];
 
@@ -332,7 +332,7 @@ final class Router
      * ancestor controller. When a controller has a matching handler, the full controller+handler route
      * is used for ranking so a prefix-only child controller cannot shadow a valid parent handler.
      *
-     * @param ReflectionClass $reflectionController
+     * @param ReflectionClass<object> $reflectionController
      * @param Request $request
      * @return array{matched_segments: int, route_length: int, specificity: int, host_specificity: int, host_params: array<int|string, string>, has_handler_match: bool}|null
      */
@@ -870,7 +870,7 @@ final class Router
     /**
      * Returns the best matching handler metadata for a controller candidate without activating it.
      *
-     * @param ReflectionClass $reflectionController
+     * @param ReflectionClass<object> $reflectionController
      * @param Request $request
      * @return array{constraints: array<string, string>, matched_segments: int, params: array<int|string, string>, route_length: int, specificity: int}|null
      * @throws HttpException
@@ -1156,7 +1156,7 @@ final class Router
     }
 
     /**
-     * @param ReflectionClass $reflectionClass
+     * @param ReflectionClass<object> $reflectionClass
      * @return ReflectionMethod[] Returns a list of request handlers belonging to the given controller.
      */
     private function getControllerHandlerMethods(ReflectionClass $reflectionClass): array
