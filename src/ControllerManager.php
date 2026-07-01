@@ -342,7 +342,7 @@ class ControllerManager
 
     $this->moduleControllerTokensMap[$moduleClass] = $moduleControllers;
     $this->moduleBranchPrefixMap[$moduleClass] = $moduleBranchPrefix;
-    $this->moduleBranchHostGroupsMap[$moduleClass] = $moduleBranchHostGroups;
+    $this->moduleBranchHostGroupsMap[$moduleClass] = $inheritedHostGroups;
 
     foreach ($this->moduleManager->getImportedModules($moduleClass) as $importedModuleClass) {
       $this->buildModuleControllerTokens(

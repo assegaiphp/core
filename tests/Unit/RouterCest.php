@@ -31,6 +31,7 @@ use Mocks\HostScopedConsoleModule;
 use Mocks\HostScopedDashboardController;
 use Mocks\HostScopedHelpController;
 use Mocks\HostScopedSiblingModule;
+use Mocks\ImportedHostScopedSiblingAppModule;
 use Mocks\ImportOnlyRootAppModule;
 use Mocks\LegacyTenantDashboardController;
 use Mocks\NestedApiController;
@@ -699,6 +700,29 @@ class RouterCest
       $I->fail('Expected host-scoped controller to reject unmatched hosts.');
     } catch (NotFoundException $exception) {
       $I->assertStringContainsString('/admin', $exception->getMessage());
+    }
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testFirstControllerHostDoesNotGateImportedSiblingControllers(UnitTester $I): void
+  {
+    $healthResult = $this->dispatch('/health', ImportedHostScopedSiblingAppModule::class, 'localhost');
+    $adminResult = $this->dispatch('/', ImportedHostScopedSiblingAppModule::class, 'admin.example.com');
+
+    $I->assertSame('imported-sibling-health', $healthResult['response']->getBody());
+    $I->assertSame('imported-sibling-admin', $adminResult['response']->getBody());
+
+    try {
+      $this->dispatch('/', ImportedHostScopedSiblingAppModule::class, 'localhost');
+      $I->fail('Expected the imported host-scoped controller to reject unmatched hosts.');
+    } catch (NotFoundException $exception) {
+      $I->assertStringContainsString('/', $exception->getMessage());
     }
   }
 

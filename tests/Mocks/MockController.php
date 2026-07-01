@@ -595,6 +595,40 @@ class HostScopedSiblingModule
 {
 }
 
+#[Controller(path: '', host: 'admin.example.com')]
+class ImportedHostScopedSiblingAdminController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'imported-sibling-admin';
+  }
+}
+
+#[Controller(path: 'health')]
+class ImportedHostScopedSiblingHealthController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'imported-sibling-health';
+  }
+}
+
+#[Module(
+  controllers: [ImportedHostScopedSiblingAdminController::class, ImportedHostScopedSiblingHealthController::class],
+)]
+class ImportedHostScopedSiblingModule
+{
+}
+
+#[Module(
+  imports: [ImportedHostScopedSiblingModule::class],
+)]
+class ImportedHostScopedSiblingAppModule
+{
+}
+
 #[Controller(path: 'response-metadata')]
 class ResponseMetadataController
 {
