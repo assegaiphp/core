@@ -230,8 +230,8 @@ final class Injector implements ITokenStoreOwner, IContainer
       }
 
       return $resolvedInstances[$id] ?? null;
-    } catch (ReflectionException) {
-      throw new ContainerException("$id is not a valid ID");
+    } catch (ReflectionException $exception) {
+      throw new ContainerException("$id is not a valid ID", previous: $exception);
     }
   }
 
@@ -285,7 +285,7 @@ final class Injector implements ITokenStoreOwner, IContainer
         return false;
       }
     } catch (IEntryNotFoundException $e) {
-      throw new EntryNotFoundException($e->getMessage());
+      throw new EntryNotFoundException($e->getMessage(), previous: $e);
     }
 
     unset($this->store[$tokenId]);
@@ -382,8 +382,8 @@ final class Injector implements ITokenStoreOwner, IContainer
         try {
           $reflectionEnum = new ReflectionEnum($paramType->getName());
           return $reflectionEnum->getCases()[0]->getValue();
-        } catch (ReflectionException) {
-          throw new ContainerException(sprintf("Enum exception %s(%s)", __METHOD__, __LINE__));
+        } catch (ReflectionException $exception) {
+          throw new ContainerException(sprintf("Enum exception %s(%s)", __METHOD__, __LINE__), previous: $exception);
         }
       }
 
@@ -444,7 +444,7 @@ final class Injector implements ITokenStoreOwner, IContainer
           return null;
         }
 
-        throw new ResolveException(id: $id, message: "$resolveErrorPrefix — {$exception->getMessage()}");
+        throw new ResolveException(id: $id, message: "$resolveErrorPrefix — {$exception->getMessage()}", previous: $exception);
       }
 
       if (null === $dependency) {

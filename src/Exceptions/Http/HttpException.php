@@ -7,6 +7,7 @@ use Assegai\Core\Http\HttpStatusCode;
 use Assegai\Core\Http\Responses\Responders\Responder;
 use Exception;
 use stdClass;
+use Throwable;
 
 /**
  * Class HttpException
@@ -20,12 +21,12 @@ class HttpException extends Exception
   /**
    * @param string|stdClass|array<string, mixed> $message
    */
-  public function __construct(string|stdClass|array $message = '', ?HttpStatusCode $status = null)
+  public function __construct(string|stdClass|array $message = '', ?HttpStatusCode $status = null, ?Throwable $previous = null)
   {
     $this->response = $message;
 
     $this->setStatus($status);
-    parent::__construct(is_string($message) ? $message : (json_encode($message) ?: ''));
+    parent::__construct(is_string($message) ? $message : (json_encode($message) ?: ''), previous: $previous);
   }
 
   public final function __toString(): string

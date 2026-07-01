@@ -6,6 +6,7 @@ use Assegai\Core\Config;
 use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
+use Assegai\Core\Exceptions\Handlers\Concerns\LogsHandledExceptions;
 use Assegai\Core\Exceptions\Handlers\Support\FrameworkErrorPageRenderer;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
@@ -21,6 +22,7 @@ use Throwable;
 class DefaultExceptionHandler implements ExceptionHandlerInterface
 {
   use EmitsErrorResponses;
+  use LogsHandledExceptions;
 
   /**
    * @inheritDoc
@@ -34,6 +36,8 @@ class DefaultExceptionHandler implements ExceptionHandlerInterface
    */
   public function handle(Throwable $exception): void
   {
+    $this->logHandledException($exception);
+
     if ($exception instanceof HttpException) {
       $statusCode = $exception->getStatus()->code;
 

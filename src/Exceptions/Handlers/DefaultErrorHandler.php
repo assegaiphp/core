@@ -6,10 +6,13 @@ use Assegai\Core\Config;
 use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Exceptions\Handlers\Concerns\EmitsErrorResponses;
+use Assegai\Core\Exceptions\Handlers\Concerns\LogsHandledExceptions;
 use Assegai\Core\Exceptions\Handlers\Support\FrameworkErrorPageRenderer;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use Assegai\Core\Http\HttpStatus;
-use Error;
+use ErrorException;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Throwable;
 
 /**
@@ -20,30 +23,52 @@ use Throwable;
 class DefaultErrorHandler implements ErrorHandlerInterface
 {
   use EmitsErrorResponses;
+  use LogsHandledExceptions;
+
+  protected LoggerInterface $logger;
+
+  public function __construct(?LoggerInterface $logger = null)
+  {
+    $this->logger = $logger ?? new NullLogger();
+  }
 
   /**
    * @inheritDoc
    */
   public function handle(int $errno, string $errstr, string $errfile, int $errline): void
   {
+    $this->handleError(new ErrorException($errstr, 0, $errno, $errfile, $errline));
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function handleError(Throwable $error): void
+  {
+    $this->logHandledException($error);
+    $this->emitError($error->getMessage(), $error->getFile(), $error->getLine());
+  }
+
+  private function emitError(string $message, string $file, int $line): void
+  {
     $status = HttpStatus::fromInt(500);
 
     if ($this->shouldRenderHtmlErrorPage()) {
-      $message = match (Config::environment()) {
+      $bodyMessage = match (Config::environment()) {
         EnvironmentType::PRODUCTION => 'The framework hit an internal error while processing this request.',
-        default => $errstr !== '' ? $errstr : 'A PHP runtime error occurred.',
+        default => $message !== '' ? $message : 'A PHP runtime error occurred.',
       };
 
       $details = Config::environment() === EnvironmentType::PRODUCTION
         ? null
-        : basename($errfile) . ':' . $errline;
+        : basename($file) . ':' . $line;
 
       $this->emitErrorResponse(
         FrameworkErrorPageRenderer::render(
           statusCode: $status->code,
           statusName: $status->name,
           heading: 'Internal server error',
-          message: $message,
+          message: $bodyMessage,
           details: $details,
         ),
         ContentType::HTML,
@@ -59,18 +84,10 @@ class DefaultErrorHandler implements ErrorHandlerInterface
       ],
       default => [
         'statusCode' => $status->code,
-        'message' => $errstr,
+        'message' => $message,
         'error' => $status->name,
       ]
     };
     $this->emitErrorResponse(json_encode($response) ?: '{}', ContentType::JSON, $status->code);
-  }
-
-  /**
-   * @inheritDoc
-   */
-  public function handleError(Throwable $error): void
-  {
-    $this->handle($error->getCode(), $error->getMessage(), $error->getFile(), $error->getLine());
   }
 }

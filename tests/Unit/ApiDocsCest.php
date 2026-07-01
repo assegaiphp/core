@@ -18,6 +18,7 @@ use Assegai\Core\Http\Responses\Responders\JsonResponder;
 use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\ModuleManager;
 use Mocks\ApiDocsAppModule;
+use Mocks\ApiDocsInheritedHostAppModule;
 use ReflectionClass;
 use ReflectionProperty;
 use Tests\Support\UnitTester;
@@ -193,6 +194,28 @@ class ApiDocsCest
     $I->assertSame('http://api.{tenant}:8081', $portServers[2]['url'] ?? null);
     $I->assertArrayHasKey('tenant', $portServers[0]['variables'] ?? []);
     $I->assertSame('tenant', $portServers[0]['variables']['tenant']['default'] ?? null);
+  }
+
+  public function testOpenApiGenerationIncludesInheritedHostServers(UnitTester $I): void
+  {
+    $this->resetSingleton(ModuleManager::class);
+    $this->resetSingleton(ControllerManager::class);
+    $this->resetRequestSingleton();
+
+    $generator = new OpenApiGenerator(
+      ControllerManager::getInstance(),
+      ModuleManager::getInstance(),
+      Request::getInstance(),
+      new ComposerConfig(),
+      new ProjectConfig(),
+    );
+
+    $document = $generator->generate(ApiDocsInheritedHostAppModule::class);
+    $servers = $document['paths']['/console/child/status']['get']['servers'] ?? [];
+
+    $I->assertSame('http://{tenant}.console.example.com', $servers[0]['url'] ?? null);
+    $I->assertArrayHasKey('tenant', $servers[0]['variables'] ?? []);
+    $I->assertSame('tenant', $servers[0]['variables']['tenant']['default'] ?? null);
   }
 
   public function testSwaggerUiRendererTargetsTheGeneratedSpec(UnitTester $I): void

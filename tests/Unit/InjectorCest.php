@@ -381,6 +381,7 @@ class InjectorCest
       $I->assertStringContainsString(ParentPrivateModule::class, $exception->getMessage());
       $I->assertStringContainsString('declares', $exception->getMessage());
       $I->assertStringContainsString('does not export', $exception->getMessage());
+      $I->assertInstanceOf(\Assegai\Core\Exceptions\Container\ContainerException::class, $exception->getPrevious());
     }
   }
 

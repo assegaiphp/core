@@ -297,7 +297,7 @@ class ModuleManager implements SingletonInterface
         }
       }
     } catch (ReflectionException $e) {
-      throw new HttpException($e->getMessage());
+      throw new HttpException($e->getMessage(), previous: $e);
     }
   }
 
@@ -345,7 +345,7 @@ class ModuleManager implements SingletonInterface
         $this->builtDeclarations[] = $declarationToken;
       }
     } catch (ReflectionException $exception) {
-      throw new HttpException($exception->getMessage());
+      throw new HttpException($exception->getMessage(), previous: $exception);
     }
   }
 

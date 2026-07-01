@@ -80,7 +80,7 @@ class View
       $this->data = $data;
       $this->props = is_array($props) ? ViewProperties::fromArray($props) : $props;
     } catch (ReflectionException $exception) {
-      throw new HttpException($exception->getMessage());
+      throw new HttpException($exception->getMessage(), previous: $exception);
     }
   }
 

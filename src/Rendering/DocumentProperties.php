@@ -85,7 +85,7 @@ class DocumentProperties
      * @param string $title
      * @param array<int, string> $styles
      * @param ViewMeta|array<string, mixed> $meta
-     * @param array<int, string|array<int, string>> $links
+     * @param array<int, string|array<int|string, bool|int|float|string|null>> $links
      * @param array<int, string> $headScripts
      * @param array<int, string> $bodyScripts
      * @param array<int, string|array<string, bool|int|float|string|null>> $headScriptUrls
@@ -330,18 +330,19 @@ class DocumentProperties
         $html = '';
 
         foreach ($this->links as $link) {
-            $rel = 'stylesheet';
-            $href = $link;
+            $attributes = $this->normalizeLinkAttributes($link);
 
-            if (is_array($link)) {
-                [$rel, $href] = match (count($link)) {
-                    0 => ['', ''],
-                    1 => ['', $link[0]],
-                    default => $link,
-                };
+            if ($attributes === null) {
+                continue;
             }
 
-            $html .= $this->getIndent(2) . "<link rel='$rel' href='$href' />" . PHP_EOL;
+            $renderedAttributes = $this->renderHtmlAttributes($attributes);
+
+            if ($renderedAttributes === '') {
+                continue;
+            }
+
+            $html .= $this->getIndent(2) . "<link$renderedAttributes />" . PHP_EOL;
         }
 
         return $html;
@@ -453,6 +454,81 @@ class DocumentProperties
             }
         }
 
+        $renderedAttributes = $this->renderHtmlAttributes($attributes);
+
+        if ($renderedAttributes === '') {
+            return '';
+        }
+
+        $indent = $indentLevel > 0 ? $this->getIndent($indentLevel) : '';
+        $lineEnding = $indentLevel > 0 ? PHP_EOL : '';
+
+        return $indent . "<script$renderedAttributes></script>" . $lineEnding;
+    }
+
+    /**
+     * @param mixed $linkDefinition
+     * @return array<string, bool|int|float|string|null>|null
+     */
+    private function normalizeLinkAttributes(mixed $linkDefinition): ?array
+    {
+        if (is_string($linkDefinition)) {
+            $href = trim($linkDefinition);
+
+            return $href === '' ? null : ['rel' => 'stylesheet', 'href' => $href];
+        }
+
+        if (!is_array($linkDefinition)) {
+            return null;
+        }
+
+        if (array_is_list($linkDefinition)) {
+            [$rel, $href] = match (count($linkDefinition)) {
+                0 => ['', ''],
+                1 => ['', $linkDefinition[0]],
+                default => [$linkDefinition[0], $linkDefinition[1]],
+            };
+
+            $attributes = [
+                'rel' => $rel,
+                'href' => $href,
+            ];
+        } else {
+            $attributes = [];
+
+            foreach ($linkDefinition as $name => $value) {
+                if (!is_string($name)) {
+                    continue;
+                }
+
+                $attributes[$name] = $value;
+            }
+        }
+
+        if (!array_key_exists('href', $attributes)) {
+            return null;
+        }
+
+        $href = trim((string)$attributes['href']);
+
+        if ($href === '') {
+            return null;
+        }
+
+        $attributes['href'] = $href;
+
+        if (!array_key_exists('rel', $attributes) || trim((string)$attributes['rel']) === '') {
+            $attributes['rel'] = 'stylesheet';
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * @param array<string, mixed> $attributes
+     */
+    private function renderHtmlAttributes(array $attributes): string
+    {
         $renderedAttributes = '';
 
         foreach ($attributes as $name => $value) {
@@ -462,7 +538,7 @@ class DocumentProperties
                 continue;
             }
 
-            if (!is_bool($value) && !is_int($value) && !is_float($value) && !is_string($value) && $value !== null) {
+            if (!is_bool($value) && !is_int($value) && !is_float($value) && !is_string($value)) {
                 continue;
             }
 
@@ -475,14 +551,7 @@ class DocumentProperties
             $renderedAttributes .= " $attributeName='$escapedValue'";
         }
 
-        if (trim($renderedAttributes) === '') {
-            return '';
-        }
-
-        $indent = $indentLevel > 0 ? $this->getIndent($indentLevel) : '';
-        $lineEnding = $indentLevel > 0 ? PHP_EOL : '';
-
-        return $indent . "<script$renderedAttributes></script>" . $lineEnding;
+        return trim($renderedAttributes) === '' ? '' : $renderedAttributes;
     }
 
     /**

@@ -26,6 +26,12 @@ use Mocks\LegacyAppModule;
 use Mocks\MismatchedConstraintAppModule;
 use Mocks\ExactWildcardController;
 use Mocks\HostRoutingAppModule;
+use Mocks\HostScopedAppModule;
+use Mocks\HostScopedConsoleModule;
+use Mocks\HostScopedDashboardController;
+use Mocks\HostScopedHelpController;
+use Mocks\HostScopedSiblingModule;
+use Mocks\ImportedHostScopedSiblingAppModule;
 use Mocks\ImportOnlyRootAppModule;
 use Mocks\LegacyTenantDashboardController;
 use Mocks\NestedApiController;
@@ -160,6 +166,22 @@ class RouterCest
 
     $I->assertInstanceOf(NestedFeaturesController::class, $controller);
     $I->assertSame('feature-1', $response->getBody());
+  }
+
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testDeepNestedDynamicRoutesResolveToTheClosestController(UnitTester $I): void
+  {
+    $result = $this->dispatch('/api/v1/workspaces/1/vendors/16/endpoints/5/versions/3', \Mocks\DeepRoutingAppModule::class);
+
+    $I->assertInstanceOf(\Mocks\DeepVersionController::class, $result['controller']);
+    $I->assertSame('version-1-16-5-3', $result['response']->getBody());
   }
 
   /**
@@ -656,6 +678,91 @@ class RouterCest
 
     $I->assertSame('public-dashboard', $result['response']->getBody());
     $I->assertSame([], $result['request']->getHostParams());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testControllerHostsDoNotScopeHostlessSiblingControllers(UnitTester $I): void
+  {
+    $healthResult = $this->dispatch('/health', HostScopedSiblingModule::class, 'localhost');
+    $adminResult = $this->dispatch('/admin', HostScopedSiblingModule::class, 'admin.example.com');
+
+    $I->assertSame('sibling-health', $healthResult['response']->getBody());
+    $I->assertSame('sibling-admin', $adminResult['response']->getBody());
+
+    try {
+      $this->dispatch('/admin', HostScopedSiblingModule::class, 'localhost');
+      $I->fail('Expected host-scoped controller to reject unmatched hosts.');
+    } catch (NotFoundException $exception) {
+      $I->assertStringContainsString('/admin', $exception->getMessage());
+    }
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testFirstControllerHostDoesNotGateImportedSiblingControllers(UnitTester $I): void
+  {
+    $healthResult = $this->dispatch('/health', ImportedHostScopedSiblingAppModule::class, 'localhost');
+    $adminResult = $this->dispatch('/', ImportedHostScopedSiblingAppModule::class, 'admin.example.com');
+
+    $I->assertSame('imported-sibling-health', $healthResult['response']->getBody());
+    $I->assertSame('imported-sibling-admin', $adminResult['response']->getBody());
+
+    try {
+      $this->dispatch('/', ImportedHostScopedSiblingAppModule::class, 'localhost');
+      $I->fail('Expected the imported host-scoped controller to reject unmatched hosts.');
+    } catch (NotFoundException $exception) {
+      $I->assertStringContainsString('/', $exception->getMessage());
+    }
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testImportedControllersInheritParentModuleHostScope(UnitTester $I): void
+  {
+    try {
+      $this->dispatch('/help', HostScopedConsoleModule::class, 'localhost');
+      $I->fail('Expected inherited host-scoped route to reject the base host.');
+    } catch (NotFoundException $exception) {
+      $I->assertStringContainsString('/help', $exception->getMessage());
+    }
+
+    $consoleResult = $this->dispatch('/help', HostScopedConsoleModule::class, 'console.localhost');
+    $adminResult = $this->dispatch('/help', HostScopedConsoleModule::class, 'admin.localhost');
+
+    $I->assertInstanceOf(HostScopedHelpController::class, $consoleResult['controller']);
+    $I->assertSame('host-scoped-help', $consoleResult['response']->getBody());
+    $I->assertSame('host-scoped-help', $adminResult['response']->getBody());
+  }
+
+  /**
+   * @throws ReflectionException
+   * @throws NotFoundException
+   * @throws HttpException
+   * @throws ContainerException
+   * @throws EntryNotFoundException
+   */
+  public function testHostScopedImportedControllersBeatHostlessRootFallback(UnitTester $I): void
+  {
+    $result = $this->dispatch('/dashboard', HostScopedAppModule::class, 'console.localhost');
+
+    $I->assertInstanceOf(HostScopedDashboardController::class, $result['controller']);
+    $I->assertSame('host-scoped-dashboard', $result['response']->getBody());
   }
 
   /**

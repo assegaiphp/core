@@ -421,10 +421,6 @@ parameters:
 			count: 1
 			path: src/ControllerManager.php
 
-		-
-			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$controllerRouteMetadata \\(array\\<class\\-string, array\\{module\\: class\\-string, local_path\\: string, resolved_path\\: string, hosts\\: array\\<int, string\\>\\}\\>\\) does not accept non\\-empty\\-array\\<string, array\\{module\\: string, local_path\\: string, resolved_path\\: string, hosts\\: array\\<int, string\\>\\}\\>\\.$#"
-			count: 1
-			path: src/ControllerManager.php
 
 		-
 			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$controllerTokensList with generic class ReflectionClass does not specify its types\\: T$#"
@@ -1321,15 +1317,7 @@ parameters:
 			count: 1
 			path: src/RPC/RpcArgumentsHost.php
 
-		-
-			message: "#^Part \\$href \\(array\\<int, string\\>\\|string\\) of encapsed string cannot be cast to string\\.$#"
-			count: 1
-			path: src/Rendering/DocumentProperties.php
 
-		-
-			message: "#^Result of && is always false\\.$#"
-			count: 2
-			path: src/Rendering/DocumentProperties.php
 
 		-
 			message: "#^Unsafe usage of new static\\(\\)\\.$#"
@@ -1622,11 +1610,6 @@ parameters:
 			path: src/Routing/Router.php
 
 		-
-			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getControllerCandidateMatchData\\(\\) has parameter \\$reflectionController with generic class ReflectionClass but does not specify its types\\: T$#"
-			count: 1
-			path: src/Routing/Router.php
-
-		-
 			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getControllerHostMatchData\\(\\) has parameter \\$reflectionController with generic class ReflectionClass but does not specify its types\\: T$#"
 			count: 1
 			path: src/Routing/Router.php
@@ -1865,36 +1848,6 @@ parameters:
 			message: "#^Parameter \\#2 \\$timezone of class DateTime constructor expects DateTimeZone\\|null, string\\|null given\\.$#"
 			count: 1
 			path: src/Util/Functions.php
-
-		-
-			message: "#^Argument of an invalid type stdClass supplied for foreach, only iterables are supported\\.$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
-			message: "#^Cannot call method getName\\(\\) on ReflectionIntersectionType\\|ReflectionNamedType\\|ReflectionUnionType\\|null\\.$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
-			message: "#^Cannot call method getName\\(\\) on ReflectionNamedType\\|null\\.$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
-			message: "#^Match expression does not handle remaining value\\: true$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
-			message: "#^Parameter \\#1 \\$enum of function enum_exists expects string, ReflectionIntersectionType\\|ReflectionNamedType\\|ReflectionUnionType\\|null given\\.$#"
-			count: 1
-			path: src/Util/TypeManager.php
-
-		-
-			message: "#^Parameter \\#1 \\$propertyReflectionType of static method Assegai\\\\Core\\\\Util\\\\TypeManager\\:\\:getValidPropertyValue\\(\\) expects ReflectionIntersectionType\\|ReflectionNamedType\\|ReflectionUnionType\\|null, ReflectionType\\|null given\\.$#"
-			count: 1
-			path: src/Util/TypeManager.php
 
 		-
 			message: "#^Method Assegai\\\\Core\\\\Util\\\\Validator\\:\\:isValidRequestMapperAttribute\\(\\) has parameter \\$attribute with generic class ReflectionAttribute but does not specify its types\\: T$#"

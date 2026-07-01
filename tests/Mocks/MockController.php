@@ -172,6 +172,104 @@ class NestedAppModule
 {
 }
 
+
+#[Controller('api/v1/workspaces')]
+class DeepWorkspaceController
+{
+  #[Get(':workspace_id')]
+  public function findOne(int $workspace_id): string
+  {
+    return "workspace-$workspace_id";
+  }
+}
+
+#[Controller(':workspace_id/vendors')]
+class DeepVendorController
+{
+  #[Get(':vendor_id')]
+  public function findOne(int $workspace_id, int $vendor_id): string
+  {
+    return "vendor-$workspace_id-$vendor_id";
+  }
+}
+
+#[Controller(':vendor_id/endpoints')]
+class DeepEndpointController
+{
+  #[Get(':endpoint_id')]
+  public function findOne(int $workspace_id, int $vendor_id, int $endpoint_id): string
+  {
+    return "endpoint-$workspace_id-$vendor_id-$endpoint_id";
+  }
+}
+
+#[Controller(':endpoint_id/versions')]
+class DeepVersionController
+{
+  #[Get(':version_id')]
+  public function findOne(int $workspace_id, int $vendor_id, int $endpoint_id, int $version_id): string
+  {
+    return "version-$workspace_id-$vendor_id-$endpoint_id-$version_id";
+  }
+}
+
+#[Controller(':version_id')]
+class DeepVersionDetailController
+{
+  #[Get('responses')]
+  public function responses(int $workspace_id, int $vendor_id, int $endpoint_id, int $version_id): string
+  {
+    return "version-responses-$workspace_id-$vendor_id-$endpoint_id-$version_id";
+  }
+}
+
+#[Module(
+  controllers: [DeepVersionDetailController::class],
+)]
+class DeepVersionDetailsModule
+{
+}
+
+#[Module(
+  controllers: [DeepVersionController::class],
+  imports: [DeepVersionDetailsModule::class],
+)]
+class DeepVersionsModule
+{
+}
+
+#[Module(
+  controllers: [DeepEndpointController::class],
+  imports: [DeepVersionsModule::class],
+)]
+class DeepEndpointsModule
+{
+}
+
+#[Module(
+  controllers: [DeepVendorController::class],
+  imports: [DeepEndpointsModule::class],
+)]
+class DeepVendorsModule
+{
+}
+
+#[Module(
+  controllers: [DeepWorkspaceController::class],
+  imports: [DeepVendorsModule::class],
+)]
+class DeepWorkspacesModule
+{
+}
+
+#[Module(
+  controllers: [NestedRootController::class],
+  imports: [DeepWorkspacesModule::class],
+)]
+class DeepRoutingAppModule
+{
+}
+
 #[Controller('v1/workspaces')]
 class CyclicWorkspaceController
 {
@@ -398,6 +496,137 @@ class RuntimeHostController
   {
     return "runtime-$vendorRuntimeSlug:$vendorPath";
   }
+}
+
+#[Controller(path: '/', host: ['console.localhost', 'admin.localhost'])]
+class HostScopedConsoleController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'host-scoped-console';
+  }
+}
+
+#[Controller(path: 'dashboard')]
+class HostScopedDashboardController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'host-scoped-dashboard';
+  }
+}
+
+#[Controller(path: 'help')]
+class HostScopedHelpController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'host-scoped-help';
+  }
+}
+
+#[Module(
+  controllers: [HostScopedHelpController::class],
+)]
+class HostScopedHelpModule
+{
+}
+
+#[Module(
+  controllers: [HostScopedDashboardController::class],
+)]
+class HostScopedDashboardModule
+{
+}
+
+#[Module(
+  controllers: [HostScopedConsoleController::class],
+  imports: [HostScopedDashboardModule::class, HostScopedHelpModule::class],
+)]
+class HostScopedConsoleModule
+{
+}
+
+#[Controller(path: '')]
+class HostScopedAppController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'host-scoped-app';
+  }
+}
+
+#[Module(
+  controllers: [HostScopedAppController::class],
+  imports: [HostScopedConsoleModule::class],
+)]
+class HostScopedAppModule
+{
+}
+
+#[Controller(path: 'admin', host: 'admin.example.com')]
+class HostScopedSiblingAdminController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'sibling-admin';
+  }
+}
+
+#[Controller(path: 'health')]
+class HostScopedSiblingHealthController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'sibling-health';
+  }
+}
+
+#[Module(
+  controllers: [HostScopedSiblingAdminController::class, HostScopedSiblingHealthController::class],
+)]
+class HostScopedSiblingModule
+{
+}
+
+#[Controller(path: '', host: 'admin.example.com')]
+class ImportedHostScopedSiblingAdminController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'imported-sibling-admin';
+  }
+}
+
+#[Controller(path: 'health')]
+class ImportedHostScopedSiblingHealthController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'imported-sibling-health';
+  }
+}
+
+#[Module(
+  controllers: [ImportedHostScopedSiblingAdminController::class, ImportedHostScopedSiblingHealthController::class],
+)]
+class ImportedHostScopedSiblingModule
+{
+}
+
+#[Module(
+  imports: [ImportedHostScopedSiblingModule::class],
+)]
+class ImportedHostScopedSiblingAppModule
+{
 }
 
 #[Controller(path: 'response-metadata')]
