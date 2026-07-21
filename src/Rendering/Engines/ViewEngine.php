@@ -83,7 +83,7 @@ final class ViewEngine
     if (!$this->view) {
       throw new RenderingException("Invalid view");
     }
-    $lang = $this->view->props->lang;
+    $lang = htmlspecialchars($this->view->props->lang, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
     $html = <<<START
 <!DOCTYPE html>

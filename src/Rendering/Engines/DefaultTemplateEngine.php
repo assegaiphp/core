@@ -246,6 +246,7 @@ class DefaultTemplateEngine extends TemplateEngine
         $rawDocumentProps = $this->meta['props'] ?? [];
         $documentProps = DocumentProperties::fromArray(is_array($rawDocumentProps) ? $rawDocumentProps : []);
         $lang = $this->getMetaString('lang') ?? ($documentProps->lang ?: Request::current()->getLang());
+        $lang = htmlspecialchars($lang, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $headAssets = $documentProps->generateHeadAssetTags();
 
         if (is_string($rawDocumentProps) && trim($rawDocumentProps) !== '') {
@@ -256,7 +257,11 @@ class DefaultTemplateEngine extends TemplateEngine
         $headAssets .= $this->loadStyles();
         $headAssets .= $this->loadScripts();
         $output = $template->render([...$this->data]);
-        $charSet = $this->meta['charset'] ?? 'UTF-8';
+        $charSet = htmlspecialchars(
+            (string)($this->meta['charset'] ?? 'UTF-8'),
+            ENT_QUOTES | ENT_SUBSTITUTE,
+            'UTF-8',
+        );
         $documentMetaTags = $this->renderDocumentMetaTags();
         $bodyScripts = $documentProps->generateBodyScriptTags() . $documentProps->generateBodyScriptImportTags();
         $webComponentBundleTag = $this->loadWebComponentBundle();

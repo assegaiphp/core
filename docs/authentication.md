@@ -42,6 +42,8 @@ $strategy = new SessionAuthStrategy([
 
 If authentication succeeds, the strategy stores a sanitized copy of the user in `$_SESSION`.
 
+Framework session cookies default to `HttpOnly` and `SameSite=Lax`; `Secure` is enabled automatically for HTTPS requests. Long-lived runtimes also isolate the session identifier and `$_SESSION` data between requests.
+
 ## JWT authentication
 
 Use JWT authentication when the client is calling your API directly and you want to return a token.

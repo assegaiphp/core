@@ -32,6 +32,13 @@ class OpenSwooleHttpRuntime implements HttpRuntimeInterface
   {
     $this->assertNetworkBinding();
     $this->settings = (new OpenSwooleServerSettingsResolver())->normalize($settings);
+
+    if (($this->settings['enableCoroutine'] ?? false) === true) {
+      throw new InvalidArgumentException(
+        'OpenSwoole coroutine request handling is disabled until all process-global PHP state is coroutine-safe.'
+      );
+    }
+
     $this->serverFactory ??= new NativeOpenSwooleServerFactory();
   }
 
@@ -145,10 +152,10 @@ class OpenSwooleHttpRuntime implements HttpRuntimeInterface
     $normalizedServerData['CONTENT_TYPE'] = (string) ($headerData['content-type'] ?? '');
     $normalizedServerData['REMOTE_ADDR'] = (string) ($serverData['remote_addr'] ?? '127.0.0.1');
     $normalizedServerData['SERVER_PROTOCOL'] = (string) ($serverData['server_protocol'] ?? 'HTTP/1.1');
-    $normalizedServerData['REQUEST_SCHEME'] = (string) ($headerData['x-forwarded-proto'] ?? 'http');
+    $normalizedServerData['REQUEST_SCHEME'] = (string) ($serverData['request_scheme'] ?? 'http');
 
     $query = $request->get ?? [];
-    $query['path'] ??= $normalizedServerData['REQUEST_URI'];
+    $query['path'] = (string) (parse_url($normalizedServerData['REQUEST_URI'], PHP_URL_PATH) ?: '/');
 
     return new RuntimeRequestContext(
       server: $normalizedServerData,

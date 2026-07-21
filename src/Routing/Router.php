@@ -1413,7 +1413,7 @@ final class Router
      * @throws ReflectionException
      * @throws HttpException
      */
-    private function runMiddleware(Request $request, Response $response, callable $next): bool
+    public function runMiddleware(Request $request, Response $response, callable $next): bool
     {
         if (!$this->middlewareConsumer) {
             $next();

@@ -62,7 +62,7 @@ If a project should usually boot with OpenSwoole, keep that in config:
         "workerNum": 1,
         "taskWorkerNum": 0,
         "maxRequest": 0,
-        "enableCoroutine": true,
+        "enableCoroutine": false,
         "hookFlags": "all"
       }
     }
@@ -83,7 +83,7 @@ Assegai validates these settings before the runtime boots, so a typo like `worke
 - `workerNum` controls how many HTTP workers the server starts
 - `taskWorkerNum` reserves task workers for short internal offloading work
 - `maxRequest` lets a worker restart after a fixed number of requests
-- `enableCoroutine` turns coroutine support on or off
+- `enableCoroutine` must remain `false`; Assegai rejects coroutine request handling until PHP global request and session state can be isolated safely
 - `hookFlags` controls which coroutine hooks OpenSwoole enables
 
 `hookFlags` can be:

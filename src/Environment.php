@@ -25,7 +25,7 @@ class Environment
    */
   public static function isDebug(): bool
   {
-    return filter_var(($_ENV['DEBUG_MODE'] ?? false), FILTER_VALIDATE_BOOL);
+    return Config::isDebug();
   }
 
   /**

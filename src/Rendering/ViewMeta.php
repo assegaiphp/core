@@ -57,7 +57,9 @@ class ViewMeta
     $html = '';
     foreach ($this->httpEquiv as $name => $content)
     {
-      $html .= "<meta http-equiv='$name' content='$content' />" . PHP_EOL;
+      $escapedName = htmlspecialchars((string)$name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+      $escapedContent = htmlspecialchars((string)$content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+      $html .= "<meta http-equiv='$escapedName' content='$escapedContent' />" . PHP_EOL;
     }
     return $html;
   }
@@ -69,7 +71,9 @@ class ViewMeta
   {    $html = '';
     foreach ($this->props as $name => $content)
     {
-      $html .= "<meta name='$name' content='$content'>" . PHP_EOL;
+      $escapedName = htmlspecialchars((string)$name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+      $escapedContent = htmlspecialchars((string)$content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+      $html .= "<meta name='$escapedName' content='$escapedContent'>" . PHP_EOL;
     }
     return $html;
   }

@@ -13,6 +13,7 @@ use Assegai\Core\Enumerations\Http\ContentType;
 use Assegai\Core\Events\Event;
 use Assegai\Core\Exceptions\Container\ContainerException;
 use Assegai\Core\Exceptions\Container\EntryNotFoundException;
+use Assegai\Core\Exceptions\Handlers\DefaultErrorHandler;
 use Assegai\Core\Exceptions\Handlers\HttpExceptionHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsErrorHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
@@ -117,6 +118,10 @@ class App implements AppInterface
      */
     protected ErrorHandlerInterface $errorHandler;
     /**
+     * @var ErrorHandlerInterface $productionErrorHandler The production-safe error handler.
+     */
+    protected ErrorHandlerInterface $productionErrorHandler;
+    /**
      * @var ExceptionHandlerInterface $exceptionHandler The exception handler.
      */
     protected ExceptionHandlerInterface $exceptionHandler;
@@ -162,6 +167,7 @@ class App implements AppInterface
     protected array $profileResults = [];
     protected int $profilePrecision = 4;
     protected bool $sessionStartedForRequest = false;
+    protected ?string $pendingSessionCookieHeader = null;
     protected bool $applicationGraphPrepared = false;
     protected bool $middlewarePrepared = false;
     protected bool $moduleInitInvoked = false;
@@ -214,6 +220,7 @@ class App implements AppInterface
         $this->setLogger(new ConsoleLogger(new ConsoleOutput()));
         $this->exceptionHandler = new WhoopsExceptionHandler($this->logger);
         $this->errorHandler = new WhoopsErrorHandler($this->logger);
+        $this->productionErrorHandler = new DefaultErrorHandler($this->logger);
         $this->httpExceptionHandler = new HttpExceptionHandler($this->logger);
 
         set_exception_handler(function (Throwable $exception) {
@@ -230,9 +237,23 @@ class App implements AppInterface
             }
         });
 
-        set_error_handler(function ($errno, $errstr, $errfile, $errline) {
-            $this->errorHandler->handle($errno, $errstr, $errfile, $errline);
+        set_error_handler(function ($errno, $errstr, $errfile, $errline): bool {
+            return $this->handlePhpError($errno, $errstr, $errfile, $errline);
         });
+    }
+
+    /**
+     * Handles PHP runtime errors through the appropriate environment-specific handler.
+     */
+    protected function handlePhpError(int $errno, string $errstr, string $errfile, int $errline): bool
+    {
+        if (Environment::isProduction()) {
+            $this->productionErrorHandler->handle($errno, $errstr, $errfile, $errline);
+            return true;
+        }
+
+        $this->errorHandler->handle($errno, $errstr, $errfile, $errline);
+        return true;
     }
 
     /**
@@ -278,7 +299,7 @@ class App implements AppInterface
         $this->registerApplicationDependencies();
         $this->refreshRequestScope();
 
-        $this->isDebug = env('DEBUG_MODE', false);
+        $this->isDebug = Config::isDebug();
         $this->withProfiling = env('PROFILING', false);
     }
 
@@ -365,6 +386,7 @@ class App implements AppInterface
         $this->registerRequestScopedDependencies();
         $this->responder->setEmitter($this->getActiveResponseEmitter());
         $this->sessionStartedForRequest = false;
+        $this->pendingSessionCookieHeader = null;
     }
 
     /**
@@ -376,11 +398,15 @@ class App implements AppInterface
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {
             $this->sessionStartedForRequest = false;
+            $this->applyPendingSessionCookieHeader();
+            $this->clearLongLivedRuntimeSessionState();
             return;
         }
 
         session_write_close();
         $this->sessionStartedForRequest = false;
+        $this->applyPendingSessionCookieHeader();
+        $this->clearLongLivedRuntimeSessionState();
     }
 
     /**
@@ -673,13 +699,13 @@ class App implements AppInterface
                     $this->profileResults['Application Graph Preparation'] = microtime(true) - $time;
                     $time = microtime(true);
                 }
-                if ($this->handleGeneratedApiDocsRequest()) {
-                    return;
-                }
                 $this->prepareMiddlewareGraph();
                 if ($this->withProfiling) {
                     $this->profileResults['Middleware Preparation'] = microtime(true) - $time;
                     $time = microtime(true);
+                }
+                if ($this->handleGeneratedApiDocsRequest()) {
+                    return;
                 }
                 $this->handleRequest();
             }
@@ -955,10 +981,159 @@ class App implements AppInterface
         session_cache_limiter($sessionLimiter);
         session_cache_expire($sessionExpire);
 
-        if (session_start()) {
+        $cookieParams = $this->resolveSessionCookieParameters();
+        ini_set('session.use_cookies', '1');
+        ini_set('session.use_only_cookies', '1');
+        session_set_cookie_params($cookieParams);
+        ini_set('session.use_strict_mode', '1');
+
+        $isLongLivedRuntime = $this->isLongLivedRuntime();
+        $incomingSessionId = null;
+
+        if ($isLongLivedRuntime) {
+            $incomingSessionId = $this->resolveIncomingSessionId();
+            session_id($incomingSessionId ?? '');
+        }
+
+        $sessionOptions = $isLongLivedRuntime
+            ? ['use_cookies' => false]
+            : [];
+
+        if (session_start($sessionOptions)) {
             $this->sessionStartedForRequest = true;
+            $currentSessionId = session_id();
+
+            if (
+                $isLongLivedRuntime &&
+                is_string($currentSessionId) &&
+                $currentSessionId !== '' &&
+                !hash_equals($incomingSessionId ?? '', $currentSessionId)
+            ) {
+                $this->pendingSessionCookieHeader = $this->buildSessionCookieHeader($currentSessionId, $cookieParams);
+            }
+
             broadcast(EventChannel::SESSION_START, new Event());
         }
+    }
+
+    private function isLongLivedRuntime(): bool
+    {
+        return strtolower($this->runtime->getName()) !== 'php';
+    }
+
+    private function applyPendingSessionCookieHeader(): void
+    {
+        if ($this->pendingSessionCookieHeader === null || !isset($this->response)) {
+            return;
+        }
+
+        $this->response->setHeader('Set-Cookie', $this->pendingSessionCookieHeader, false);
+        $this->pendingSessionCookieHeader = null;
+    }
+
+    private function clearLongLivedRuntimeSessionState(): void
+    {
+        if (!$this->isLongLivedRuntime()) {
+            return;
+        }
+
+        $_SESSION = [];
+
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_id('');
+            ini_set('session.use_cookies', '1');
+            ini_set('session.use_only_cookies', '1');
+        }
+    }
+
+    private function resolveIncomingSessionId(): ?string
+    {
+        $sessionName = session_name();
+
+        if (!is_string($sessionName)) {
+            return null;
+        }
+
+        $sessionId = $this->request->getCookies($sessionName);
+
+        if (!is_string($sessionId) || !preg_match('/^[A-Za-z0-9,-]{1,128}$/D', $sessionId)) {
+            return null;
+        }
+
+        return $sessionId;
+    }
+
+    /**
+     * @return array{lifetime: int, path: string, domain: string, secure: bool, httponly: bool, samesite: string}
+     */
+    private function resolveSessionCookieParameters(): array
+    {
+        $sessionConfig = $this->appConfig?->get('session', []);
+        $sessionConfig = is_array($sessionConfig) ? $sessionConfig : [];
+        $configuredSecure = $sessionConfig['cookieSecure'] ?? $sessionConfig['cookie_secure'] ?? null;
+        $sameSite = ucfirst(strtolower((string)($sessionConfig['cookieSameSite'] ?? $sessionConfig['cookie_samesite'] ?? 'Lax')));
+
+        if (!in_array($sameSite, ['Lax', 'Strict', 'None'], true)) {
+            $sameSite = 'Lax';
+        }
+
+        $secure = is_bool($configuredSecure)
+            ? $configuredSecure
+            : $this->request->getProtocol() === 'https';
+
+        if ($sameSite === 'None') {
+            $secure = true;
+        }
+
+        $path = (string)($sessionConfig['cookiePath'] ?? $sessionConfig['cookie_path'] ?? '/');
+        $domain = (string)($sessionConfig['cookieDomain'] ?? $sessionConfig['cookie_domain'] ?? '');
+
+        if ($path === '' || $path[0] !== '/' || preg_match('/[\x00-\x20;,\x7f]/', $path)) {
+            $path = '/';
+        }
+
+        if ($domain !== '' && !preg_match('/^\.?[a-z0-9.-]+$/iD', $domain)) {
+            $domain = '';
+        }
+
+        return [
+            'lifetime' => max(0, (int)($sessionConfig['cookieLifetime'] ?? $sessionConfig['cookie_lifetime'] ?? 0)),
+            'path' => $path,
+            'domain' => $domain,
+            'secure' => $secure,
+            'httponly' => (bool)($sessionConfig['cookieHttpOnly'] ?? $sessionConfig['cookie_httponly'] ?? true),
+            'samesite' => $sameSite,
+        ];
+    }
+
+    /**
+     * @param array{lifetime: int, path: string, domain: string, secure: bool, httponly: bool, samesite: string} $parameters
+     */
+    private function buildSessionCookieHeader(string $sessionId, array $parameters): string
+    {
+        $parts = [session_name() . '=' . rawurlencode($sessionId)];
+        $parts[] = 'Path=' . ($parameters['path'] !== '' ? $parameters['path'] : '/');
+
+        if ($parameters['domain'] !== '') {
+            $parts[] = 'Domain=' . $parameters['domain'];
+        }
+
+        if ($parameters['lifetime'] > 0) {
+            $parts[] = 'Max-Age=' . $parameters['lifetime'];
+            $parts[] = 'Expires=' . gmdate('D, d M Y H:i:s T', time() + $parameters['lifetime']);
+        }
+
+        if ($parameters['secure']) {
+            $parts[] = 'Secure';
+        }
+
+        if ($parameters['httponly']) {
+            $parts[] = 'HttpOnly';
+        }
+
+        $parts[] = 'SameSite=' . $parameters['samesite'];
+
+        return implode('; ', $parts);
     }
 
     /**
@@ -1232,7 +1407,7 @@ class App implements AppInterface
     {
         $requestPath = trim($this->request->getPath(), '/');
 
-        if ($this->projectConfig?->get('apiDocs.enabled', true) === false) {
+        if ($this->projectConfig?->get('apiDocs.enabled', false) !== true) {
             return false;
         }
 
@@ -1240,25 +1415,26 @@ class App implements AppInterface
             return false;
         }
 
-        $document = $this->describeApi();
         $response = $this->response;
         $response->reset();
+        $this->router->runMiddleware($this->request, $response, function () use ($requestPath, $response): void {
+            $document = $this->describeApi();
 
-        if ($requestPath === 'openapi.json') {
-            $response->jsonRaw($document);
-            $this->closeSessionForCurrentRequest();
-            $this->responder->respond($response);
-            return true;
-        }
+            if ($requestPath === 'openapi.json') {
+                $response->jsonRaw($document);
+                return;
+            }
 
-        $renderer = new SwaggerUiRenderer();
-        $response->setContentType(ContentType::HTML);
-        $response->setBody(
-            $renderer->render(
-                specUrl: '/openapi.json',
-                title: ($document['info']['title'] ?? 'Assegai API') . ' Docs',
-            )
-        );
+            $renderer = new SwaggerUiRenderer();
+            $response->setContentType(ContentType::HTML);
+            $response->setBody(
+                $renderer->render(
+                    specUrl: '/openapi.json',
+                    title: ($document['info']['title'] ?? 'Assegai API') . ' Docs',
+                )
+            );
+        });
+
         $this->closeSessionForCurrentRequest();
         $this->responder->respond($response);
         return true;

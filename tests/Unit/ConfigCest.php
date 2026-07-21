@@ -32,7 +32,8 @@ class ConfigCest
       unset($GLOBALS['config']);
     }
 
-    unset($_ENV['ENV'], $_ENV['DEBUG_MODE']);
+    unset($_ENV['ENV'], $_ENV['DEBUG_MODE'], $_ENV['APP_ENV'], $_ENV['APP_DEBUG']);
+    unset($_SERVER['ENV'], $_SERVER['DEBUG_MODE'], $_SERVER['APP_ENV'], $_SERVER['APP_DEBUG']);
 
     $I->assertFalse(isset($GLOBALS['config']));
     Config::hydrate($this->workingDirectory);
@@ -149,6 +150,29 @@ class ConfigCest
     $I->assertFalse($isProductionEnvironment);
   }
 
+  public function testEnvironmentMethodAcceptsCommonAliases(UnitTester $I): void
+  {
+    $_ENV['ENV'] = 'prod';
+    $I->assertSame(EnvironmentType::PRODUCTION, Config::environment());
+
+    $_ENV['ENV'] = 'PRODUCTION';
+    $I->assertSame(EnvironmentType::PRODUCTION, Config::environment());
+
+    $_ENV['ENV'] = 'DEV # inline comment';
+    $I->assertSame(EnvironmentType::DEVELOP, Config::environment());
+
+    unset($_ENV['ENV']);
+    unset($_SERVER['ENV']);
+    $_ENV['APP_ENV'] = 'production';
+    $I->assertSame(EnvironmentType::PRODUCTION, Config::environment());
+
+    $_ENV['APP_ENV'] = 'development';
+    $I->assertSame(EnvironmentType::DEVELOP, Config::environment());
+
+    $_ENV['ENV'] = 'DEV';
+    unset($_ENV['APP_ENV']);
+  }
+
   #[Skip]
   public function testTheSetEnvironmentMethod(UnitTester $I): void
   {
@@ -178,6 +202,14 @@ class ConfigCest
   /** @noinspection SpellCheckingInspection */
   public function testTheIsdebugMethods(UnitTester $I): void
   {
+    $I->assertFalse(Config::isDebug());
+
+    unset($_ENV['DEBUG_MODE']);
+    unset($_SERVER['DEBUG_MODE']);
+    $_ENV['APP_DEBUG'] = 'true';
+    $I->assertTrue(Config::isDebug());
+
+    $_ENV['APP_DEBUG'] = 'false';
     $I->assertFalse(Config::isDebug());
   }
 }

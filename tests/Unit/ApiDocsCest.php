@@ -9,6 +9,7 @@ use Assegai\Core\ApiDocs\SwaggerUiRenderer;
 use Assegai\Core\ApiDocs\TypeScriptClientGenerator;
 use Assegai\Core\Config\ComposerConfig;
 use Assegai\Core\Config\ProjectConfig;
+use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\ControllerManager;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
@@ -55,6 +56,9 @@ class ApiDocsCest
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     file_put_contents($this->workspace . '/assegai.json', json_encode([
       'name' => 'Test API',
+      'apiDocs' => [
+        'enabled' => true,
+      ],
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     file_put_contents($this->envFile, '');
     file_put_contents($this->defaultConfigFile, '<?php return [];');
@@ -305,6 +309,71 @@ class ApiDocsCest
     $I->assertTrue($handled);
     $I->assertCount(1, $capturingEmitter->emissions);
     $I->assertSame('3.1.0', json_decode($capturingEmitter->emissions[0]['body'], true)['openapi']);
+  }
+
+  public function testGeneratedApiDocsAreDisabledUnlessExplicitlyEnabled(UnitTester $I): void
+  {
+    file_put_contents($this->workspace . '/assegai.json', json_encode([
+      'name' => 'Test API',
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $_SERVER['REQUEST_URI'] = '/openapi.json';
+    $_GET['path'] = 'openapi.json';
+
+    $app = AssegaiFactory::create(ApiDocsAppModule::class);
+    $refreshRequestScope = new \ReflectionMethod($app, 'refreshRequestScope');
+    $refreshRequestScope->invoke($app);
+
+    $handleGeneratedApiDocsRequest = new \ReflectionMethod($app, 'handleGeneratedApiDocsRequest');
+
+    $I->assertFalse($handleGeneratedApiDocsRequest->invoke($app));
+  }
+
+  public function testGeneratedApiDocsRunThroughConfiguredMiddleware(UnitTester $I): void
+  {
+    $_SERVER['REQUEST_URI'] = '/openapi.json';
+    $_GET['path'] = 'openapi.json';
+
+    $app = AssegaiFactory::create(ApiDocsAppModule::class);
+    $capturingEmitter = new class implements ResponseEmitterInterface {
+      /** @var array<int, array{body: string, response: ResponseInterface|null}> */
+      public array $emissions = [];
+
+      public function emit(string $body, ?ResponseInterface $response = null): void
+      {
+        $this->emissions[] = [
+          'body' => $body,
+          'response' => $response,
+        ];
+      }
+    };
+    $responder = Responder::current();
+    $responder->setEmitter($capturingEmitter);
+    $responderProperty = new ReflectionProperty($app, 'responder');
+    $responderProperty->setValue($app, $responder);
+
+    $refreshRequestScope = new \ReflectionMethod($app, 'refreshRequestScope');
+    $refreshRequestScope->invoke($app);
+    $responder->setEmitter($capturingEmitter);
+    $responderProperty->setValue($app, $responder);
+
+    $consumer = new MiddlewareConsumer();
+    $consumer->apply(
+      static function (Request $request, Response $response, callable $next): void {
+        $response->setStatus(403);
+        $response->jsonRaw(['error' => 'forbidden']);
+      }
+    )->forRoutes('openapi.json');
+
+    $routerProperty = new ReflectionProperty($app, 'router');
+    $routerProperty->getValue($app)->setMiddlewareConsumer($consumer);
+
+    $handleGeneratedApiDocsRequest = new \ReflectionMethod($app, 'handleGeneratedApiDocsRequest');
+    $handled = $handleGeneratedApiDocsRequest->invoke($app);
+
+    $I->assertTrue($handled);
+    $I->assertCount(1, $capturingEmitter->emissions);
+    $I->assertSame(['error' => 'forbidden'], json_decode($capturingEmitter->emissions[0]['body'], true));
+    $I->assertSame(403, $capturingEmitter->emissions[0]['response']?->getStatus()->code);
   }
 
   public function testCreateFromProjectKeepsApiDocsBoundToTheExplicitWorkspace(UnitTester $I): void

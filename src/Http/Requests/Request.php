@@ -130,21 +130,27 @@ class Request implements RequestInterface
         $this->fileData = $context->files;
         $this->rawBody = $context->rawBody;
 
-        $requestUri = (string)($this->serverData['REQUEST_URI'] ?? '/');
-        $this->uri = (string)($this->queryData['path'] ?? $requestUri);
+        $hasRequestUri = array_key_exists('REQUEST_URI', $this->serverData)
+            && is_scalar($this->serverData['REQUEST_URI']);
+        $requestUri = $hasRequestUri
+            ? (string)$this->serverData['REQUEST_URI']
+            : (string)($this->queryData['path'] ?? '/');
+        $this->uri = $requestUri !== '' ? $requestUri : '/';
         $parsedUrl = parse_url($this->uri);
 
-        $scheme = null;
-        $host = null;
-        $path = null;
+        $scheme = is_array($parsedUrl) && is_string($parsedUrl['scheme'] ?? null)
+            ? $parsedUrl['scheme']
+            : null;
+        $host = is_array($parsedUrl) && is_string($parsedUrl['host'] ?? null)
+            ? $parsedUrl['host']
+            : null;
+        $path = is_array($parsedUrl) && is_string($parsedUrl['path'] ?? null)
+            ? $parsedUrl['path']
+            : null;
 
-        if (is_array($parsedUrl)) {
-            extract($parsedUrl);
-        }
-
-        $this->scheme = $scheme ?? ((string)($this->serverData['REQUEST_SCHEME'] ?? 'http'));
+        $this->scheme = $this->resolveScheme($scheme);
         $this->host = $this->resolveHostName($host);
-        $this->path = $path;
+        $this->path = is_string($path) && $path !== '' ? $path : '/';
         $queryData = $this->queryData;
         unset($queryData['path']);
         $this->query = new RequestQuery((string)($this->serverData['QUERY_STRING'] ?? ''), $queryData);
@@ -188,10 +194,12 @@ class Request implements RequestInterface
     private function resolveHostName(?string $host = null): string
     {
         $candidates = [
-            $host,
-            $this->serverData['HTTP_X_FORWARDED_HOST'] ?? null,
+            $this->shouldTrustForwardedHeaders()
+                ? ($this->serverData['HTTP_X_FORWARDED_HOST'] ?? null)
+                : null,
             $this->serverData['HTTP_HOST'] ?? null,
             $this->serverData['SERVER_NAME'] ?? null,
+            $host,
             $this->serverData['REMOTE_HOST'] ?? null,
             'localhost',
         ];
@@ -205,6 +213,109 @@ class Request implements RequestInterface
         }
 
         return 'localhost';
+    }
+
+    private function resolveScheme(?string $parsedScheme = null): string
+    {
+        if ($this->shouldTrustForwardedHeaders()) {
+            $forwardedScheme = $this->serverData['HTTP_X_FORWARDED_PROTO'] ?? null;
+
+            if (is_string($forwardedScheme) && trim($forwardedScheme) !== '') {
+                $candidate = strtolower(trim(explode(',', $forwardedScheme)[0]));
+
+                if (in_array($candidate, ['http', 'https'], true)) {
+                    return $candidate;
+                }
+            }
+        }
+
+        $https = $this->serverData['HTTPS'] ?? null;
+
+        if ($https === true || $https === 1 || (is_string($https) && !in_array(strtolower($https), ['', 'off', '0'], true))) {
+            return 'https';
+        }
+
+        $requestScheme = strtolower((string)($this->serverData['REQUEST_SCHEME'] ?? ''));
+
+        if (in_array($requestScheme, ['http', 'https'], true)) {
+            return $requestScheme;
+        }
+
+        return in_array(strtolower((string)$parsedScheme), ['http', 'https'], true)
+            ? strtolower((string)$parsedScheme)
+            : 'http';
+    }
+
+    private function shouldTrustForwardedHeaders(): bool
+    {
+        $remoteAddress = $this->serverData['REMOTE_ADDR'] ?? null;
+
+        if (!is_string($remoteAddress) || filter_var($remoteAddress, FILTER_VALIDATE_IP) === false) {
+            return false;
+        }
+
+        $configuredProxies = Config::get('trustedProxies') ?? Config::get('TRUSTED_PROXIES');
+
+        if (is_string($configuredProxies)) {
+            $configuredProxies = array_map('trim', explode(',', $configuredProxies));
+        }
+
+        if (!is_array($configuredProxies)) {
+            return false;
+        }
+
+        foreach ($configuredProxies as $configuredProxy) {
+            if (is_string($configuredProxy) && $this->ipMatchesRange($remoteAddress, trim($configuredProxy))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function ipMatchesRange(string $address, string $range): bool
+    {
+        if ($range === '') {
+            return false;
+        }
+
+        if (!str_contains($range, '/')) {
+            return hash_equals(strtolower($range), strtolower($address));
+        }
+
+        [$network, $prefix] = array_pad(explode('/', $range, 2), 2, null);
+        $addressBytes = inet_pton($address);
+        $networkBytes = is_string($network) ? inet_pton($network) : false;
+
+        if ($addressBytes === false || $networkBytes === false || strlen($addressBytes) !== strlen($networkBytes)) {
+            return false;
+        }
+
+        if (!is_string($prefix) || filter_var($prefix, FILTER_VALIDATE_INT) === false) {
+            return false;
+        }
+
+        $prefixLength = (int)$prefix;
+        $maximumPrefix = strlen($addressBytes) * 8;
+
+        if ($prefixLength < 0 || $prefixLength > $maximumPrefix) {
+            return false;
+        }
+
+        $wholeBytes = intdiv($prefixLength, 8);
+        $remainingBits = $prefixLength % 8;
+
+        if ($wholeBytes > 0 && substr($addressBytes, 0, $wholeBytes) !== substr($networkBytes, 0, $wholeBytes)) {
+            return false;
+        }
+
+        if ($remainingBits === 0) {
+            return true;
+        }
+
+        $mask = (0xff << (8 - $remainingBits)) & 0xff;
+
+        return (ord($addressBytes[$wholeBytes]) & $mask) === (ord($networkBytes[$wholeBytes]) & $mask);
     }
 
     /**

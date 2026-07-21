@@ -1005,6 +1005,7 @@ class RouterCest
     RuntimeContext::flush();
     $_GET['path'] = $path;
     $_SERVER['REQUEST_METHOD'] = $method;
+    $_SERVER['REQUEST_URI'] = $path;
     $_SERVER['HTTP_HOST'] = $host;
     $_SERVER['REMOTE_HOST'] = $host;
     unset($_SERVER['HTTP_X_FORWARDED_HOST']);

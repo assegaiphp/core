@@ -73,7 +73,7 @@ final class OpenSwooleServerSettingsResolver
   {
     $normalized = $this->normalize($settings);
     $serverSettings = [
-      'enable_coroutine' => $normalized['enableCoroutine'] ?? true,
+      'enable_coroutine' => $normalized['enableCoroutine'] ?? false,
     ];
 
     if (array_key_exists('hookFlags', $normalized)) {
