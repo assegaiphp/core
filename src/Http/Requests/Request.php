@@ -254,7 +254,7 @@ class Request implements RequestInterface
             return false;
         }
 
-        $configuredProxies = Config::get('trustedProxies') ?? Config::get('TRUSTED_PROXIES');
+        $configuredProxies = Config::get('trustedProxies') ?? Config::environmentValue('TRUSTED_PROXIES');
 
         if (is_string($configuredProxies)) {
             $configuredProxies = array_map('trim', explode(',', $configuredProxies));

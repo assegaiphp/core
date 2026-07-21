@@ -51,6 +51,18 @@ class RuntimeProbeController
   {
     return Response::current()->jsonRaw(['principal' => $_SESSION['principal'] ?? null]);
   }
+
+  #[Get('session/regenerate')]
+  public function regenerateSession(): Response
+  {
+    $previousSessionId = session_id();
+    session_regenerate_id(true);
+
+    return Response::current()->jsonRaw([
+      'previous' => $previousSessionId,
+      'current' => session_id(),
+    ]);
+  }
 }
 
 #[Module(controllers: [RuntimeProbeController::class])]
@@ -804,8 +816,15 @@ class RuntimeCest
         query: [],
         remoteAddress: '10.20.30.54',
       ),
+      $this->createFakeOpenSwooleRequest(
+        path: '/runtime-probe/session/regenerate',
+        queryString: '',
+        query: [],
+        remoteAddress: '10.20.30.55',
+      ),
     ];
     $responses = [
+      $this->createFakeOpenSwooleResponse(),
       $this->createFakeOpenSwooleResponse(),
       $this->createFakeOpenSwooleResponse(),
       $this->createFakeOpenSwooleResponse(),
@@ -867,6 +886,7 @@ class RuntimeCest
     $secondPayload = json_decode($responses[1]->body, true);
     $sessionWritePayload = json_decode($responses[2]->body, true);
     $sessionReadPayload = json_decode($responses[3]->body, true);
+    $sessionRegeneratePayload = json_decode($responses[4]->body, true);
 
     $I->assertSame(200, $responses[0]->status);
     $I->assertSame(200, $responses[1]->status);
@@ -890,6 +910,11 @@ class RuntimeCest
     $I->assertSame(['principal' => null], $sessionReadPayload);
     $I->assertStringContainsString('HttpOnly', $responses[2]->headers['Set-Cookie'] ?? '');
     $I->assertStringContainsString('SameSite=Lax', $responses[2]->headers['Set-Cookie'] ?? '');
+    $I->assertNotSame($sessionRegeneratePayload['previous'], $sessionRegeneratePayload['current']);
+    $I->assertStringStartsWith(
+      session_name() . '=' . rawurlencode($sessionRegeneratePayload['current']) . ';',
+      $responses[4]->headers['Set-Cookie'] ?? ''
+    );
     $I->assertSame(1, $this->readProtectedProperty($app, 'applicationGraphBuildCount'));
     $I->assertSame(1, $this->readProtectedProperty($app, 'middlewareBuildCount'));
     $I->assertNull(RuntimeContext::get(Request::class));

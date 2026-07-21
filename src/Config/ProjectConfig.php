@@ -3,6 +3,7 @@
 namespace Assegai\Core\Config;
 
 use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Config as RootConfig;
 use Assegai\Core\Enumerations\Http\ContextType;
 use Assegai\Core\Interfaces\ConfigInterface;
 use Assegai\Util\Path;
@@ -30,11 +31,11 @@ class ProjectConfig extends AbstractConfig
       $dotenv->safeLoad();
     }
 
-    if (!isset($_ENV['ENV'])) {
+    if (RootConfig::environmentValue('ENV') === null && RootConfig::environmentValue('APP_ENV') === null) {
       $_ENV['ENV'] = 'prod';
     }
 
-    if (!isset($_ENV['DEBUG_MODE'])) {
+    if (RootConfig::environmentValue('DEBUG_MODE') === null && RootConfig::environmentValue('APP_DEBUG') === null) {
       $_ENV['DEBUG_MODE'] = false;
     }
 

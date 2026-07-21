@@ -396,6 +396,8 @@ class App implements AppInterface
      */
     protected function closeSessionForCurrentRequest(): void
     {
+        $this->prepareLongLivedRuntimeSessionCookie();
+
         if (session_status() !== PHP_SESSION_ACTIVE) {
             $this->sessionStartedForRequest = false;
             $this->applyPendingSessionCookieHeader();
@@ -1001,17 +1003,6 @@ class App implements AppInterface
 
         if (session_start($sessionOptions)) {
             $this->sessionStartedForRequest = true;
-            $currentSessionId = session_id();
-
-            if (
-                $isLongLivedRuntime &&
-                is_string($currentSessionId) &&
-                $currentSessionId !== '' &&
-                !hash_equals($incomingSessionId ?? '', $currentSessionId)
-            ) {
-                $this->pendingSessionCookieHeader = $this->buildSessionCookieHeader($currentSessionId, $cookieParams);
-            }
-
             broadcast(EventChannel::SESSION_START, new Event());
         }
     }
@@ -1019,6 +1010,28 @@ class App implements AppInterface
     private function isLongLivedRuntime(): bool
     {
         return strtolower($this->runtime->getName()) !== 'php';
+    }
+
+    private function prepareLongLivedRuntimeSessionCookie(): void
+    {
+        if (!$this->sessionStartedForRequest || !$this->isLongLivedRuntime()) {
+            return;
+        }
+
+        $currentSessionId = session_id();
+
+        if (
+            !is_string($currentSessionId) ||
+            $currentSessionId === '' ||
+            hash_equals($this->resolveIncomingSessionId() ?? '', $currentSessionId)
+        ) {
+            return;
+        }
+
+        $this->pendingSessionCookieHeader = $this->buildSessionCookieHeader(
+            $currentSessionId,
+            $this->resolveSessionCookieParameters()
+        );
     }
 
     private function applyPendingSessionCookieHeader(): void

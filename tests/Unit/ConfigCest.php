@@ -4,6 +4,7 @@
 namespace Unit;
 
 use Assegai\Core\Config;
+use Assegai\Core\Config\ProjectConfig;
 use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Exceptions\ConfigurationException;
 use Assegai\Core\Util\Paths;
@@ -171,6 +172,25 @@ class ConfigCest
 
     $_ENV['ENV'] = 'DEV';
     unset($_ENV['APP_ENV']);
+  }
+
+  public function testProjectDefaultsDoNotShadowEnvironmentAliases(UnitTester $I): void
+  {
+    unset($_ENV['ENV'], $_ENV['DEBUG_MODE']);
+    unset($_SERVER['ENV'], $_SERVER['DEBUG_MODE']);
+    $_ENV['APP_ENV'] = 'development';
+    $_ENV['APP_DEBUG'] = 'true';
+
+    new class extends ProjectConfig {
+      public function load(): void
+      {
+      }
+    };
+
+    $I->assertArrayNotHasKey('ENV', $_ENV);
+    $I->assertArrayNotHasKey('DEBUG_MODE', $_ENV);
+    $I->assertSame(EnvironmentType::DEVELOP, Config::environment());
+    $I->assertTrue(Config::isDebug());
   }
 
   #[Skip]

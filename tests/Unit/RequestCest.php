@@ -24,6 +24,8 @@ class RequestCest
     $_POST = [];
     $_FILES = [];
     $_SERVER = [];
+    unset($_ENV['TRUSTED_PROXIES']);
+    putenv('TRUSTED_PROXIES');
   }
 
   public function testTheGetInstanceMethod(UnitTester $I): void
@@ -143,6 +145,20 @@ class RequestCest
     );
 
     $I->assertSame('tenant.example.com', $request->getHostName());
+  }
+
+  public function testTheRequestReadsTrustedProxiesFromTheProcessEnvironment(UnitTester $I): void
+  {
+    putenv('TRUSTED_PROXIES=127.0.0.1');
+    $request = $this->createRequest(
+      server: [
+        'HTTP_HOST' => 'tenant.example.com',
+        'HTTP_X_FORWARDED_HOST' => 'admin.example.com',
+        'REMOTE_ADDR' => '127.0.0.1',
+      ],
+    );
+
+    $I->assertSame('admin.example.com', $request->getHostName());
   }
 
   public function testTheRequestUriCannotBeOverriddenByAPathQueryParameter(UnitTester $I): void

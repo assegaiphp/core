@@ -160,7 +160,7 @@ class Config
   public static function environment(): EnvironmentType|false
   {
     $env = self::normalizeEnvironmentValue(
-      self::readEnvironmentValue('ENV') ?? self::readEnvironmentValue('APP_ENV')
+      self::environmentValue('ENV') ?? self::environmentValue('APP_ENV')
     );
 
     return match ($env) {
@@ -268,12 +268,15 @@ class Config
   public static function isDebug(): bool
   {
     return filter_var(
-      self::readEnvironmentValue('DEBUG_MODE') ?? self::readEnvironmentValue('APP_DEBUG') ?? false,
+      self::environmentValue('DEBUG_MODE') ?? self::environmentValue('APP_DEBUG') ?? false,
       FILTER_VALIDATE_BOOL
     );
   }
 
-  private static function readEnvironmentValue(string $name): mixed
+  /**
+   * Reads an environment value from PHP's supported environment sources.
+   */
+  public static function environmentValue(string $name): mixed
   {
     if (array_key_exists($name, $_ENV)) {
       return $_ENV[$name];
