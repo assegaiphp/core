@@ -42,7 +42,7 @@ The current OpenSwoole settings live under:
         "workerNum": 1,
         "taskWorkerNum": 0,
         "maxRequest": 0,
-        "enableCoroutine": true,
+        "enableCoroutine": false,
         "hookFlags": "all"
       }
     }
@@ -59,6 +59,8 @@ Assegai translates those into the OpenSwoole server options it knows about today
 - `hookFlags` -> `hook_flags`
 
 Assegai validates these settings before the runtime boots. That means unsupported keys and invalid values fail early instead of being silently ignored.
+
+Coroutine request handling is intentionally disabled. PHP superglobals and session state are process-global, so Assegai rejects `enableCoroutine: true` until that state can be isolated safely between concurrent requests.
 
 `hookFlags` supports a few forms:
 

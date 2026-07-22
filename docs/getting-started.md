@@ -109,9 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
   exit();
 }
 
-if (!isset($_GET['path']) || $_GET['path'] === '') {
-  $_GET['path'] = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-}
+$_GET['path'] = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 
 require_once __DIR__ . '/bootstrap.php';
 ```

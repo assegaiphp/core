@@ -159,14 +159,17 @@ class Config
    */
   public static function environment(): EnvironmentType|false
   {
-    $env = $_ENV['ENV'] ?? null;
+    $env = self::normalizeEnvironmentValue(
+      self::environmentValue('ENV') ?? self::environmentValue('APP_ENV')
+    );
+
     return match ($env) {
-      'PROD' => EnvironmentType::PRODUCTION,
-      'STAGING' => EnvironmentType::STAGING,
+      'PROD', 'PRODUCTION' => EnvironmentType::PRODUCTION,
+      'STAGING', 'STAGE' => EnvironmentType::STAGING,
       'LOCAL' => EnvironmentType::LOCAL,
       'QA' => EnvironmentType::QA,
-      'DEV' => EnvironmentType::DEVELOP,
-      'TEST' => EnvironmentType::TEST,
+      'DEV', 'DEVELOP', 'DEVELOPMENT' => EnvironmentType::DEVELOP,
+      'TEST', 'TESTING' => EnvironmentType::TEST,
       default => false
     };
   }
@@ -264,6 +267,39 @@ class Config
    */
   public static function isDebug(): bool
   {
-    return filter_var(($_ENV['DEBUG_MODE'] ?? false), FILTER_VALIDATE_BOOL);
+    return filter_var(
+      self::environmentValue('DEBUG_MODE') ?? self::environmentValue('APP_DEBUG') ?? false,
+      FILTER_VALIDATE_BOOL
+    );
+  }
+
+  /**
+   * Reads an environment value from PHP's supported environment sources.
+   */
+  public static function environmentValue(string $name): mixed
+  {
+    if (array_key_exists($name, $_ENV)) {
+      return $_ENV[$name];
+    }
+
+    if (array_key_exists($name, $_SERVER)) {
+      return $_SERVER[$name];
+    }
+
+    $value = getenv($name);
+
+    return $value === false ? null : $value;
+  }
+
+  private static function normalizeEnvironmentValue(mixed $value): ?string
+  {
+    if (!is_scalar($value)) {
+      return null;
+    }
+
+    $normalized = trim((string)$value);
+    $normalized = preg_replace('/\s+#.*$/', '', $normalized) ?? $normalized;
+
+    return strtoupper(trim($normalized));
   }
 }

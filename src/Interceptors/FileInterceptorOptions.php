@@ -6,6 +6,9 @@ use Closure;
 
 class FileInterceptorOptions
 {
+  /**
+   * @param array{fileSize?: int, size?: int} $limits
+   */
   public function __construct(
     public readonly string $dest = DEFAULT_STORAGE_PATH,
     public readonly string $storage = DEFAULT_STORAGE_PATH,

@@ -53,7 +53,7 @@ Those runtime endpoints do not require an exported file on disk.
 
 API docs are configurable from `assegai.json`.
 
-If you want the runtime routes available, keep `enabled` set to `true`:
+Runtime documentation is disabled by default. If you want the runtime routes available, explicitly set `enabled` to `true`:
 
 ```json
 {
@@ -63,7 +63,7 @@ If you want the runtime routes available, keep `enabled` set to `true`:
 }
 ```
 
-If a project does not need runtime docs at all, disable them:
+If a project does not need runtime docs, omit the setting or disable it explicitly:
 
 ```json
 {
@@ -77,6 +77,8 @@ That turns off both:
 
 - `/docs`
 - `/openapi.json`
+
+The runtime documentation endpoints pass through the application's configured middleware. Protect them with the same authentication and authorization middleware as other non-public routes when they are enabled outside local development.
 
 The export commands are separate on purpose:
 

@@ -413,6 +413,8 @@ public function upload(#[UploadedFile] object $file): array
 
 Under the hood this is driven by `Request::getFile()`, which is populated during multipart form handling.
 
+Treat the browser-supplied filename and MIME type as untrusted. `FileInterceptor` normalizes the original name, derives MIME data from the temporary file, enforces configured size and filter rules, and generates a random server-side storage name.
+
 ### Access to the raw request and response
 
 You do not always need the lower-level objects, but they are available:
@@ -516,12 +518,19 @@ In practice that means:
 
 ### Proxy-aware host resolution
 
-Request host matching is normalized from the incoming request metadata. The current `Request` implementation prefers:
+Request host matching is normalized from the incoming request metadata. By default, Assegai ignores forwarded host and scheme headers and uses the direct `Host` metadata. This prevents clients from selecting host-bound routes by supplying an untrusted `X-Forwarded-Host` value.
 
-1. `X-Forwarded-Host`
-2. `Host`
-3. `SERVER_NAME`
-4. `REMOTE_HOST`
+When the application is behind a known reverse proxy, list its exact IP addresses or CIDR ranges in `config/default.php`:
+
+```php
+<?php
+
+return [
+  'trustedProxies' => ['127.0.0.1', '10.0.0.0/8'],
+];
+```
+
+`TRUSTED_PROXIES` may also be supplied as a comma-separated environment value. Only requests whose `REMOTE_ADDR` matches that allowlist may use `X-Forwarded-Host` or `X-Forwarded-Proto`.
 
 Ports are stripped and hostnames are normalized to lowercase before matching.
 

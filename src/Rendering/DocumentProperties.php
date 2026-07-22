@@ -257,7 +257,13 @@ class DocumentProperties
      */
     private function generateTitleTag(): string
     {
-        return $this->getIndent(2) . "<title>" . ($this->title ?: static::DEFAULT_TITLE) . "</title>" . PHP_EOL;
+        $title = htmlspecialchars(
+            $this->title ?: static::DEFAULT_TITLE,
+            ENT_QUOTES | ENT_SUBSTITUTE,
+            'UTF-8',
+        );
+
+        return $this->getIndent(2) . "<title>$title</title>" . PHP_EOL;
     }
 
     /**
@@ -297,7 +303,13 @@ class DocumentProperties
             $type = static::DEFAULT_FAVICON[1];
         }
 
-        return $this->getIndent(2) . "<link rel='shortcut icon' href='$href' type='$type' />" . PHP_EOL;
+        $attributes = $this->renderHtmlAttributes([
+            'rel' => 'shortcut icon',
+            'href' => (string)$href,
+            'type' => (string)$type,
+        ]);
+
+        return $this->getIndent(2) . "<link$attributes />" . PHP_EOL;
     }
 
     /**
@@ -393,7 +405,9 @@ class DocumentProperties
             return '';
         }
 
-        return $this->getIndent(2) . "<base href='$this->base' />" . PHP_EOL;
+        $attributes = $this->renderHtmlAttributes(['href' => $this->base]);
+
+        return $this->getIndent(2) . "<base$attributes />" . PHP_EOL;
     }
 
     /**

@@ -37,6 +37,32 @@ class RuntimeProbeController
       'remote_ip' => $request->getRemoteIp(),
     ]);
   }
+
+  #[Get('session/write')]
+  public function writeSession(): Response
+  {
+    $_SESSION['principal'] = 'alice';
+
+    return Response::current()->jsonRaw(['stored' => 'alice']);
+  }
+
+  #[Get('session/read')]
+  public function readSession(): Response
+  {
+    return Response::current()->jsonRaw(['principal' => $_SESSION['principal'] ?? null]);
+  }
+
+  #[Get('session/regenerate')]
+  public function regenerateSession(): Response
+  {
+    $previousSessionId = session_id();
+    session_regenerate_id(true);
+
+    return Response::current()->jsonRaw([
+      'previous' => $previousSessionId,
+      'current' => session_id(),
+    ]);
+  }
 }
 
 #[Module(controllers: [RuntimeProbeController::class])]
@@ -347,7 +373,7 @@ class RuntimeCest
             'workerNum' => 2,
             'taskWorkerNum' => 1,
             'maxRequest' => 250,
-            'enableCoroutine' => true,
+            'enableCoroutine' => false,
             'hookFlags' => 'all',
           ],
         ],
@@ -412,6 +438,12 @@ class RuntimeCest
     $I->expectThrowable(InvalidArgumentException::class, static function (): void {
       new OpenSwooleHttpRuntime(settings: [
         'workerNum' => 0,
+      ]);
+    });
+
+    $I->expectThrowable(InvalidArgumentException::class, static function (): void {
+      new OpenSwooleHttpRuntime(settings: [
+        'enableCoroutine' => true,
       ]);
     });
   }
@@ -714,7 +746,7 @@ class RuntimeCest
         'workerNum' => 2,
         'taskWorkerNum' => 1,
         'maxRequest' => 50,
-        'enableCoroutine' => true,
+        'enableCoroutine' => false,
         'hookFlags' => 'all',
       ],
       serverFactory: $factory,
@@ -726,7 +758,7 @@ class RuntimeCest
     $I->assertSame(2, $server->settings['worker_num'] ?? null);
     $I->assertSame(1, $server->settings['task_worker_num'] ?? null);
     $I->assertSame(50, $server->settings['max_request'] ?? null);
-    $I->assertTrue($server->settings['enable_coroutine'] ?? false);
+    $I->assertFalse($server->settings['enable_coroutine'] ?? true);
     $I->assertArrayHasKey('hook_flags', $server->settings);
     $I->assertSame(200, $response->status);
     $I->assertSame('application/json', $response->headers['Content-Type'] ?? null);
@@ -772,8 +804,29 @@ class RuntimeCest
         ],
         remoteAddress: '10.20.30.52',
       ),
+      $this->createFakeOpenSwooleRequest(
+        path: '/runtime-probe/session/write',
+        queryString: '',
+        query: [],
+        remoteAddress: '10.20.30.53',
+      ),
+      $this->createFakeOpenSwooleRequest(
+        path: '/runtime-probe/session/read',
+        queryString: '',
+        query: [],
+        remoteAddress: '10.20.30.54',
+      ),
+      $this->createFakeOpenSwooleRequest(
+        path: '/runtime-probe/session/regenerate',
+        queryString: '',
+        query: [],
+        remoteAddress: '10.20.30.55',
+      ),
     ];
     $responses = [
+      $this->createFakeOpenSwooleResponse(),
+      $this->createFakeOpenSwooleResponse(),
+      $this->createFakeOpenSwooleResponse(),
       $this->createFakeOpenSwooleResponse(),
       $this->createFakeOpenSwooleResponse(),
     ];
@@ -831,6 +884,9 @@ class RuntimeCest
 
     $firstPayload = json_decode($responses[0]->body, true);
     $secondPayload = json_decode($responses[1]->body, true);
+    $sessionWritePayload = json_decode($responses[2]->body, true);
+    $sessionReadPayload = json_decode($responses[3]->body, true);
+    $sessionRegeneratePayload = json_decode($responses[4]->body, true);
 
     $I->assertSame(200, $responses[0]->status);
     $I->assertSame(200, $responses[1]->status);
@@ -850,6 +906,15 @@ class RuntimeCest
       'cookie' => 'second',
       'remote_ip' => '10.20.30.52',
     ], $secondPayload);
+    $I->assertSame(['stored' => 'alice'], $sessionWritePayload);
+    $I->assertSame(['principal' => null], $sessionReadPayload);
+    $I->assertStringContainsString('HttpOnly', $responses[2]->headers['Set-Cookie'] ?? '');
+    $I->assertStringContainsString('SameSite=Lax', $responses[2]->headers['Set-Cookie'] ?? '');
+    $I->assertNotSame($sessionRegeneratePayload['previous'], $sessionRegeneratePayload['current']);
+    $I->assertStringStartsWith(
+      session_name() . '=' . rawurlencode($sessionRegeneratePayload['current']) . ';',
+      $responses[4]->headers['Set-Cookie'] ?? ''
+    );
     $I->assertSame(1, $this->readProtectedProperty($app, 'applicationGraphBuildCount'));
     $I->assertSame(1, $this->readProtectedProperty($app, 'middlewareBuildCount'));
     $I->assertNull(RuntimeContext::get(Request::class));

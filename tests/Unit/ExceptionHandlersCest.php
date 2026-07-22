@@ -2,7 +2,9 @@
 
 namespace Tests\Unit;
 
+use Assegai\Core\App;
 use Assegai\Core\Enumerations\Http\ContentType;
+use Assegai\Core\Exceptions\Handlers\DefaultErrorHandler;
 use Assegai\Core\Exceptions\Handlers\DefaultExceptionHandler;
 use Assegai\Core\Exceptions\Handlers\HttpExceptionHandler;
 use Assegai\Core\Exceptions\Handlers\Support\FrameworkErrorPageRenderer;
@@ -10,6 +12,7 @@ use Assegai\Core\Exceptions\Http\ForbiddenException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\Handlers\WhoopsErrorHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
+use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Requests\RuntimeRequestContext;
@@ -18,6 +21,7 @@ use RuntimeException;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 use Tests\Support\UnitTester;
+use Throwable;
 
 class ExceptionHandlersCest
 {
@@ -127,6 +131,64 @@ class ExceptionHandlersCest
     $I->assertStringContainsString(RuntimeException::class, $records[0]['message']);
     $I->assertStringContainsString('Runtime failure', $records[0]['message']);
     $I->assertStringContainsString('Stack trace:', $records[0]['message']);
+  }
+
+  public function testAppRoutesPhpErrorsToProductionSafeHandler(UnitTester $I): void
+  {
+    $_ENV['ENV'] = 'PROD';
+
+    $developmentHandler = new class implements ErrorHandlerInterface {
+      public array $errors = [];
+
+      public function handle(int $errno, string $errstr, string $errfile, int $errline): void
+      {
+        $this->errors[] = compact('errno', 'errstr', 'errfile', 'errline');
+      }
+
+      public function handleError(Throwable $error): void
+      {
+        $this->errors[] = $error;
+      }
+    };
+
+    $productionHandler = new class implements ErrorHandlerInterface {
+      public array $errors = [];
+
+      public function handle(int $errno, string $errstr, string $errfile, int $errline): void
+      {
+        $this->errors[] = compact('errno', 'errstr', 'errfile', 'errline');
+      }
+
+      public function handleError(Throwable $error): void
+      {
+        $this->errors[] = $error;
+      }
+    };
+
+    $app = new class extends App {
+      public function __construct()
+      {
+      }
+
+      public function setErrorHandlersForTest(ErrorHandlerInterface $developmentHandler, ErrorHandlerInterface $productionHandler): void
+      {
+        $this->errorHandler = $developmentHandler;
+        $this->productionErrorHandler = $productionHandler;
+      }
+
+      public function handlePhpErrorForTest(int $errno, string $errstr, string $errfile, int $errline): bool
+      {
+        return $this->handlePhpError($errno, $errstr, $errfile, $errline);
+      }
+    };
+    $app->setErrorHandlersForTest($developmentHandler, $productionHandler);
+
+    $handled = $app->handlePhpErrorForTest(E_WARNING, 'Undefined array key 0', __FILE__, __LINE__);
+
+    $I->assertTrue($handled);
+    $I->assertCount(0, $developmentHandler->errors);
+    $I->assertCount(1, $productionHandler->errors);
+    $I->assertSame('Undefined array key 0', $productionHandler->errors[0]['errstr']);
   }
 
   public function testWhoopsExceptionHandlerAlsoChoosesJsonForNonGetRequests(UnitTester $I): void
@@ -355,6 +417,44 @@ class ExceptionHandlersCest
     $I->assertStringContainsString('Page not found', $html);
     $I->assertStringContainsString('404', $html);
     $I->assertStringContainsString('AssegaiPHP', $html);
+  }
+
+  public function testDefaultErrorHandlerHidesRuntimeWarningsInProduction(UnitTester $I): void
+  {
+    $_ENV['ENV'] = 'PROD';
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $_SERVER['CONTENT_TYPE'] = '';
+    $_SERVER['HTTP_ACCEPT'] = 'text/html';
+
+    $logger = $this->createNullLogger();
+
+    $handler = new class($logger) extends DefaultErrorHandler {
+      public array $emissions = [];
+
+      public function __construct(LoggerInterface $logger)
+      {
+        parent::__construct($logger);
+      }
+
+      protected function emitErrorResponse(string $body, ContentType $contentType, int $statusCode): void
+      {
+        $this->emissions[] = [
+          'body' => $body,
+          'status' => $statusCode,
+          'content_type' => $contentType->value,
+        ];
+      }
+    };
+
+    $handler->handle(E_WARNING, 'Undefined array key 0', __FILE__, __LINE__);
+
+    $I->assertCount(1, $handler->emissions);
+    $I->assertSame(500, $handler->emissions[0]['status']);
+    $I->assertSame('text/html', $handler->emissions[0]['content_type']);
+    $I->assertStringContainsString('Internal server error', $handler->emissions[0]['body']);
+    $I->assertStringNotContainsString('Undefined array key 0', $handler->emissions[0]['body']);
+    $I->assertStringNotContainsString('ExceptionHandlersCest.php', $handler->emissions[0]['body']);
+    $I->assertStringNotContainsString('Details', $handler->emissions[0]['body']);
   }
 
   public function testDefaultExceptionHandlerCanRenderHtmlErrors(UnitTester $I): void
