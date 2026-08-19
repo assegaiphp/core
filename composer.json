@@ -3,7 +3,7 @@
     "description": "A progressive PHP framework for building efficient and scalable server-side applications.",
     "type": "library",
     "require-dev": {
-        "codeception/codeception": "^5.0",
+        "codeception/codeception": "^5.3.5",
         "codeception/module-phpbrowser": "*",
         "codeception/module-asserts": "*",
         "phpstan/phpstan": "^1.11"
@@ -48,7 +48,7 @@
         "jimmiw/php-time-ago": "^3.3"
     },
     "scripts": {
-        "test": "vendor/bin/codecept run Unit",
+        "test": "php -d register_argc_argv=On -d error_reporting=-1 vendor/bin/codecept run Unit",
         "analyze": "vendor/bin/phpstan analyse src --level 8"
     }
 }

@@ -1588,16 +1588,7 @@ final class Router
         $controllerInterceptorCallHandlers = $this->consumeControllerInterceptors($controllerReflection, $context);
 
         # Consume handler guards
-        $useGuardsAttributes = $activatedHandler->getAttributes(UseGuards::class);
-
-        if ($useGuardsAttributes) {
-            /** @var UseGuards $handlerUseGuardsAttribute */
-            $handlerUseGuardsAttribute = $useGuardsAttributes[0]->newInstance();
-
-            if (!$this->guardsConsumer->canActivate(guards: $handlerUseGuardsAttribute->guards, context: $context)) {
-                throw new $handlerUseGuardsAttribute->exceptionClassName();
-            }
-        }
+        $this->consumeHandlerGuards($activatedHandler, $context);
 
         # Consume handler interceptors
         $handlerInterceptorCallHandlers = [];
@@ -1682,6 +1673,27 @@ final class Router
                 } else {
                     throw new $controllerUseGuardsInstance->exceptionClassName();
                 }
+            }
+        }
+    }
+
+    /**
+     * Consumes the guards for the given handler.
+     *
+     * @param ReflectionMethod $activatedHandler The activated handler.
+     * @param ExecutionContext $context The execution context.
+     * @return void
+     */
+    private function consumeHandlerGuards(ReflectionMethod $activatedHandler, ExecutionContext $context): void
+    {
+        $useGuardsAttributes = $activatedHandler->getAttributes(UseGuards::class);
+
+        if ($useGuardsAttributes) {
+            /** @var UseGuards $handlerUseGuardsAttribute */
+            $handlerUseGuardsAttribute = $useGuardsAttributes[0]->newInstance();
+
+            if (!$this->guardsConsumer->canActivate(guards: $handlerUseGuardsAttribute->guards, context: $context)) {
+                throw new $handlerUseGuardsAttribute->exceptionClassName();
             }
         }
     }

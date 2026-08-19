@@ -94,20 +94,10 @@ One front-end detail matters early too:
 
 ## How the scaffold boots
 
-The root `index.php` sets CORS headers, normalizes the request path, and forwards every request into `bootstrap.php`:
+The root `index.php` normalizes the request path and forwards every request into `bootstrap.php`:
 
 ```php
 <?php
-
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Headers: Origin,X-Requested-With,Content-Type,Accept,X-Access-Token,Authorization,x-api-key");
-header("Access-Control-Allow-Methods: GET,HEAD,OPTIONS,PUT,PATCH,POST,DELETE");
-header("Access-Control-Allow-Origin: *");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-  http_response_code(200);
-  exit();
-}
 
 $_GET['path'] = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 
@@ -132,6 +122,11 @@ function bootstrap(): void
 
 bootstrap();
 ```
+
+Cross-origin access is opt-in. Configure it on the application in `bootstrap.php` with
+`$app->enableCors(...)` rather than adding unconditional headers or an `OPTIONS` exit to
+`index.php`. See [Cross-Origin Resource Sharing (CORS)](./cors.md) for the defaults,
+credentialed allowlists, and migration guidance.
 
 That tells you a lot about Assegai's philosophy:
 

@@ -3,6 +3,7 @@
 namespace Assegai\Core\Interfaces;
 
 use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
+use Assegai\Core\Http\Cors\CorsOptions;
 use Exception;
 use Psr\Log\LoggerInterface;
 
@@ -15,6 +16,14 @@ interface AppInterface
    * @return self
    */
   public function configure(mixed $config = null): self;
+
+  /**
+   * Enables application-level Cross-Origin Resource Sharing.
+   *
+   * @param CorsOptions|array<string, mixed>|callable|null $options
+   * @return static
+   */
+  public function enableCors(CorsOptions|array|callable|null $options = null): static;
 
   /**
    * Specifies a list of pipes that should be used by the `App` instance.

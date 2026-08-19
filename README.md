@@ -73,6 +73,21 @@ function bootstrap(): void
 bootstrap();
 ```
 
+Enable cross-origin access at the application boundary when the browser client and API
+use different origins:
+
+```php
+$app->enableCors([
+  'origin' => ['http://localhost:5173'],
+  'credentials' => true,
+  'maxAge' => 600,
+]);
+```
+
+The framework handles real preflight requests and adds CORS headers to successful and
+error responses. See [Cross-Origin Resource Sharing (CORS)](./docs/cors.md) for all
+options and the migration from entry-point header shims.
+
 Start the development server:
 
 ```bash

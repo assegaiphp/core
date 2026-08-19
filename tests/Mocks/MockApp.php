@@ -3,6 +3,7 @@
 namespace tests\Mocks;
 
 use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
+use Assegai\Core\Http\Cors\CorsOptions;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\IAssegaiInterceptor;
 use Assegai\Core\Interfaces\IPipeTransform;
@@ -41,6 +42,14 @@ class MockApp implements AppInterface
   public function configure(mixed $config = null): AppInterface
   {
     $this->config = $config;
+    return $this;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function enableCors(CorsOptions|array|callable|null $options = null): static
+  {
     return $this;
   }
 

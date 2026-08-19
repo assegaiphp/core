@@ -48,6 +48,39 @@ class ResponseEmissionCest
     $I->assertSame(202, http_response_code());
   }
 
+  public function testPhpResponseEmitterStreamsFileBodies(UnitTester $I): void
+  {
+    $filename = tempnam(sys_get_temp_dir(), 'assegai-response-');
+
+    if (!is_string($filename)) {
+      throw new \RuntimeException('Unable to create a temporary response file.');
+    }
+
+    file_put_contents($filename, 'streamed-file-body');
+
+    $response = Response::create();
+    $response->setStatus(200);
+    $response->setHeader('Content-Type', 'application/octet-stream');
+    $emitter = new PhpResponseEmitter();
+
+    ob_start();
+
+    try {
+      $emitter->emitFile($filename, $response);
+      $output = ob_get_clean();
+    } finally {
+      if (ob_get_level() > 0) {
+        ob_end_clean();
+      }
+
+      if (is_file($filename)) {
+        unlink($filename);
+      }
+    }
+
+    $I->assertSame('streamed-file-body', $output);
+  }
+
   public function testJsonResponderReturnsAfterRawEmission(UnitTester $I): void
   {
     $response = Response::create();
