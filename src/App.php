@@ -23,6 +23,7 @@ use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
+use Assegai\Core\Http\Cors\CorsFileResponseEmitter;
 use Assegai\Core\Http\Cors\CorsOptions;
 use Assegai\Core\Http\Cors\CorsProcessor;
 use Assegai\Core\Http\Cors\CorsResponseEmitter;
@@ -30,6 +31,7 @@ use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Requests\RuntimeRequestContext;
 use Assegai\Core\Http\Responses\Emitters\PhpResponseEmitter;
+use Assegai\Core\Http\Responses\Interfaces\FileResponseEmitterInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponderInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponseInterface;
@@ -511,11 +513,10 @@ class App implements AppInterface
         }
 
         if ($this->activeCorsOptions) {
-            $emitter = new CorsResponseEmitter(
-                emitter: $emitter,
-                request: $this->request,
-                processor: new CorsProcessor($this->activeCorsOptions),
-            );
+            $processor = new CorsProcessor($this->activeCorsOptions);
+            $emitter = $emitter instanceof FileResponseEmitterInterface
+                ? new CorsFileResponseEmitter($emitter, $this->request, $processor)
+                : new CorsResponseEmitter($emitter, $this->request, $processor);
         }
 
         return $this->activeResponseEmitter = $emitter;
@@ -820,14 +821,8 @@ class App implements AppInterface
      */
     protected function respondWithPublicResource(string $resourcePath): void
     {
-        $contents = file_get_contents($resourcePath);
-
-        if ($contents === false) {
-            throw new InternalServerErrorException('Unable to read the requested public resource.');
-        }
-
         $this->response->reset();
-        $this->response->setBody($contents);
+        $this->response->setBody('');
         $this->response->setHeader('Content-Type', Paths::getMimeType($resourcePath));
         $this->response->setHeader('X-Content-Type-Options', 'nosniff');
         $contentLength = filesize($resourcePath);
@@ -836,7 +831,15 @@ class App implements AppInterface
             $this->response->setHeader('Content-Length', (string)$contentLength);
         }
 
-        $this->responder->respond($this->response);
+        $emitter = $this->getActiveResponseEmitter();
+
+        if (!$emitter instanceof FileResponseEmitterInterface) {
+            throw new InternalServerErrorException(
+                'The active response emitter does not support streaming public resources.'
+            );
+        }
+
+        $emitter->emitFile($resourcePath, $this->response);
     }
 
     /**

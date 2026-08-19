@@ -177,6 +177,7 @@ use Assegai\Core\ControllerManager;
 use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Requests\RuntimeRequestContext;
 use Assegai\Core\Http\Responses\Emitters\OpenSwooleResponseEmitter;
+use Assegai\Core\Http\Responses\Interfaces\FileResponseEmitterInterface;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\Interfaces\HttpRuntimeInterface;
 use Assegai\Core\Http\Responses\Interfaces\ResponseEmitterInterface;
@@ -542,6 +543,52 @@ class RuntimeCest
     $I->assertSame('openswoole', $target->headers['X-Runtime'] ?? null);
     $I->assertSame('application/json', $target->headers['Content-Type'] ?? null);
     $I->assertSame('{"ok":true}', $target->body);
+  }
+
+  public function testOpenSwooleResponseEmitterUsesNativeFileStreaming(UnitTester $I): void
+  {
+    $target = new class {
+      public ?int $status = null;
+      /** @var array<string, string> */
+      public array $headers = [];
+      public ?string $filename = null;
+      public bool $writable = true;
+
+      public function isWritable(): bool
+      {
+        return $this->writable;
+      }
+
+      public function status(int $status): void
+      {
+        $this->status = $status;
+      }
+
+      public function header(string $name, string $value): void
+      {
+        $this->headers[$name] = $value;
+      }
+
+      public function sendfile(string $filename): bool
+      {
+        $this->filename = $filename;
+        $this->writable = false;
+        return true;
+      }
+    };
+
+    $emitter = new OpenSwooleResponseEmitter($target);
+    $response = HttpResponse::create();
+    $response->setHeader('Content-Type', 'application/pdf');
+    $response->setHeader('Content-Length', '10485760');
+
+    $emitter->emitFile('/srv/public/manual.pdf', $response);
+
+    $I->assertSame(200, $target->status);
+    $I->assertSame('application/pdf', $target->headers['Content-Type'] ?? null);
+    $I->assertSame('10485760', $target->headers['Content-Length'] ?? null);
+    $I->assertSame('/srv/public/manual.pdf', $target->filename);
+    $I->assertFalse($target->writable);
   }
 
   public function testCurrentFrameworkObjectsPreferRuntimeContext(UnitTester $I): void
@@ -1561,15 +1608,20 @@ class RuntimeCest
       }
     }
   }
-  public function testStaticAssetsAreStreamedWithoutExecutingEmbeddedPhpSequences(UnitTester $I): void
+  public function testStaticAssetsUseCorsDecoratedRuntimeFileEmission(UnitTester $I): void
   {
-    $capturingEmitter = new class implements ResponseEmitterInterface {
-      public string $body = '';
+    $capturingEmitter = new class implements FileResponseEmitterInterface {
+      public ?string $filename = null;
       public ?ResponseInterface $response = null;
 
       public function emit(string $body, ?ResponseInterface $response = null): void
       {
-        $this->body = $body;
+        throw new \LogicException('Static assets must use file emission.');
+      }
+
+      public function emitFile(string $filename, ?ResponseInterface $response = null): void
+      {
+        $this->filename = $filename;
         $this->response = $response;
       }
     };
@@ -1611,7 +1663,8 @@ class RuntimeCest
       }
     }
 
-    $I->assertSame($assetContents, $capturingEmitter->body);
+    $I->assertSame($assetFilename, $capturingEmitter->filename);
+    $I->assertSame((string)strlen($assetContents), $capturingEmitter->response?->getHeader('Content-Length'));
     $I->assertSame('image/png', $capturingEmitter->response?->getHeader('Content-Type'));
     $I->assertSame('nosniff', $capturingEmitter->response?->getHeader('X-Content-Type-Options'));
     $I->assertSame(
