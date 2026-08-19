@@ -264,7 +264,6 @@ class ApiDocsCest
     ]);
 
     $method = new \ReflectionMethod(JsonResponder::class, 'encodePayload');
-    $method->setAccessible(true);
     $payload = $method->invoke(new JsonResponder(), $response->getBody());
     $decoded = json_decode($payload, true);
 
