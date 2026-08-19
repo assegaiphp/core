@@ -18,10 +18,14 @@ use Assegai\Core\Exceptions\Handlers\HttpExceptionHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsErrorHandler;
 use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
 use Assegai\Core\Exceptions\Http\HttpException;
+use Assegai\Core\Exceptions\Http\InternalServerErrorException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
+use Assegai\Core\Http\Cors\CorsOptions;
+use Assegai\Core\Http\Cors\CorsProcessor;
+use Assegai\Core\Http\Cors\CorsResponseEmitter;
 use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Requests\Request;
 use Assegai\Core\Http\Requests\RuntimeRequestContext;
@@ -45,8 +49,10 @@ use Assegai\Core\Runtimes\PhpHttpRuntime;
 use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Paths;
+use Closure;
 use Dotenv\Dotenv;
 use Exception;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -178,6 +184,10 @@ class App implements AppInterface
     protected ?array $lifecycleTargets = null;
     protected ?RuntimeRequestContext $runtimeRequestContext = null;
     protected ?ResponseEmitterInterface $runtimeResponseEmitter = null;
+    /** @var CorsOptions|Closure|null */
+    protected CorsOptions|Closure|null $corsOptions = null;
+    protected ?CorsOptions $activeCorsOptions = null;
+    protected ?ResponseEmitterInterface $activeResponseEmitter = null;
     protected HttpRuntimeInterface $runtime;
     protected ResponseEmitterInterface $responseEmitter;
 
@@ -238,6 +248,10 @@ class App implements AppInterface
         });
 
         set_error_handler(function ($errno, $errstr, $errfile, $errline): bool {
+            if ((error_reporting() & $errno) === 0) {
+                return false;
+            }
+
             return $this->handlePhpError($errno, $errstr, $errfile, $errline);
         });
     }
@@ -381,6 +395,8 @@ class App implements AppInterface
 
         $this->response = Response::create();
         Response::setInstance($this->response);
+        $this->activeCorsOptions = $this->resolveCorsOptions($this->request);
+        $this->activeResponseEmitter = null;
 
         $this->resetRequestScopedDependencies();
         $this->registerRequestScopedDependencies();
@@ -480,17 +496,29 @@ class App implements AppInterface
      */
     protected function getActiveResponseEmitter(): ResponseEmitterInterface
     {
-        if ($this->runtimeResponseEmitter instanceof ResponseEmitterInterface) {
-            return $this->runtimeResponseEmitter;
+        if ($this->activeResponseEmitter instanceof ResponseEmitterInterface) {
+            return $this->activeResponseEmitter;
         }
 
-        $registeredEmitter = $this->injector->get(ResponseEmitterInterface::class);
+        $emitter = $this->runtimeResponseEmitter;
 
-        if ($registeredEmitter instanceof ResponseEmitterInterface && $registeredEmitter !== $this->responseEmitter) {
-            return $registeredEmitter;
+        if (!$emitter instanceof ResponseEmitterInterface) {
+            $registeredEmitter = $this->injector->get(ResponseEmitterInterface::class);
+
+            $emitter = $registeredEmitter instanceof ResponseEmitterInterface && $registeredEmitter !== $this->responseEmitter
+                ? $registeredEmitter
+                : $this->responseEmitter;
         }
 
-        return $this->responseEmitter;
+        if ($this->activeCorsOptions) {
+            $emitter = new CorsResponseEmitter(
+                emitter: $emitter,
+                request: $this->request,
+                processor: new CorsProcessor($this->activeCorsOptions),
+            );
+        }
+
+        return $this->activeResponseEmitter = $emitter;
     }
 
     /**
@@ -539,6 +567,51 @@ class App implements AppInterface
         }
 
         return $this;
+    }
+
+    /**
+     * Enables application-level Cross-Origin Resource Sharing.
+     *
+     * A callable receives the active request and may return a CorsOptions instance,
+     * an options array, true for defaults, or false/null to disable CORS for that request.
+     *
+     * @param CorsOptions|array<string, mixed>|callable|null $options
+     * @return static
+     */
+    public function enableCors(CorsOptions|array|callable|null $options = null): static
+    {
+        $this->corsOptions = is_callable($options)
+            ? Closure::fromCallable($options)
+            : CorsOptions::from($options);
+        $this->activeCorsOptions = null;
+        $this->activeResponseEmitter = null;
+
+        return $this;
+    }
+
+    private function resolveCorsOptions(RequestInterface $request): ?CorsOptions
+    {
+        if (!$this->corsOptions instanceof Closure) {
+            return $this->corsOptions;
+        }
+
+        $options = ($this->corsOptions)($request);
+
+        if ($options === false || is_null($options)) {
+            return null;
+        }
+
+        if ($options === true) {
+            return new CorsOptions();
+        }
+
+        if ($options instanceof CorsOptions || is_array($options)) {
+            return CorsOptions::from($options);
+        }
+
+        throw new InvalidArgumentException(
+            'A CORS options callback must return CorsOptions, an options array, true, false, or null.'
+        );
     }
 
     /**
@@ -623,6 +696,8 @@ class App implements AppInterface
     public function setRuntimeRequestContext(?RuntimeRequestContext $context): void
     {
         $this->runtimeRequestContext = $context;
+        $this->activeCorsOptions = null;
+        $this->activeResponseEmitter = null;
     }
 
     /**
@@ -634,6 +709,7 @@ class App implements AppInterface
     public function setRuntimeResponseEmitter(?ResponseEmitterInterface $emitter): void
     {
         $this->runtimeResponseEmitter = $emitter;
+        $this->activeResponseEmitter = null;
     }
 
     /**
@@ -645,6 +721,8 @@ class App implements AppInterface
     {
         $this->runtimeRequestContext = null;
         $this->runtimeResponseEmitter = null;
+        $this->activeCorsOptions = null;
+        $this->activeResponseEmitter = null;
     }
 
     /**
@@ -671,21 +749,14 @@ class App implements AppInterface
         $this->refreshRequestScope();
         broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
         try {
+            if ($this->handleCorsPreflight()) {
+                return;
+            }
+
             $resourcePath = $this->resolvePublicResourcePath($_SERVER['REQUEST_URI'] ?? null);
 
             if (is_string($resourcePath)) {
-                $mimeType = Paths::getMimeType($resourcePath);
-
-                header("Content-Type: $mimeType");
-                header('X-Content-Type-Options: nosniff');
-
-                $contentLength = filesize($resourcePath);
-
-                if (is_int($contentLength) && $contentLength >= 0) {
-                    header('Content-Length: ' . $contentLength);
-                }
-
-                readfile($resourcePath);
+                $this->respondWithPublicResource($resourcePath);
                 return;
             } else {
                 $this->startSessionForCurrentRequest();
@@ -716,6 +787,56 @@ class App implements AppInterface
         } finally {
             $this->clearRequestScopedRuntimeContext();
         }
+    }
+
+    /**
+     * Responds to a framework-managed CORS preflight before sessions, routing, or middleware.
+     */
+    protected function handleCorsPreflight(): bool
+    {
+        if (!$this->activeCorsOptions) {
+            return false;
+        }
+
+        $processor = new CorsProcessor($this->activeCorsOptions);
+
+        if (!$processor->shouldShortCircuitPreflight($this->request)) {
+            return false;
+        }
+
+        $this->response->reset();
+        $this->response->setStatus($this->activeCorsOptions->optionsSuccessStatus);
+        $this->response->setBody('');
+        $this->response->setHeader('Content-Length', '0');
+        $this->responder->respond($this->response);
+
+        return true;
+    }
+
+    /**
+     * Emits a public resource through the runtime-neutral response pipeline.
+     *
+     * @throws InternalServerErrorException
+     */
+    protected function respondWithPublicResource(string $resourcePath): void
+    {
+        $contents = file_get_contents($resourcePath);
+
+        if ($contents === false) {
+            throw new InternalServerErrorException('Unable to read the requested public resource.');
+        }
+
+        $this->response->reset();
+        $this->response->setBody($contents);
+        $this->response->setHeader('Content-Type', Paths::getMimeType($resourcePath));
+        $this->response->setHeader('X-Content-Type-Options', 'nosniff');
+        $contentLength = filesize($resourcePath);
+
+        if (is_int($contentLength) && $contentLength >= 0) {
+            $this->response->setHeader('Content-Length', (string)$contentLength);
+        }
+
+        $this->responder->respond($this->response);
     }
 
     /**

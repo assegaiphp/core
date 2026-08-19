@@ -174,6 +174,7 @@ namespace Unit;
 use Assegai\Core\App;
 use Assegai\Core\AssegaiFactory;
 use Assegai\Core\ControllerManager;
+use Assegai\Core\Http\Requests\Interfaces\RequestInterface;
 use Assegai\Core\Http\Requests\RuntimeRequestContext;
 use Assegai\Core\Http\Responses\Emitters\OpenSwooleResponseEmitter;
 use Assegai\Core\Interfaces\AppInterface;
@@ -638,6 +639,105 @@ class RuntimeCest
     $I->assertSame(1, \Tests\Runtime\LifecycleCounters::$applicationShutdownCalls);
     $I->assertSame(200, $capturingEmitter->response?->getStatusCode());
     $I->assertSame(['ok' => true], json_decode($capturingEmitter->body, true));
+  }
+
+  public function testCorsPreflightsShortCircuitBeforeRoutingAndApplicationGraphPreparation(UnitTester $I): void
+  {
+    $capturingEmitter = new class implements ResponseEmitterInterface {
+      public string $body = '';
+      public ?ResponseInterface $response = null;
+
+      public function emit(string $body, ?ResponseInterface $response = null): void
+      {
+        $this->body = $body;
+        $this->response = $response;
+      }
+    };
+
+    $app = AssegaiFactory::create(\Tests\Runtime\DummyAppModule::class);
+    $app->enableCors([
+      'origin' => ['http://localhost:5173'],
+      'credentials' => true,
+      'methods' => ['GET', 'POST', 'PATCH', 'DELETE'],
+      'maxAge' => 600,
+    ]);
+    $app->setRuntimeRequestContext(new RuntimeRequestContext(
+      server: [
+        'REQUEST_METHOD' => 'OPTIONS',
+        'REQUEST_URI' => '/missing-route',
+        'QUERY_STRING' => '',
+        'HTTP_HOST' => 'api.localhost',
+        'REQUEST_SCHEME' => 'http',
+        'HTTP_ORIGIN' => 'http://localhost:5173',
+        'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'PATCH',
+        'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' => 'Content-Type, Authorization',
+      ],
+      query: ['path' => '/missing-route'],
+    ));
+    $app->setRuntimeResponseEmitter($capturingEmitter);
+
+    $app->run();
+
+    $I->assertSame(204, $capturingEmitter->response?->getStatusCode());
+    $I->assertSame('', $capturingEmitter->body);
+    $I->assertSame('0', $capturingEmitter->response?->getHeader('Content-Length'));
+    $I->assertSame(
+      'http://localhost:5173',
+      $capturingEmitter->response?->getHeader('Access-Control-Allow-Origin')
+    );
+    $I->assertSame('true', $capturingEmitter->response?->getHeader('Access-Control-Allow-Credentials'));
+    $I->assertSame('600', $capturingEmitter->response?->getHeader('Access-Control-Max-Age'));
+    $I->assertSame(0, $this->readProtectedProperty($app, 'applicationGraphBuildCount'));
+    $I->assertSame(0, $this->readProtectedProperty($app, 'middlewareBuildCount'));
+  }
+
+  public function testCorsHeadersSurviveFrameworkErrorResponseResets(UnitTester $I): void
+  {
+    $capturingEmitter = new class implements ResponseEmitterInterface {
+      public string $body = '';
+      public ?ResponseInterface $response = null;
+
+      public function emit(string $body, ?ResponseInterface $response = null): void
+      {
+        $this->body = $body;
+        $this->response = $response;
+      }
+    };
+
+    $app = AssegaiFactory::create(WorkerErrorProbeAppModule::class);
+    $app->enableCors(static function (RequestInterface $request): array|false {
+      if ($request->getPath() !== '/worker-error-probe/fail') {
+        return false;
+      }
+
+      return [
+        'origin' => ['https://console.example.com'],
+        'credentials' => true,
+      ];
+    });
+    $app->setRuntimeRequestContext(new RuntimeRequestContext(
+      server: [
+        'REQUEST_METHOD' => 'GET',
+        'REQUEST_URI' => '/worker-error-probe/fail',
+        'QUERY_STRING' => '',
+        'HTTP_HOST' => 'api.example.com',
+        'REQUEST_SCHEME' => 'https',
+        'HTTP_ORIGIN' => 'https://console.example.com',
+      ],
+      query: ['path' => '/worker-error-probe/fail'],
+    ));
+    $app->setRuntimeResponseEmitter($capturingEmitter);
+
+    $app->run();
+
+    $I->assertSame(500, $capturingEmitter->response?->getStatusCode());
+    $I->assertSame(
+      'https://console.example.com',
+      $capturingEmitter->response?->getHeader('Access-Control-Allow-Origin')
+    );
+    $I->assertSame('true', $capturingEmitter->response?->getHeader('Access-Control-Allow-Credentials'));
+    $I->assertSame('Origin', $capturingEmitter->response?->getHeader('Vary'));
+    $I->assertNotSame('', $capturingEmitter->body);
   }
 
   public function testOpenSwooleRuntimeCanHandleAFullWorkerLifecycle(UnitTester $I): void
@@ -1463,6 +1563,16 @@ class RuntimeCest
   }
   public function testStaticAssetsAreStreamedWithoutExecutingEmbeddedPhpSequences(UnitTester $I): void
   {
+    $capturingEmitter = new class implements ResponseEmitterInterface {
+      public string $body = '';
+      public ?ResponseInterface $response = null;
+
+      public function emit(string $body, ?ResponseInterface $response = null): void
+      {
+        $this->body = $body;
+        $this->response = $response;
+      }
+    };
     $publicImagesDirectory = $this->workingDirectory . '/public/images';
 
     if (!is_dir($publicImagesDirectory)) {
@@ -1473,7 +1583,9 @@ class RuntimeCest
     $assetContents = "not-a-real-png<?php echo 'EXECUTED'; ?>tail";
 
     file_put_contents($assetFilename, $assetContents);
+    $_SERVER['REQUEST_METHOD'] = 'GET';
     $_SERVER['REQUEST_URI'] = '/images/binary-probe.png';
+    $_SERVER['HTTP_ORIGIN'] = 'https://console.example.com';
     $_GET['path'] = 'images/binary-probe.png';
 
     if (function_exists('header_remove')) {
@@ -1481,28 +1593,31 @@ class RuntimeCest
     }
 
     $app = AssegaiFactory::createFromProject('Tests\\Runtime\\DummyAppModule', $this->workingDirectory);
+    $app->enableCors(['origin' => ['https://console.example.com']]);
+    $app->setRuntimeResponseEmitter($capturingEmitter);
     $runDefaultHttpLifecycle = new \ReflectionMethod($app, 'runDefaultHttpLifecycle');
-
-    ob_start();
 
     try {
       $runDefaultHttpLifecycle->invoke($app);
-      $output = (string) ob_get_clean();
     } finally {
-      if (ob_get_level() > 0) {
-        ob_end_clean();
-      }
-
       if (is_file($assetFilename)) {
         unlink($assetFilename);
       }
+
+      unset($_SERVER['HTTP_ORIGIN']);
 
       if (function_exists('header_remove')) {
         header_remove();
       }
     }
 
-    $I->assertSame($assetContents, $output);
+    $I->assertSame($assetContents, $capturingEmitter->body);
+    $I->assertSame('image/png', $capturingEmitter->response?->getHeader('Content-Type'));
+    $I->assertSame('nosniff', $capturingEmitter->response?->getHeader('X-Content-Type-Options'));
+    $I->assertSame(
+      'https://console.example.com',
+      $capturingEmitter->response?->getHeader('Access-Control-Allow-Origin')
+    );
   }
 
   private function createFakeOpenSwooleRequest(

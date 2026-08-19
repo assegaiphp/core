@@ -48,7 +48,7 @@
         "jimmiw/php-time-ago": "^3.3"
     },
     "scripts": {
-        "test": "vendor/bin/codecept run Unit",
+        "test": "php -d register_argc_argv=On -d error_reporting=8191 vendor/bin/codecept run Unit",
         "analyze": "vendor/bin/phpstan analyse src --level 8"
     }
 }
