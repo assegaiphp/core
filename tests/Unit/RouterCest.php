@@ -31,6 +31,7 @@ use Mocks\HostScopedConsoleModule;
 use Mocks\HostScopedDashboardController;
 use Mocks\HostScopedHelpController;
 use Mocks\HostScopedSiblingModule;
+use Mocks\IdenticalDiamondMountedAppModule;
 use Mocks\ImportedHostScopedSiblingAppModule;
 use Mocks\ImportOnlyRootAppModule;
 use Mocks\LegacyTenantDashboardController;
@@ -45,6 +46,13 @@ use Mocks\RequestAwareProviderAppModule;
 use Mocks\ResponseMetadataAppModule;
 use Mocks\RuntimeHostController;
 use Mocks\RuntimeHostRoutingAppModule;
+use Mocks\ReverseSharedMountedAppModule;
+use Mocks\SharedMountedAppModule;
+use Mocks\SharedMountedController;
+use Mocks\SharedHostMountedAppModule;
+use Mocks\SharedHostMountedController;
+use Mocks\SharedCycleController;
+use Mocks\SharedCyclicMountedAppModule;
 use Mocks\UnknownConstraintAppModule;
 use Mocks\WildcardControllerAppModule;
 use Mocks\WildcardHandlerAppModule;
@@ -197,6 +205,92 @@ class RouterCest
 
     $I->assertInstanceOf(CyclicVendorController::class, $result['controller']);
     $I->assertSame('vendor-1-2', $result['response']->getBody());
+  }
+
+  public function testSharedControllerModuleIsRoutableThroughEveryParent(UnitTester $I): void
+  {
+    $apiResult = $this->dispatch('/api/shared/1', SharedMountedAppModule::class);
+    $controlResult = $this->dispatch('/control/shared/2', SharedMountedAppModule::class);
+
+    $I->assertInstanceOf(SharedMountedController::class, $apiResult['controller']);
+    $I->assertSame('shared-1', $apiResult['response']->getBody());
+    $I->assertInstanceOf(SharedMountedController::class, $controlResult['controller']);
+    $I->assertSame('shared-2', $controlResult['response']->getBody());
+  }
+
+  public function testSharedControllerRoutesDoNotDependOnParentImportOrder(UnitTester $I): void
+  {
+    $apiResult = $this->dispatch('/api/shared/3', ReverseSharedMountedAppModule::class);
+    $controlResult = $this->dispatch('/control/shared/4', ReverseSharedMountedAppModule::class);
+
+    $I->assertSame('shared-3', $apiResult['response']->getBody());
+    $I->assertSame('shared-4', $controlResult['response']->getBody());
+  }
+
+  public function testActivatedSharedControllerInstancesRetainTheirOwnMountContext(UnitTester $I): void
+  {
+    $controllerTokens = $this->buildControllerTokensForRootModule(SharedMountedAppModule::class);
+    $apiRequest = $this->makeRequest('/api/shared/6');
+    $apiController = $this->router->getActivatedController($apiRequest, $controllerTokens);
+    $controlRequest = $this->makeRequest('/control/shared/7');
+    $controlController = $this->router->getActivatedController($controlRequest, $controllerTokens);
+
+    $apiResponse = $this->router->handleRequest($apiRequest, $apiController);
+    $controlResponse = $this->router->handleRequest($controlRequest, $controlController);
+
+    $I->assertSame('shared-6', $apiResponse->getBody());
+    $I->assertSame('shared-7', $controlResponse->getBody());
+  }
+
+  public function testSharedControllerModuleRetainsEachParentHostScope(UnitTester $I): void
+  {
+    $consoleResult = $this->dispatch('/host-shared', SharedHostMountedAppModule::class, 'console.example.com');
+    $controlResult = $this->dispatch('/host-shared', SharedHostMountedAppModule::class, 'control.example.com');
+
+    $I->assertInstanceOf(SharedHostMountedController::class, $consoleResult['controller']);
+    $I->assertSame('host-shared', $consoleResult['response']->getBody());
+    $I->assertInstanceOf(SharedHostMountedController::class, $controlResult['controller']);
+    $I->assertSame('host-shared', $controlResult['response']->getBody());
+
+    $I->expectThrowable(
+      NotFoundException::class,
+      fn() => $this->dispatch('/host-shared', SharedHostMountedAppModule::class, 'public.example.com'),
+    );
+  }
+
+  public function testIdenticalDiamondMountsAreDeduplicated(UnitTester $I): void
+  {
+    $controllerTokens = $this->buildControllerTokensForRootModule(IdenticalDiamondMountedAppModule::class);
+    $contexts = ControllerManager::getInstance()->getControllerRouteContexts(SharedMountedController::class);
+
+    $I->assertCount(1, $contexts);
+    $I->assertCount(1, array_filter(
+      $controllerTokens,
+      static fn(ReflectionClass $controller): bool => $controller->getName() === SharedMountedController::class,
+    ));
+
+    $request = $this->makeRequest('/shared/5');
+    $controller = $this->router->getActivatedController($request, $controllerTokens);
+    $response = $this->router->handleRequest($request, $controller);
+
+    $I->assertSame('shared-5', $response->getBody());
+  }
+
+  public function testSharedModuleMountsArePreservedAcrossCyclicBranches(UnitTester $I): void
+  {
+    $parentResult = $this->dispatch(
+      '/cycle-parent/cycle-shared',
+      SharedCyclicMountedAppModule::class,
+    );
+    $peerResult = $this->dispatch(
+      '/cycle-peer/cycle-shared',
+      SharedCyclicMountedAppModule::class,
+    );
+
+    $I->assertInstanceOf(SharedCycleController::class, $parentResult['controller']);
+    $I->assertSame('cycle-shared', $parentResult['response']->getBody());
+    $I->assertInstanceOf(SharedCycleController::class, $peerResult['controller']);
+    $I->assertSame('cycle-shared', $peerResult['response']->getBody());
   }
 
   /**

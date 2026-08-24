@@ -104,11 +104,14 @@ class OpenApiGenerator
     $this->resolvingInlineSchemas = [];
 
     $paths = [];
+    $operationSources = [];
 
-    foreach ($this->controllerManager->getControllerTokenList() as $controllerReflection) {
+    foreach ($this->controllerManager->getControllerRouteContexts() as $routeContext) {
+      $controllerReflection = $routeContext['controller'];
       $controllerClass = $controllerReflection->getName();
-      $controllerPath = $this->controllerManager->getResolvedControllerPath($controllerClass) ?? '/';
-      $controllerHostGroups = $this->controllerManager->getControllerHostGroups($controllerClass);
+      $controllerPath = $routeContext['resolved_path'];
+      $controllerHostGroups = $routeContext['host_groups'];
+      $hasMultiplePaths = count($this->controllerManager->getResolvedControllerPaths($controllerClass)) > 1;
       $tagName = $this->buildTagName($controllerReflection->getShortName());
 
       foreach ($controllerReflection->getMethods(ReflectionMethod::IS_PUBLIC) as $handler) {
@@ -125,9 +128,36 @@ class OpenApiGenerator
 
           $routePath = $this->joinPaths($controllerPath, $this->getRouteAttributePath($attribute));
           $openApiPath = $this->toOpenApiPath($routePath);
-          $operation = $this->buildOperation($controllerReflection, $handler, $routePath, $controllerHostGroups, $tagName);
+          $operationId = $this->buildOperationId($controllerReflection, $handler);
 
-          $paths[$openApiPath][strtolower($httpMethod)] = $operation;
+          if ($hasMultiplePaths) {
+            $operationId .= 'At' . substr(hash('sha256', $controllerPath), 0, 12);
+          }
+
+          $operation = $this->buildOperation(
+            $controllerReflection,
+            $handler,
+            $routePath,
+            $controllerHostGroups,
+            $tagName,
+            $operationId,
+          );
+
+          $normalizedMethod = strtolower($httpMethod);
+          $operationSource = $controllerClass . '::' . $handler->getName();
+
+          if (
+            isset($paths[$openApiPath][$normalizedMethod]) &&
+            ($operationSources[$openApiPath][$normalizedMethod] ?? null) === $operationSource
+          ) {
+            $operation = $this->mergeOperationServers(
+              $paths[$openApiPath][$normalizedMethod],
+              $operation,
+            );
+          }
+
+          $paths[$openApiPath][$normalizedMethod] = $operation;
+          $operationSources[$openApiPath][$normalizedMethod] = $operationSource;
         }
       }
     }
@@ -183,6 +213,7 @@ class OpenApiGenerator
     string $routePath,
     array $controllerHostGroups,
     string $tagName,
+    string $operationId,
   ): array
   {
     $parameters = [];
@@ -251,7 +282,6 @@ class OpenApiGenerator
       $parameters[] = $this->buildPathParameter($name, $constraint, null);
     }
 
-    $operationId = $this->buildOperationId($controllerReflection, $handler);
     $responseStatus = $this->resolveResponseStatus($handler);
     $operation = [
       'tags' => [$tagName],
@@ -281,6 +311,44 @@ class OpenApiGenerator
     }
 
     return $operation;
+  }
+
+  /**
+   * Combines host-specific server alternatives when the same handler is mounted at the same path
+   * through more than one parent context.
+   *
+   * @param array<string, mixed> $current
+   * @param array<string, mixed> $candidate
+   * @return array<string, mixed>
+   */
+  private function mergeOperationServers(array $current, array $candidate): array
+  {
+    $servers = [];
+    $currentServers = $current['servers'] ?? [];
+    $candidateServers = $candidate['servers'] ?? [];
+
+    if (array_key_exists('servers', $current) !== array_key_exists('servers', $candidate)) {
+      $currentServers = array_key_exists('servers', $current) ? $currentServers : $this->buildDefaultServers();
+      $candidateServers = array_key_exists('servers', $candidate) ? $candidateServers : $this->buildDefaultServers();
+    }
+
+    foreach ([...$currentServers, ...$candidateServers] as $server) {
+      if (!is_array($server)) {
+        continue;
+      }
+
+      $key = json_encode($server, JSON_UNESCAPED_SLASHES);
+
+      if (is_string($key)) {
+        $servers[$key] = $server;
+      }
+    }
+
+    if (!empty($servers)) {
+      $current['servers'] = array_values($servers);
+    }
+
+    return $current;
   }
 
   /**

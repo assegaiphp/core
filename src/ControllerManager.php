@@ -33,7 +33,7 @@ class ControllerManager
   /** @var array $controllerPathTokenIdMap */
   protected array $controllerPathTokenIdMap = [];
   /**
-   * @var array<class-string, ReflectionClass[]> A map of controller reflections keyed by module class.
+   * @var array<class-string, array<class-string, ReflectionClass<object>>> A map of controller reflections keyed by module class.
    */
   protected array $moduleControllerTokensMap = [];
   /**
@@ -48,6 +48,20 @@ class ControllerManager
    * @var array<string, array{module: string, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>}>
    */
   protected array $controllerRouteMetadata = [];
+  /**
+   * @var array<string, array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>}>
+   */
+  protected array $controllerRouteContexts = [];
+  /**
+   * @var array<class-string, array<string, true>>
+   */
+  protected array $controllerRouteContextIdsMap = [];
+  /**
+   * @var array<string, array{id: string, module: string, prefix: string, host_groups: array<int, array<int, string>>, import_host_groups: array<int, array<int, string>>, controllers: array<int, string>, imports: array<int, string>}>
+   */
+  protected array $moduleRouteContexts = [];
+  protected ?string $rootModuleRouteContextId = null;
+  protected int $graphVersion = 0;
 
   /**
    * ControllerManager constructor.
@@ -181,6 +195,75 @@ class ControllerManager
   }
 
   /**
+   * Returns every distinct mount context for the given controller, or for the whole application.
+   *
+   * @param string|null $controllerClass
+   * @return array<string, array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>}>
+   */
+  public function getControllerRouteContexts(?string $controllerClass = null): array
+  {
+    if (is_null($controllerClass)) {
+      return $this->controllerRouteContexts;
+    }
+
+    $contexts = [];
+
+    foreach (array_keys($this->controllerRouteContextIdsMap[$controllerClass] ?? []) as $contextId) {
+      if (isset($this->controllerRouteContexts[$contextId])) {
+        $contexts[$contextId] = $this->controllerRouteContexts[$contextId];
+      }
+    }
+
+    return $contexts;
+  }
+
+  /**
+   * @return array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>}|null
+   */
+  public function getControllerRouteContext(string $contextId): ?array
+  {
+    return $this->controllerRouteContexts[$contextId] ?? null;
+  }
+
+  /**
+   * @return array{id: string, module: string, prefix: string, host_groups: array<int, array<int, string>>, import_host_groups: array<int, array<int, string>>, controllers: array<int, string>, imports: array<int, string>}|null
+   */
+  public function getModuleRouteContext(string $contextId): ?array
+  {
+    return $this->moduleRouteContexts[$contextId] ?? null;
+  }
+
+  public function getRootModuleRouteContextId(): ?string
+  {
+    return $this->rootModuleRouteContextId;
+  }
+
+  /**
+   * Returns a monotonic version that changes whenever route metadata is rebuilt.
+   */
+  public function getGraphVersion(): int
+  {
+    return $this->graphVersion;
+  }
+
+  /**
+   * Returns every distinct resolved path at which the controller is mounted.
+   *
+   * @param string $controllerClass
+   * @return array<int, string>
+   */
+  public function getResolvedControllerPaths(string $controllerClass): array
+  {
+    $paths = [];
+
+    foreach ($this->getControllerRouteContexts($controllerClass) as $context) {
+      $paths[$context['resolved_path']] = true;
+    }
+
+    return array_keys($paths);
+  }
+
+  /**
    * Returns the root controller class when the root module declares one.
    *
    * Root modules may also act purely as composition roots that only import feature modules.
@@ -238,24 +321,25 @@ class ControllerManager
    */
   public function buildControllerTokensList(array $moduleTokensList): array
   {
+    $this->graphVersion++;
     $this->controllerTokensList = [];
     $this->controllerPathTokenIdMap = [];
     $this->moduleControllerTokensMap = [];
     $this->moduleBranchPrefixMap = [];
     $this->moduleBranchHostGroupsMap = [];
     $this->controllerRouteMetadata = [];
+    $this->controllerRouteContexts = [];
+    $this->controllerRouteContextIdsMap = [];
+    $this->moduleRouteContexts = [];
+    $this->rootModuleRouteContextId = null;
 
     if (empty($moduleTokensList)) {
       return $this->getControllerTokenList();
     }
 
-    $visitedModules = [];
-    $this->buildModuleControllerTokens(
-      moduleClass: $this->moduleManager->getRootModuleClass(),
-      inheritedPrefix: '/',
-      inheritedHostGroups: [],
-      visitedModules: $visitedModules,
-    );
+    /** @var class-string $rootModuleClass */
+    $rootModuleClass = $this->moduleManager->getRootModuleClass();
+    $this->buildRouteContexts($rootModuleClass);
 
     return $this->getControllerTokenList();
   }
@@ -283,75 +367,320 @@ class ControllerManager
   }
 
   /**
-   * Builds the controller token metadata for the given module and its imported descendants.
+   * Builds a deduplicated graph of module and controller mount contexts.
    *
-   * @param string $moduleClass
-   * @param string $inheritedPrefix
-   * @param array<int, array<int, string>> $inheritedHostGroups
-   * @param array<string, bool> $visitedModules
+   * A module class may appear in more than one context when distinct parents contribute different
+   * path or host constraints. Identical diamond mounts collapse to one context. Within cyclic
+   * components, path-local ancestry permits every finite simple mount without following a module
+   * twice on the same branch.
+   *
+   * @param class-string $rootModuleClass
    * @return void
    * @throws EntryNotFoundException
    */
-  private function buildModuleControllerTokens(string $moduleClass, string $inheritedPrefix, array $inheritedHostGroups, array &$visitedModules): void
+  private function buildRouteContexts(string $rootModuleClass): void
   {
-    if (!isset($this->moduleManager->getModuleTokens()[$moduleClass]) || isset($visitedModules[$moduleClass])) {
+    $moduleTokens = $this->moduleManager->getModuleTokens();
+
+    if (!isset($moduleTokens[$rootModuleClass])) {
       return;
     }
 
-    $visitedModules[$moduleClass] = true;
-    $moduleReflection = $this->moduleManager->getModuleTokens()[$moduleClass];
+    /** @var array<class-string, array<int, class-string>> $importsMap */
+    $importsMap = [];
 
-    /** @var array{controllers: string[]} $args */
+    foreach (array_keys($moduleTokens) as $moduleClass) {
+      $importsMap[$moduleClass] = array_values(array_filter(
+        $this->moduleManager->getImportedModules($moduleClass),
+        static fn(string $importedModuleClass): bool => isset($moduleTokens[$importedModuleClass]),
+      ));
+    }
+
+    $moduleComponentMap = $this->buildModuleComponentMap($rootModuleClass, $importsMap);
+    $rootContextId = $this->buildModuleRouteContextId($rootModuleClass, '/', []);
+    $this->rootModuleRouteContextId = $rootContextId;
+    $pendingContexts = [[
+      'id' => $rootContextId,
+      'module' => $rootModuleClass,
+      'inherited_prefix' => '/',
+      'inherited_host_groups' => [],
+      'component_ancestry' => [$rootModuleClass => true],
+    ]];
+    $expandedStates = [];
+
+    while ($pendingContext = array_pop($pendingContexts)) {
+      $contextId = $pendingContext['id'];
+      $componentAncestry = $pendingContext['component_ancestry'];
+      $ancestryModules = array_keys($componentAncestry);
+      sort($ancestryModules);
+      $expansionStateId = hash('sha256', $contextId . "\0" . implode("\0", $ancestryModules));
+
+      if (isset($expandedStates[$expansionStateId])) {
+        continue;
+      }
+
+      $expandedStates[$expansionStateId] = true;
+      $moduleClass = $pendingContext['module'];
+      $inheritedPrefix = $pendingContext['inherited_prefix'];
+      $inheritedHostGroups = $pendingContext['inherited_host_groups'];
+
+      if (!isset($this->moduleRouteContexts[$contextId])) {
+        $moduleControllers = $this->loadModuleControllers($moduleClass);
+        $controllerContextIds = [];
+        $moduleBranchPrefix = $this->normalizePath($inheritedPrefix);
+        $moduleBranchHostGroups = $inheritedHostGroups;
+        $isFirstController = true;
+
+        foreach ($moduleControllers as $tokenId => $controllerReflection) {
+          $localPath = $this->getControllerPath($controllerReflection);
+          $localHosts = $this->getControllerHostsFromReflection($controllerReflection);
+          $resolvedPath = $this->combinePaths($inheritedPrefix, $localPath);
+          $effectiveHostGroups = $this->mergeHostGroups($inheritedHostGroups, $localHosts);
+          $controllerContextId = $this->buildControllerRouteContextId(
+            $contextId,
+            $tokenId,
+            $resolvedPath,
+            $effectiveHostGroups,
+          );
+
+          $this->controllerRouteContexts[$controllerContextId] = [
+            'id' => $controllerContextId,
+            'module' => $moduleClass,
+            'controller' => $controllerReflection,
+            'local_path' => $localPath,
+            'resolved_path' => $resolvedPath,
+            'hosts' => $localHosts,
+            'host_groups' => $effectiveHostGroups,
+          ];
+          $this->controllerRouteContextIdsMap[$tokenId][$controllerContextId] = true;
+          $controllerContextIds[] = $controllerContextId;
+
+          $this->controllerPathTokenIdMap[$tokenId] ??= $resolvedPath;
+          $this->controllerRouteMetadata[$tokenId] ??= [
+            'module' => $moduleClass,
+            'local_path' => $localPath,
+            'resolved_path' => $resolvedPath,
+            'hosts' => $localHosts,
+            'host_groups' => $effectiveHostGroups,
+          ];
+
+          if ($isFirstController) {
+            $moduleBranchPrefix = $resolvedPath;
+
+            if (!empty($localHosts)) {
+              $moduleBranchHostGroups = $effectiveHostGroups;
+            }
+
+            $isFirstController = false;
+          }
+        }
+
+        $this->moduleBranchPrefixMap[$moduleClass] ??= $moduleBranchPrefix;
+        $this->moduleBranchHostGroupsMap[$moduleClass] ??= $inheritedHostGroups;
+        $this->moduleRouteContexts[$contextId] = [
+          'id' => $contextId,
+          'module' => $moduleClass,
+          'prefix' => $moduleBranchPrefix,
+          'host_groups' => $inheritedHostGroups,
+          'import_host_groups' => $moduleBranchHostGroups,
+          'controllers' => $controllerContextIds,
+          'imports' => [],
+        ];
+      }
+
+      $moduleContext = $this->moduleRouteContexts[$contextId];
+
+      foreach ($importsMap[$moduleClass] ?? [] as $importedModuleClass) {
+        if (isset($componentAncestry[$importedModuleClass])) {
+          continue;
+        }
+
+        $importContextId = $this->buildModuleRouteContextId(
+          $importedModuleClass,
+          $moduleContext['prefix'],
+          $moduleContext['import_host_groups'],
+        );
+
+        if (!in_array($importContextId, $this->moduleRouteContexts[$contextId]['imports'], true)) {
+          $this->moduleRouteContexts[$contextId]['imports'][] = $importContextId;
+        }
+
+        $importAncestry = ($moduleComponentMap[$importedModuleClass] ?? null) === ($moduleComponentMap[$moduleClass] ?? null)
+          ? [...$componentAncestry, $importedModuleClass => true]
+          : [$importedModuleClass => true];
+        $pendingContexts[] = [
+          'id' => $importContextId,
+          'module' => $importedModuleClass,
+          'inherited_prefix' => $moduleContext['prefix'],
+          'inherited_host_groups' => $moduleContext['import_host_groups'],
+          'component_ancestry' => $importAncestry,
+        ];
+      }
+    }
+  }
+
+  /**
+   * Loads and caches controller definitions declared by a module.
+   *
+   * @param class-string $moduleClass
+   * @return array<class-string, ReflectionClass<object>>
+   * @throws EntryNotFoundException
+   */
+  private function loadModuleControllers(string $moduleClass): array
+  {
+    if (array_key_exists($moduleClass, $this->moduleControllerTokensMap)) {
+      return $this->moduleControllerTokensMap[$moduleClass];
+    }
+
+    $moduleReflection = $this->moduleManager->getModuleTokens()[$moduleClass] ?? null;
+
+    if (is_null($moduleReflection)) {
+      return $this->moduleControllerTokensMap[$moduleClass] = [];
+    }
+
+    /** @var array{controllers?: class-string[]} $args */
     $args = $moduleReflection->getArguments();
-    $controllers = $args['controllers'] ?? [];
     $moduleControllers = [];
-    $moduleBranchPrefix = $this->normalizePath($inheritedPrefix);
-    $moduleBranchHostGroups = $inheritedHostGroups;
-    $isFirstController = true;
 
-    foreach ($controllers as $tokenId) {
+    foreach ($args['controllers'] ?? [] as $tokenId) {
       if (!$controllerReflection = $this->getControllerReflection($tokenId)) {
         continue;
       }
 
-      $localPath = $this->getControllerPath($controllerReflection);
-      $localHosts = $this->getControllerHostsFromReflection($controllerReflection);
-      $resolvedPath = $this->combinePaths($inheritedPrefix, $localPath);
-      $effectiveHostGroups = $this->mergeHostGroups($inheritedHostGroups, $localHosts);
-
       $this->controllerTokensList[$tokenId] = $controllerReflection;
-      $this->controllerPathTokenIdMap[$tokenId] = $resolvedPath;
-      $this->controllerRouteMetadata[$tokenId] = [
-        'module' => $moduleClass,
-        'local_path' => $localPath,
-        'resolved_path' => $resolvedPath,
-        'hosts' => $localHosts,
-        'host_groups' => $effectiveHostGroups,
-      ];
-
       $moduleControllers[$tokenId] = $controllerReflection;
+    }
 
-      if ($isFirstController) {
-        $moduleBranchPrefix = $resolvedPath;
-        if (!empty($localHosts)) {
-          $moduleBranchHostGroups = $effectiveHostGroups;
+    return $this->moduleControllerTokensMap[$moduleClass] = $moduleControllers;
+  }
+
+  /**
+   * Assigns each reachable module to a strongly connected component using iterative Kosaraju passes.
+   * Route expansion only needs ancestry tracking inside these cyclic components; the component graph
+   * itself is acyclic and can therefore reuse identical mount contexts without repeated work.
+   *
+   * @param class-string $rootModuleClass
+   * @param array<class-string, array<int, class-string>> $importsMap
+   * @return array<class-string, int>
+   */
+  private function buildModuleComponentMap(string $rootModuleClass, array $importsMap): array
+  {
+    $visited = [$rootModuleClass => true];
+    $finishOrder = [];
+    $stack = [[
+      'module' => $rootModuleClass,
+      'index' => 0,
+    ]];
+
+    while (!empty($stack)) {
+      $stackIndex = array_key_last($stack);
+      $frame = $stack[$stackIndex];
+      $moduleImports = $importsMap[$frame['module']] ?? [];
+
+      if ($frame['index'] >= count($moduleImports)) {
+        $finishOrder[] = $frame['module'];
+        array_pop($stack);
+        continue;
+      }
+
+      $importedModuleClass = $moduleImports[$frame['index']];
+      $stack[$stackIndex]['index']++;
+
+      if (isset($visited[$importedModuleClass])) {
+        continue;
+      }
+
+      $visited[$importedModuleClass] = true;
+      $stack[] = [
+        'module' => $importedModuleClass,
+        'index' => 0,
+      ];
+    }
+
+    $reverseImportsMap = [];
+
+    foreach (array_keys($visited) as $moduleClass) {
+      $reverseImportsMap[$moduleClass] = [];
+    }
+
+    foreach (array_keys($visited) as $moduleClass) {
+      foreach ($importsMap[$moduleClass] ?? [] as $importedModuleClass) {
+        if (isset($visited[$importedModuleClass])) {
+          $reverseImportsMap[$importedModuleClass][] = $moduleClass;
         }
-        $isFirstController = false;
       }
     }
 
-    $this->moduleControllerTokensMap[$moduleClass] = $moduleControllers;
-    $this->moduleBranchPrefixMap[$moduleClass] = $moduleBranchPrefix;
-    $this->moduleBranchHostGroupsMap[$moduleClass] = $inheritedHostGroups;
+    $componentMap = [];
+    $componentId = 0;
 
-    foreach ($this->moduleManager->getImportedModules($moduleClass) as $importedModuleClass) {
-      $this->buildModuleControllerTokens(
-        moduleClass: $importedModuleClass,
-        inheritedPrefix: $moduleBranchPrefix,
-        inheritedHostGroups: $moduleBranchHostGroups,
-        visitedModules: $visitedModules,
-      );
+    foreach (array_reverse($finishOrder) as $moduleClass) {
+      if (isset($componentMap[$moduleClass])) {
+        continue;
+      }
+
+      $componentMap[$moduleClass] = $componentId;
+      $componentStack = [$moduleClass];
+
+      while ($componentModule = array_pop($componentStack)) {
+        foreach ($reverseImportsMap[$componentModule] ?? [] as $parentModuleClass) {
+          if (isset($componentMap[$parentModuleClass])) {
+            continue;
+          }
+
+          $componentMap[$parentModuleClass] = $componentId;
+          $componentStack[] = $parentModuleClass;
+        }
+      }
+
+      $componentId++;
     }
+
+    /** @var array<class-string, int> $componentMap */
+    return $componentMap;
+  }
+
+  /**
+   * @param class-string $moduleClass
+   * @param string $inheritedPrefix
+   * @param array<int, array<int, string>> $inheritedHostGroups
+   */
+  private function buildModuleRouteContextId(string $moduleClass, string $inheritedPrefix, array $inheritedHostGroups): string
+  {
+    return hash('sha256', implode("\0", [
+      $moduleClass,
+      $this->normalizePath($inheritedPrefix),
+      $this->buildHostGroupsKey($inheritedHostGroups),
+    ]));
+  }
+
+  /**
+   * @param string $moduleContextId
+   * @param string $controllerClass
+   * @param string $resolvedPath
+   * @param array<int, array<int, string>> $hostGroups
+   */
+  private function buildControllerRouteContextId(
+    string $moduleContextId,
+    string $controllerClass,
+    string $resolvedPath,
+    array $hostGroups,
+  ): string
+  {
+    return hash('sha256', implode("\0", [
+      $moduleContextId,
+      $controllerClass,
+      $resolvedPath,
+      $this->buildHostGroupsKey($hostGroups),
+    ]));
+  }
+
+  /**
+   * @param array<int, array<int, string>> $hostGroups
+   */
+  private function buildHostGroupsKey(array $hostGroups): string
+  {
+    return json_encode($hostGroups, JSON_UNESCAPED_SLASHES) ?: '';
   }
 
   /**

@@ -397,11 +397,6 @@ parameters:
 			path: src/ControllerManager.php
 
 		-
-			message: "#^Offset 'controllers' on array\\{controllers\\: array\\<string\\>\\} on left side of \\?\\? always exists and is not nullable\\.$#"
-			count: 1
-			path: src/ControllerManager.php
-
-		-
 			message: "#^PHPDoc tag @var for variable \\$moduleAttributeReflection contains generic class ReflectionAttribute but does not specify its types\\: T$#"
 			count: 1
 			path: src/ControllerManager.php
@@ -424,21 +419,6 @@ parameters:
 
 		-
 			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$lastLoadedAttributes with generic class ReflectionAttribute does not specify its types\\: T$#"
-			count: 1
-			path: src/ControllerManager.php
-
-		-
-			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$moduleBranchPrefixMap \\(array\\<class\\-string, string\\>\\) does not accept array\\<string, string\\>\\.$#"
-			count: 1
-			path: src/ControllerManager.php
-
-		-
-			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$moduleControllerTokensMap \\(array\\<class\\-string, array\\<ReflectionClass\\>\\>\\) does not accept array\\<string, array\\<ReflectionClass\\>\\>\\.$#"
-			count: 1
-			path: src/ControllerManager.php
-
-		-
-			message: "#^Property Assegai\\\\Core\\\\ControllerManager\\:\\:\\$moduleControllerTokensMap with generic class ReflectionClass does not specify its types\\: T$#"
 			count: 1
 			path: src/ControllerManager.php
 
@@ -1540,11 +1520,6 @@ parameters:
 			path: src/Routing/Router.php
 
 		-
-			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:canActivateController\\(\\) has parameter \\$reflectionController with generic class ReflectionClass but does not specify its types\\: T$#"
-			count: 1
-			path: src/Routing/Router.php
-
-		-
 			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:consumeControllerGuards\\(\\) has parameter \\$controllerReflection with generic class ReflectionClass but does not specify its types\\: T$#"
 			count: 1
 			path: src/Routing/Router.php
@@ -1566,21 +1541,6 @@ parameters:
 
 		-
 			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getActivatedController\\(\\) has parameter \\$controllerTokensList with generic class ReflectionClass but does not specify its types\\: T$#"
-			count: 1
-			path: src/Routing/Router.php
-
-		-
-			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getActivatedControllerToken\\(\\) has parameter \\$fallbackController with generic class ReflectionClass but does not specify its types\\: T$#"
-			count: 1
-			path: src/Routing/Router.php
-
-		-
-			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getActivatedControllerToken\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
-			count: 1
-			path: src/Routing/Router.php
-
-		-
-			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:getControllerHostMatchData\\(\\) has parameter \\$reflectionController with generic class ReflectionClass but does not specify its types\\: T$#"
 			count: 1
 			path: src/Routing/Router.php
 
@@ -1630,27 +1590,7 @@ parameters:
 			path: src/Routing/Router.php
 
 		-
-			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:isRootController\\(\\) has parameter \\$controllerReflection with generic class ReflectionClass but does not specify its types\\: T$#"
-			count: 1
-			path: src/Routing/Router.php
-
-		-
 			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:patternMatchesPath\\(\\) is unused\\.$#"
-			count: 1
-			path: src/Routing/Router.php
-
-		-
-			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:preferControllerMatch\\(\\) has parameter \\$candidate with generic class ReflectionClass but does not specify its types\\: T$#"
-			count: 1
-			path: src/Routing/Router.php
-
-		-
-			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:preferControllerMatch\\(\\) has parameter \\$currentBest with generic class ReflectionClass but does not specify its types\\: T$#"
-			count: 1
-			path: src/Routing/Router.php
-
-		-
-			message: "#^Method Assegai\\\\Core\\\\Routing\\\\Router\\:\\:preferControllerMatch\\(\\) return type with generic class ReflectionClass does not specify its types\\: T$#"
 			count: 1
 			path: src/Routing/Router.php
 

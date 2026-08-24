@@ -16,6 +16,7 @@ use Mocks\MiddlewareAppModule;
 use Mocks\MiddlewareShortCircuitAppModule;
 use Mocks\MiddlewareTrace;
 use Mocks\MiddlewareTestController;
+use Mocks\SharedMiddlewareAppModule;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
@@ -155,6 +156,27 @@ class MiddlewareCest
 
     $I->assertSame('blocked', $result['response']->getBody());
     $I->assertSame(['stop'], MiddlewareTrace::$events);
+  }
+
+  public function testControllerMiddlewareAppliesToEverySharedModuleMount(UnitTester $I): void
+  {
+    $apiResult = $this->dispatch('/api-middleware/shared', SharedMiddlewareAppModule::class);
+
+    $I->assertSame('shared-middleware', $apiResult['response']->getBody());
+    $I->assertSame([
+      'first:before',
+      'controller:shared',
+      'first:after',
+    ], MiddlewareTrace::$events);
+
+    $controlResult = $this->dispatch('/control-middleware/shared', SharedMiddlewareAppModule::class);
+
+    $I->assertSame('shared-middleware', $controlResult['response']->getBody());
+    $I->assertSame([
+      'first:before',
+      'controller:shared',
+      'first:after',
+    ], MiddlewareTrace::$events);
   }
 
   /**

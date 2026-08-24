@@ -155,6 +155,106 @@ class ApiDocsInheritedHostAppModule
 {
 }
 
+#[Controller('api')]
+class ApiDocsSharedApiParentController
+{
+}
+
+#[Controller('control')]
+class ApiDocsSharedControlParentController
+{
+}
+
+#[Controller('shared')]
+class ApiDocsSharedController
+{
+  #[Get(':id<int>')]
+  public function findOne(int $id): array
+  {
+    return ['id' => $id];
+  }
+}
+
+#[Module(
+  controllers: [ApiDocsSharedController::class],
+)]
+class ApiDocsSharedModule
+{
+}
+
+#[Module(
+  controllers: [ApiDocsSharedApiParentController::class],
+  imports: [ApiDocsSharedModule::class],
+)]
+class ApiDocsSharedApiParentModule
+{
+}
+
+#[Module(
+  controllers: [ApiDocsSharedControlParentController::class],
+  imports: [ApiDocsSharedModule::class],
+)]
+class ApiDocsSharedControlParentModule
+{
+}
+
+#[Module(
+  imports: [ApiDocsSharedApiParentModule::class, ApiDocsSharedControlParentModule::class],
+)]
+class ApiDocsSharedMountedAppModule
+{
+}
+
+#[Controller(path: 'gateway', host: 'api.example.com')]
+class ApiDocsSharedApiHostParentController
+{
+}
+
+#[Controller(path: 'gateway', host: 'control.example.com')]
+class ApiDocsSharedControlHostParentController
+{
+}
+
+#[Controller('shared-host')]
+class ApiDocsSharedHostController
+{
+  #[Get]
+  public function index(): array
+  {
+    return [];
+  }
+}
+
+#[Module(
+  controllers: [ApiDocsSharedHostController::class],
+)]
+class ApiDocsSharedHostModule
+{
+}
+
+#[Module(
+  controllers: [ApiDocsSharedApiHostParentController::class],
+  imports: [ApiDocsSharedHostModule::class],
+)]
+class ApiDocsSharedApiHostParentModule
+{
+}
+
+#[Module(
+  controllers: [ApiDocsSharedControlHostParentController::class],
+  imports: [ApiDocsSharedHostModule::class],
+)]
+class ApiDocsSharedControlHostParentModule
+{
+}
+
+#[Module(
+  imports: [ApiDocsSharedApiHostParentModule::class, ApiDocsSharedControlHostParentModule::class],
+)]
+class ApiDocsSharedHostMountedAppModule
+{
+}
+
 #[Module(
   controllers: [
     ApiDocsPostsController::class,

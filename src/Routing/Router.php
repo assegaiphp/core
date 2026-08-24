@@ -61,6 +61,7 @@ use Symfony\Component\Console\Output\ConsoleOutput;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
 use Twig\Error\SyntaxError;
+use WeakMap;
 
 /**
  * The Router class is responsible for routing incoming requests to the appropriate controller and handler.
@@ -117,6 +118,10 @@ final class Router
      * @var array<string, array{matched_segments: int, route_length: int, specificity: int, host_specificity: int, host_params: array<int|string, string>, has_handler_match: bool}|null> Controller match metadata cached for the active request.
      */
     private array $controllerCandidateMatchCache = [];
+    /**
+     * @var WeakMap<object, array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>}>
+     */
+    private WeakMap $activatedControllerRouteContexts;
 
     private final function __construct(
         ?Injector $injector = null,
@@ -129,6 +134,7 @@ final class Router
         $this->guardsConsumer = GuardsConsumer::getInstance();
         $this->controllerManager = $controllerManager ?? ControllerManager::getInstance();
         $this->moduleManager = $moduleManager ?? ModuleManager::getInstance();
+        $this->activatedControllerRouteContexts = new WeakMap();
     }
 
     /**
@@ -214,100 +220,81 @@ final class Router
     public function getActivatedController(Request $request, array $controllerTokensList): object
     {
         $this->controllerCandidateMatchCache = [];
-        $rootController = null;
+        $activatedRouteContext = $this->getActivatedControllerRouteContext($request);
 
-        foreach ($controllerTokensList as $reflectionController) {
-            if ($this->isRootController($reflectionController)) {
-                $rootController = $reflectionController;
-                break;
-            }
-        }
-
-        $activatedController = $this->getActivatedControllerToken(
-            request: $request,
-            moduleClass: $this->moduleManager->getRootModuleClass(),
-            fallbackController: $rootController,
-        );
-
-        if (is_null($activatedController)) {
+        if (is_null($activatedRouteContext)) {
             $request->clearHostParams();
             throw new NotFoundException(path: $request->getPath());
         }
 
-        $controllerMatch = $this->getControllerCandidateMatchData($activatedController, $request);
+        $controllerMatch = $this->getControllerCandidateMatchData($activatedRouteContext, $request);
         $request->setHostParams($controllerMatch['host_params'] ?? []);
+        $controller = $this->activateController($activatedRouteContext['controller']);
+        $this->activatedControllerRouteContexts[$controller] = $activatedRouteContext;
 
-        return $this->activateController($activatedController);
+        return $controller;
     }
 
     /**
-     * Determines if the given controller is the root controller.
-     *
-     * @param ReflectionClass $controllerReflection The reflection instance of the controller.
-     * @return bool True if the given controller is the root controller, false otherwise.
-     * @throws ReflectionException If there was an error processing a reflection.
-     */
-    private function isRootController(ReflectionClass $controllerReflection): bool
-    {
-        $rootControllerClass = $this->controllerManager->getRootControllerClass();
-
-        return !is_null($rootControllerClass) && $controllerReflection->getName() === $rootControllerClass;
-    }
-
-    /**
-     * Determines which controller token should be activated within the current module branch.
+     * Selects the best controller route while traversing each distinct module mount at most once.
      *
      * @param Request $request
-     * @param string $moduleClass
-     * @param ReflectionClass|null $fallbackController
-     * @param array<string, bool> $visitedModules
-     * @return ReflectionClass|null
+     * @return array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>}|null
      * @throws HttpException
      * @throws ReflectionException
      */
-    private function getActivatedControllerToken(
-        Request          $request,
-        string           $moduleClass,
-        ?ReflectionClass $fallbackController = null,
-        array            $visitedModules = []
-    ): ?ReflectionClass
+    private function getActivatedControllerRouteContext(Request $request): ?array
     {
-        if (isset($visitedModules[$moduleClass])) {
+        $rootContextId = $this->controllerManager->getRootModuleRouteContextId();
+
+        if (is_null($rootContextId) && !empty($this->moduleManager->getModuleTokens())) {
+            $this->controllerManager->buildControllerTokensList($this->moduleManager->getModuleTokens());
+            $rootContextId = $this->controllerManager->getRootModuleRouteContextId();
+        }
+
+        if (is_null($rootContextId)) {
             return null;
         }
 
-        $visitedModules[$moduleClass] = true;
-        $bestMatch = $fallbackController;
+        $pendingContextIds = [$rootContextId];
+        $visitedContextIds = [];
+        $bestMatch = null;
 
-        if (!is_null($bestMatch) && !$this->canActivateController($bestMatch, $request)) {
-            $bestMatch = null;
-        }
-
-        foreach ($this->controllerManager->getModuleControllerTokens($moduleClass) as $reflectionController) {
-            if (!$this->canActivateController($reflectionController, $request)) {
+        while ($moduleContextId = array_pop($pendingContextIds)) {
+            if (isset($visitedContextIds[$moduleContextId])) {
                 continue;
             }
 
-            $bestMatch = $this->preferControllerMatch($request, $bestMatch, $reflectionController);
-        }
+            $visitedContextIds[$moduleContextId] = true;
+            $moduleContext = $this->controllerManager->getModuleRouteContext($moduleContextId);
 
-        foreach ($this->moduleManager->getImportedModules($moduleClass) as $importedModuleClass) {
-            if (isset($visitedModules[$importedModuleClass])) {
+            if (is_null($moduleContext)) {
                 continue;
             }
 
-            if (!$this->requestMatchesModuleBranch($request, $importedModuleClass)) {
-                continue;
+            foreach ($moduleContext['controllers'] as $controllerContextId) {
+                $controllerContext = $this->controllerManager->getControllerRouteContext($controllerContextId);
+
+                if (is_null($controllerContext) || !$this->canActivateController($controllerContext, $request)) {
+                    continue;
+                }
+
+                $bestMatch = $this->preferControllerMatch($request, $bestMatch, $controllerContext);
             }
 
-            $branchMatch = $this->getActivatedControllerToken(
-                request: $request,
-                moduleClass: $importedModuleClass,
-                fallbackController: $bestMatch,
-                visitedModules: $visitedModules,
-            );
+            foreach ($moduleContext['imports'] as $importContextId) {
+                if (isset($visitedContextIds[$importContextId])) {
+                    continue;
+                }
 
-            $bestMatch = $this->preferControllerMatch($request, $bestMatch, $branchMatch);
+                $importContext = $this->controllerManager->getModuleRouteContext($importContextId);
+
+                if (is_null($importContext) || !$this->requestMatchesModuleBranch($request, $importContext)) {
+                    continue;
+                }
+
+                $pendingContextIds[] = $importContextId;
+            }
         }
 
         return $bestMatch;
@@ -316,13 +303,13 @@ final class Router
     /**
      * Determines if the given controller can be activated.
      *
-     * @param ReflectionClass $reflectionController The reflection instance of the controller to be activated.
+     * @param array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>} $controllerContext
      * @param Request $request
      * @return bool True if the controller can be activated, false otherwise.
      */
-    private function canActivateController(ReflectionClass $reflectionController, Request $request): bool
+    private function canActivateController(array $controllerContext, Request $request): bool
     {
-        return !is_null($this->getControllerCandidateMatchData($reflectionController, $request));
+        return !is_null($this->getControllerCandidateMatchData($controllerContext, $request));
     }
 
     /**
@@ -332,14 +319,14 @@ final class Router
      * ancestor controller. When a controller has a matching handler, the full controller+handler route
      * is used for ranking so a prefix-only child controller cannot shadow a valid parent handler.
      *
-     * @param ReflectionClass<object> $reflectionController
+     * @param array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>} $controllerContext
      * @param Request $request
      * @return array{matched_segments: int, route_length: int, specificity: int, host_specificity: int, host_params: array<int|string, string>, has_handler_match: bool}|null
      */
-    private function getControllerCandidateMatchData(ReflectionClass $reflectionController, Request $request): ?array
+    private function getControllerCandidateMatchData(array $controllerContext, Request $request): ?array
     {
         $cacheKey = implode("\0", [
-            $reflectionController->getName(),
+            $controllerContext['id'],
             $request->getMethod()->value,
             $request->getHostName(),
             $request->getPath(),
@@ -349,20 +336,24 @@ final class Router
             return $this->controllerCandidateMatchCache[$cacheKey];
         }
 
-        $controllerPrefix = $this->getControllerPrefix($reflectionController);
+        $controllerPrefix = $controllerContext['resolved_path'];
         $pathMatch = $this->matchRoutePath(route: $controllerPrefix, path: $request->getPath(), allowPartial: true);
 
         if (is_null($pathMatch)) {
             return $this->controllerCandidateMatchCache[$cacheKey] = null;
         }
 
-        $hostMatch = $this->getControllerHostMatchData($reflectionController, $request);
+        $hostMatch = $this->getControllerHostMatchData($controllerContext, $request);
 
         if (is_null($hostMatch)) {
             return $this->controllerCandidateMatchCache[$cacheKey] = null;
         }
 
-        $handlerMatch = $this->getBestHandlerMatchData($reflectionController, $request);
+        $handlerMatch = $this->getBestHandlerMatchData(
+            $controllerContext['controller'],
+            $request,
+            $controllerPrefix,
+        );
         $routeMatch = $handlerMatch ?? [
             'matched_segments' => count($this->getPathSegments($controllerPrefix)),
             'route_length' => strlen($controllerPrefix),
@@ -387,6 +378,11 @@ final class Router
     private function getControllerPrefix(object $controller): string
     {
         $reflectionController = $controller instanceof ReflectionClass ? $controller : new ReflectionClass($controller);
+
+        if (!($controller instanceof ReflectionClass) && isset($this->activatedControllerRouteContexts[$controller])) {
+            return $this->activatedControllerRouteContexts[$controller]['resolved_path'];
+        }
+
         $resolvedPrefix = $this->controllerManager->getResolvedControllerPath($reflectionController->getName());
 
         if ($resolvedPrefix) {
@@ -532,14 +528,14 @@ final class Router
     /**
      * Matches the controller's configured host pattern(s) against the current request host.
      *
-     * @param ReflectionClass $reflectionController
+     * @param array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>} $controllerContext
      * @param Request $request
      * @return array{params: array<int|string, string>, specificity: int}|null
      */
-    private function getControllerHostMatchData(ReflectionClass $reflectionController, Request $request): ?array
+    private function getControllerHostMatchData(array $controllerContext, Request $request): ?array
     {
         return $this->matchHostGroups(
-            $this->controllerManager->getControllerHostGroups($reflectionController->getName()),
+            $controllerContext['host_groups'],
             $request,
         );
     }
@@ -716,15 +712,15 @@ final class Router
      * Chooses the more specific controller match for the current request.
      *
      * @param Request $request
-     * @param ReflectionClass|null $currentBest
-     * @param ReflectionClass|null $candidate
-     * @return ReflectionClass|null
+     * @param array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>}|null $currentBest
+     * @param array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>}|null $candidate
+     * @return array{id: string, module: string, controller: ReflectionClass<object>, local_path: string, resolved_path: string, hosts: array<int, string>, host_groups: array<int, array<int, string>>}|null
      */
     private function preferControllerMatch(
-        Request          $request,
-        ?ReflectionClass $currentBest,
-        ?ReflectionClass $candidate
-    ): ?ReflectionClass
+        Request $request,
+        ?array  $currentBest,
+        ?array  $candidate
+    ): ?array
     {
         if (is_null($candidate)) {
             return $currentBest;
@@ -802,14 +798,14 @@ final class Router
      * Determines if the current request can continue down the imported module branch.
      *
      * @param Request $request
-     * @param string $moduleClass
+     * @param array{id: string, module: string, prefix: string, host_groups: array<int, array<int, string>>, import_host_groups: array<int, array<int, string>>, controllers: array<int, string>, imports: array<int, string>} $moduleContext
      * @return bool
      */
-    private function requestMatchesModuleBranch(Request $request, string $moduleClass): bool
+    private function requestMatchesModuleBranch(Request $request, array $moduleContext): bool
     {
         if (is_null(
             $this->matchRoutePath(
-                route: $this->controllerManager->getModuleBranchPrefix($moduleClass),
+                route: $moduleContext['prefix'],
                 path: $request->getPath(),
                 allowPartial: true,
             )
@@ -819,7 +815,7 @@ final class Router
 
         return !is_null(
             $this->matchHostGroups(
-                $this->controllerManager->getModuleBranchHostGroups($moduleClass),
+                $moduleContext['host_groups'],
                 $request,
             )
         );
@@ -876,12 +872,21 @@ final class Router
      * @throws HttpException
      * @throws ReflectionException
      */
-    private function getBestHandlerMatchData(ReflectionClass $reflectionController, Request $request): ?array
+    private function getBestHandlerMatchData(
+        ReflectionClass $reflectionController,
+        Request $request,
+        string $controllerPrefix,
+    ): ?array
     {
         $bestMatch = null;
 
         foreach ($this->getControllerHandlerMethods($reflectionController) as $handler) {
-            $matchData = $this->getHandlerMatchData(handler: $handler, controller: $reflectionController, request: $request);
+            $matchData = $this->getHandlerMatchData(
+                handler: $handler,
+                controller: $reflectionController,
+                request: $request,
+                controllerPrefix: $controllerPrefix,
+            );
 
             if (is_null($matchData)) {
                 continue;
@@ -916,10 +921,15 @@ final class Router
      * @throws HttpException
      * @throws ReflectionException
      */
-    private function getHandlerMatchData(ReflectionMethod $handler, object $controller, Request $request): ?array
+    private function getHandlerMatchData(
+        ReflectionMethod $handler,
+        object $controller,
+        Request $request,
+        ?string $controllerPrefix = null,
+    ): ?array
     {
         $path = $this->normalizePath($request->getPath());
-        $controllerPrefix = $this->getControllerPrefix(controller: $controller);
+        $controllerPrefix ??= $this->getControllerPrefix(controller: $controller);
         $requestMapperAttribute = $this->getRequestMapperAttribute($handler, $request->getMethod());
 
         if (is_null($requestMapperAttribute)) {
@@ -2073,7 +2083,16 @@ final class Router
      */
     private function getControllerMatchScore(ReflectionClass $reflectionController, Request $request): int
     {
-        return $this->getControllerCandidateMatchData($reflectionController, $request)['matched_segments'] ?? -1;
+        $bestScore = -1;
+
+        foreach ($this->controllerManager->getControllerRouteContexts($reflectionController->getName()) as $context) {
+            $bestScore = max(
+                $bestScore,
+                $this->getControllerCandidateMatchData($context, $request)['matched_segments'] ?? -1,
+            );
+        }
+
+        return $bestScore;
     }
 
     /**
