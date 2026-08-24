@@ -39,6 +39,7 @@ class MiddlewareConsumer implements ConsumerInterface
    * @var array<class-string, array<int, array{method: RequestMethod, path: string}>>
    */
   protected array $controllerRoutesCache = [];
+  protected int $controllerRoutesCacheGraphVersion = -1;
   protected ControllerManager $controllerManager;
 
   public function __construct()
@@ -264,6 +265,13 @@ class MiddlewareConsumer implements ConsumerInterface
    */
   private function getControllerRoutes(string $controllerClass): array
   {
+    $graphVersion = $this->controllerManager->getGraphVersion();
+
+    if ($this->controllerRoutesCacheGraphVersion !== $graphVersion) {
+      $this->controllerRoutesCache = [];
+      $this->controllerRoutesCacheGraphVersion = $graphVersion;
+    }
+
     if (isset($this->controllerRoutesCache[$controllerClass])) {
       return $this->controllerRoutesCache[$controllerClass];
     }
@@ -274,23 +282,29 @@ class MiddlewareConsumer implements ConsumerInterface
       return [];
     }
 
-    $controllerPath = $this->controllerManager->getResolvedControllerPath($controllerClass) ??
-      $this->extractControllerPath($reflectionClass);
+    $controllerPaths = $this->controllerManager->getResolvedControllerPaths($controllerClass);
+
+    if (empty($controllerPaths)) {
+      $controllerPaths = [$this->extractControllerPath($reflectionClass)];
+    }
+
     $routes = [];
 
-    foreach ($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC) as $reflectionMethod) {
-      foreach ($reflectionMethod->getAttributes() as $attribute) {
-        if (!Validator::isValidRequestMapperAttribute($attribute)) {
-          continue;
+    foreach ($controllerPaths as $controllerPath) {
+      foreach ($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC) as $reflectionMethod) {
+        foreach ($reflectionMethod->getAttributes() as $attribute) {
+          if (!Validator::isValidRequestMapperAttribute($attribute)) {
+            continue;
+          }
+
+          $attributeInstance = $attribute->newInstance();
+          $routes[] = [
+            'method' => $this->resolveRequestMethod($attribute->getName()),
+            'path' => $this->combinePaths($controllerPath, $attributeInstance->path ?? '/'),
+          ];
+
+          break;
         }
-
-        $attributeInstance = $attribute->newInstance();
-        $routes[] = [
-          'method' => $this->resolveRequestMethod($attribute->getName()),
-          'path' => $this->combinePaths($controllerPath, $attributeInstance->path ?? '/'),
-        ];
-
-        break;
       }
     }
 

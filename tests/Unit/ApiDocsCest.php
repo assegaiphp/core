@@ -20,6 +20,8 @@ use Assegai\Core\Http\Responses\Responders\Responder;
 use Assegai\Core\ModuleManager;
 use Mocks\ApiDocsAppModule;
 use Mocks\ApiDocsInheritedHostAppModule;
+use Mocks\ApiDocsSharedMountedAppModule;
+use Mocks\ApiDocsSharedHostMountedAppModule;
 use ReflectionClass;
 use ReflectionProperty;
 use Tests\Support\UnitTester;
@@ -220,6 +222,57 @@ class ApiDocsCest
     $I->assertSame('http://{tenant}.console.example.com', $servers[0]['url'] ?? null);
     $I->assertArrayHasKey('tenant', $servers[0]['variables'] ?? []);
     $I->assertSame('tenant', $servers[0]['variables']['tenant']['default'] ?? null);
+  }
+
+  public function testOpenApiGenerationIncludesEverySharedModuleMount(UnitTester $I): void
+  {
+    $this->resetSingleton(ModuleManager::class);
+    $this->resetSingleton(ControllerManager::class);
+    $this->resetRequestSingleton();
+
+    $generator = new OpenApiGenerator(
+      ControllerManager::getInstance(),
+      ModuleManager::getInstance(),
+      Request::getInstance(),
+      new ComposerConfig(),
+      new ProjectConfig(),
+    );
+
+    $document = $generator->generate(ApiDocsSharedMountedAppModule::class);
+    $apiOperation = $document['paths']['/api/shared/{id}']['get'] ?? null;
+    $controlOperation = $document['paths']['/control/shared/{id}']['get'] ?? null;
+
+    $I->assertNotNull($apiOperation);
+    $I->assertNotNull($controlOperation);
+    $I->assertNotSame($apiOperation['operationId'], $controlOperation['operationId']);
+    $I->assertSame('integer', $apiOperation['parameters'][0]['schema']['type'] ?? null);
+    $I->assertSame('integer', $controlOperation['parameters'][0]['schema']['type'] ?? null);
+  }
+
+  public function testOpenApiGenerationMergesHostsForAnIdenticallyMountedSharedRoute(UnitTester $I): void
+  {
+    $this->resetSingleton(ModuleManager::class);
+    $this->resetSingleton(ControllerManager::class);
+    $this->resetRequestSingleton();
+
+    $generator = new OpenApiGenerator(
+      ControllerManager::getInstance(),
+      ModuleManager::getInstance(),
+      Request::getInstance(),
+      new ComposerConfig(),
+      new ProjectConfig(),
+    );
+
+    $document = $generator->generate(ApiDocsSharedHostMountedAppModule::class);
+    $operation = $document['paths']['/gateway/shared-host']['get'] ?? null;
+    $serverUrls = array_column($operation['servers'] ?? [], 'url');
+    sort($serverUrls);
+
+    $I->assertNotNull($operation);
+    $I->assertSame([
+      'http://api.example.com',
+      'http://control.example.com',
+    ], $serverUrls);
   }
 
   public function testSwaggerUiRendererTargetsTheGeneratedSpec(UnitTester $I): void

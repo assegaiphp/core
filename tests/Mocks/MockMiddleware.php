@@ -178,3 +178,61 @@ class MiddlewareAppModule
 class MiddlewareShortCircuitAppModule
 {
 }
+
+#[Controller('api-middleware')]
+class SharedMiddlewareApiParentController
+{
+}
+
+#[Controller('control-middleware')]
+class SharedMiddlewareControlParentController
+{
+}
+
+#[Controller('shared')]
+class SharedMiddlewareController
+{
+  #[Get]
+  public function index(): string
+  {
+    MiddlewareTrace::$events[] = 'controller:shared';
+
+    return 'shared-middleware';
+  }
+}
+
+#[Module(
+  controllers: [SharedMiddlewareController::class],
+)]
+class SharedMiddlewareFeatureModule implements AssegaiModuleInterface
+{
+  public function configure(MiddlewareConsumer $consumer): void
+  {
+    $consumer
+      ->apply(FirstTraceMiddleware::class)
+      ->forRoutes(SharedMiddlewareController::class);
+  }
+}
+
+#[Module(
+  controllers: [SharedMiddlewareApiParentController::class],
+  imports: [SharedMiddlewareFeatureModule::class],
+)]
+class SharedMiddlewareApiParentModule
+{
+}
+
+#[Module(
+  controllers: [SharedMiddlewareControlParentController::class],
+  imports: [SharedMiddlewareFeatureModule::class],
+)]
+class SharedMiddlewareControlParentModule
+{
+}
+
+#[Module(
+  imports: [SharedMiddlewareApiParentModule::class, SharedMiddlewareControlParentModule::class],
+)]
+class SharedMiddlewareAppModule
+{
+}

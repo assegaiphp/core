@@ -172,6 +172,185 @@ class NestedAppModule
 {
 }
 
+#[Controller('shared')]
+class SharedMountedController
+{
+  #[Get(':id')]
+  public function findOne(int $id): string
+  {
+    return "shared-$id";
+  }
+}
+
+#[Controller('api')]
+class SharedApiParentController
+{
+}
+
+#[Controller('control')]
+class SharedControlParentController
+{
+}
+
+#[Module(
+  controllers: [SharedMountedController::class],
+)]
+class SharedMountedModule
+{
+}
+
+#[Module(
+  controllers: [SharedApiParentController::class],
+  imports: [SharedMountedModule::class],
+)]
+class SharedApiParentModule
+{
+}
+
+#[Module(
+  controllers: [SharedControlParentController::class],
+  imports: [SharedMountedModule::class],
+)]
+class SharedControlParentModule
+{
+}
+
+#[Module(
+  imports: [SharedApiParentModule::class, SharedControlParentModule::class],
+)]
+class SharedMountedAppModule
+{
+}
+
+#[Module(
+  imports: [SharedControlParentModule::class, SharedApiParentModule::class],
+)]
+class ReverseSharedMountedAppModule
+{
+}
+
+#[Controller(path: '', host: 'console.example.com')]
+class SharedConsoleHostParentController
+{
+}
+
+#[Controller(path: '', host: 'control.example.com')]
+class SharedControlHostParentController
+{
+}
+
+#[Controller('host-shared')]
+class SharedHostMountedController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'host-shared';
+  }
+}
+
+#[Module(
+  controllers: [SharedHostMountedController::class],
+)]
+class SharedHostMountedModule
+{
+}
+
+#[Module(
+  controllers: [SharedConsoleHostParentController::class],
+  imports: [SharedHostMountedModule::class],
+)]
+class SharedConsoleHostParentModule
+{
+}
+
+#[Module(
+  controllers: [SharedControlHostParentController::class],
+  imports: [SharedHostMountedModule::class],
+)]
+class SharedControlHostParentModule
+{
+}
+
+#[Module(
+  imports: [SharedConsoleHostParentModule::class, SharedControlHostParentModule::class],
+)]
+class SharedHostMountedAppModule
+{
+}
+
+#[Module(
+  imports: [SharedMountedModule::class],
+)]
+class SharedIdentityParentOneModule
+{
+}
+
+#[Module(
+  imports: [SharedMountedModule::class],
+)]
+class SharedIdentityParentTwoModule
+{
+}
+
+#[Module(
+  imports: [SharedIdentityParentOneModule::class, SharedIdentityParentTwoModule::class],
+)]
+class IdenticalDiamondMountedAppModule
+{
+}
+
+#[Controller('cycle-parent')]
+class SharedCycleParentController
+{
+}
+
+#[Controller('cycle-shared')]
+class SharedCycleController
+{
+  #[Get]
+  public function index(): string
+  {
+    return 'cycle-shared';
+  }
+}
+
+#[Controller('cycle-peer')]
+class SharedCyclePeerController
+{
+}
+
+#[Module(
+  controllers: [SharedCycleParentController::class],
+  imports: [SharedCycleModule::class],
+)]
+class SharedCycleParentModule
+{
+}
+
+#[Module(
+  controllers: [SharedCycleController::class],
+  imports: [SharedCyclePeerModule::class],
+)]
+class SharedCycleModule
+{
+}
+
+#[Module(
+  controllers: [SharedCyclePeerController::class],
+  imports: [SharedCycleModule::class],
+)]
+class SharedCyclePeerModule
+{
+}
+
+#[Module(
+  imports: [SharedCycleParentModule::class, SharedCyclePeerModule::class],
+)]
+class SharedCyclicMountedAppModule
+{
+}
+
 
 #[Controller('api/v1/workspaces')]
 class DeepWorkspaceController
