@@ -97,7 +97,7 @@ Ship internal structure first:
 - write entries for:
   - `0.7.6 -> 0.8.0`
   - `0.8.x -> 0.9.0`
-  - `0.9.x -> 0.10.0`
+  - `0.9.x -> 0.10.0` — configurable authentication failure handling, `config/auth.php`, and the complete exception-filter lifecycle
   - `0.10.x -> 1.0.0`
 - link the advisor plan from developer docs
 
@@ -126,6 +126,7 @@ That means:
 
 - `assegai update` should replay installed package installers
 - milestone releases should ship explicit upgrade notes
+- the `0.9.x -> 0.10.0` path should link the Core release notes, upgrade notes, and session-authentication guide
 - `assegai updates:scaffold <from> <to>` should create the site-consumable upgrade entry and draft upgrade notes
 - docs should call out the preferred upgrade command for humans
 

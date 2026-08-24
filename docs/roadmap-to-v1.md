@@ -80,6 +80,32 @@ Release article:
 
 - topic: why the ORM was rewritten, what changed across MySQL, SQLite, and PostgreSQL, and what developers gain from the new model
 
+## `0.10.0` Configurable Authentication Failure Handling
+
+Theme: make guard failures usable for both browser sessions and APIs by completing the exception-filter lifecycle and keeping response policy application-configurable.
+
+Primary goals:
+
+- support reliable global, controller, and handler exception-filter registration
+- resolve filter class names through dependency injection
+- enforce handler, controller, then global precedence with terminal handling and one response emission
+- run filters before the request session closes
+- ship an opt-in `LoginRedirectFilter` whose login URL and redirect policy come from the application
+- preserve only safe local intended targets and retain normal `401` behavior where the redirect filter is not applied
+- provide a dedicated `config/auth.php` surface and a complete session-login guide
+
+Release bar:
+
+- guard denial through `UnauthorizedException` is covered end to end
+- class-name and configured-instance filters both work
+- redirect-loop, cross-origin target, API 401, session persistence, precedence, and single-emission regressions are covered
+- new projects receive `config/auth.php`, while existing projects can adopt it without changing unrelated configuration
+- release and upgrade notes distinguish the substantive Core/Auth/Console work from synchronization-only packages
+
+Release article:
+
+- topic: why authentication failure response policy belongs in exception filters, how browser redirects and API 401 responses coexist, and how applications configure or replace the built-in behavior
+
 ## Likely `1.0.0+` candidates
 
 These are valuable roadmap items, but under the current `1.0.0` north star they do not automatically count as identity-defining blockers.
@@ -110,7 +136,7 @@ Release bar:
 - destructive changes are surfaced clearly instead of being hidden behind magic
 - one release article explains the entity-first workflow, what it automates, and what still needs explicit developer judgment
 
-Not required for `0.10.0`:
+Deferred design considerations:
 
 - direct database mutation as the default sync behavior
 - automatic rename detection
@@ -142,7 +168,7 @@ Release bar:
 - lifecycle hooks, provider injection, and shutdown behavior work consistently in the non-web path
 - one release article explains why Assegai is expanding runtime contexts and how scheduling fits into that architecture
 
-Not required for `0.11.0`:
+Deferred design considerations:
 
 - replacing durable queues
 - solving every worker and scheduler pattern at once
@@ -153,7 +179,7 @@ Release article:
 
 - topic: why Assegai is expanding beyond HTTP runtimes, how the first non-web runtime works, and why scheduling belongs on top of that model instead of beside it
 
-## The road from `0.9.x` to `1.0.0`
+## The road from `0.10.x` to `1.0.0`
 
 Theme: define the minimum agreed identity of AssegaiPHP and make that identity polished, reliable, and well documented.
 
@@ -271,8 +297,10 @@ This is the working near-term sequence, not a fixed promise that there will be n
 2. `0.8.x` patch releases for fixes and polish if needed
 3. `0.9.0` ORM Stability Rewrite
 4. `0.9.x` patch releases for ORM and compatibility fixes if needed
-5. additional `0.x` milestones if stability, polish, or feedback say we still need them
-6. `1.0.0` confidence release once the framework has actually earned it
+5. `0.10.0` Configurable Authentication Failure Handling
+6. `0.10.x` patch releases for fixes and polish if needed
+7. additional `0.x` milestones if stability, polish, or feedback say we still need them
+8. `1.0.0` confidence release once the framework has actually earned it
 
 ## Current placement under the `1.0.0` filter
 

@@ -78,6 +78,7 @@ Examples:
 
 - `0.8.0` = OpenSwoole runtime foundations
 - `0.9.0` = ORM stability rewrite
+- `0.10.0` = configurable authentication failure handling and complete exception-filter lifecycle
 - likely `1.0.0+` = entity-driven database sync
 - likely `1.0.0+` = application runtime contexts and scheduling
 - `1.0.0` = confidence release
@@ -88,6 +89,7 @@ Examples:
 
 - if `orm` is a headline part of `0.9.0`, it should ship on the `0.9.x` line
 - if `console` needs new upgrade or scaffolding behavior for `0.9.0`, it should also ship on the `0.9.x` line
+- if `auth` and `console` support Core's configurable browser-login failure flow for `0.10.0`, the repositories already on `0.9.x` should synchronize on `0.10.x`
 - if `database:sync` becomes a post-`1.0.0` milestone, `orm` and `console` should align to that release line together
 - if application runtime contexts and scheduling become a post-`1.0.0` milestone, `core` and `console` should align to that release line together
 
