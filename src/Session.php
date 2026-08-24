@@ -56,12 +56,14 @@ class Session implements SingletonInterface, ConfigInterface
     $keys = explode('.', $path);
 
     foreach ($keys as $key) {
-      if (is_array($value) && array_key_exists($key, $value)) {
-        $value = $value[$key];
+      if (!is_array($value) || !array_key_exists($key, $value)) {
+        return $default;
       }
+
+      $value = $value[$key];
     }
 
-    return $value ?? $default;
+    return $value;
   }
 
   /**
@@ -109,20 +111,37 @@ class Session implements SingletonInterface, ConfigInterface
    */
   public function remove(string $path): void
   {
-    if ($this->has($path)) {
-      $keys = explode('.', $path);
-      $session = &$_SESSION;
+    $keys = explode('.', $path);
+    $lastKey = array_pop($keys);
 
-      foreach ($keys as $key) {
-        if (! array_key_exists($key, $session)) {
-          return;
-        }
+    if (!is_string($lastKey) || $lastKey === '') {
+      return;
+    }
 
-        $session = &$session[$key];
+    $session = &$_SESSION;
+
+    foreach ($keys as $key) {
+      if (!is_array($session) || !array_key_exists($key, $session)) {
+        return;
       }
 
-      unset($session);
+      $session = &$session[$key];
     }
+
+    if (is_array($session)) {
+      unset($session[$lastKey]);
+    }
+  }
+
+  /**
+   * Returns a session value and removes it from the session.
+   */
+  public function pull(string $path, mixed $default = null): mixed
+  {
+    $value = $this->get($path, $default);
+    $this->remove($path);
+
+    return $value;
   }
 
   /**

@@ -7,6 +7,7 @@ use Assegai\Core\ApiDocs\SwaggerUiRenderer;
 use Assegai\Core\Config\AppConfig;
 use Assegai\Core\Config\ComposerConfig;
 use Assegai\Core\Config\ProjectConfig;
+use Assegai\Core\Consumers\ExceptionFiltersConsumer;
 use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\Enumerations\EventChannel;
 use Assegai\Core\Enumerations\Http\ContentType;
@@ -20,6 +21,8 @@ use Assegai\Core\Exceptions\Handlers\WhoopsExceptionHandler;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\InternalServerErrorException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
+use Assegai\Core\Exceptions\Filters\ExceptionFilterBinding;
+use Assegai\Core\Exceptions\Filters\ExceptionFilterMetadata;
 use Assegai\Core\Exceptions\Interfaces\ErrorHandlerInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\Exceptions\Interfaces\ExceptionHandlerInterface;
@@ -116,7 +119,7 @@ class App implements AppInterface
     /**
      * @var object|null The activated controller.
      */
-    protected ?object $activatedController;
+    protected ?object $activatedController = null;
     /**
      * @var LoggerInterface|null The logger instance.
      */
@@ -145,10 +148,7 @@ class App implements AppInterface
      * @var array<IAssegaiInterceptor> A list of application scoped interceptors
      */
     protected array $interceptors = [];
-    /**
-     * @var array<ExceptionFilterInterface> A list of application scoped exception filters
-     */
-    protected array $exceptionFilters = [];
+    protected ExceptionFiltersConsumer $exceptionFiltersConsumer;
     /**
      * @var MiddlewareConsumer|null The middleware consumer
      */
@@ -213,6 +213,7 @@ class App implements AppInterface
     )
     {
         $this->runtime = $runtime ?? new PhpHttpRuntime();
+        $this->exceptionFiltersConsumer = new ExceptionFiltersConsumer($this->injector);
         broadcast(EventChannel::APP_INIT_START, new Event());
         $this->initializeErrorAndExceptionHandlers();
         $this->initializeAppProperties();
@@ -235,19 +236,7 @@ class App implements AppInterface
         $this->productionErrorHandler = new DefaultErrorHandler($this->logger);
         $this->httpExceptionHandler = new HttpExceptionHandler($this->logger);
 
-        set_exception_handler(function (Throwable $exception) {
-            foreach ($this->exceptionFilters as $type => $filter) {
-                if (is_a($exception, $type)) {
-                    $filter->catch($exception, $this->host);
-                }
-            }
-
-            if (Environment::isProduction()) {
-                $this->httpExceptionHandler->handle($exception);
-            } else {
-                $this->exceptionHandler->handle($exception);
-            }
-        });
+        set_exception_handler(fn(Throwable $exception) => $this->handleThrowable($exception));
 
         set_error_handler(function ($errno, $errstr, $errfile, $errline): bool {
             if ((error_reporting() & $errno) === 0) {
@@ -389,6 +378,8 @@ class App implements AppInterface
     {
         $this->closeSessionForCurrentRequest();
         $this->clearRequestScopedRuntimeContext();
+        $this->router->resetRequestState();
+        $this->activatedController = null;
         $this->request = $this->runtimeRequestContext instanceof RuntimeRequestContext
             ? Request::createFromRuntimeContext($this->runtimeRequestContext)
             : Request::createFromGlobals();
@@ -650,20 +641,47 @@ class App implements AppInterface
      */
     public function useGlobalFilters(ExceptionFilterInterface|string|array $filters, string|array $type = Exception::class): self
     {
-        $types = is_string($type) ? [$type] : $type;
+        $types = ExceptionFilterMetadata::normalize($type);
+        $bindings = [];
 
-        if (!$this->exceptionFilters) {
-            foreach ($types as $filterType) {
-                $this->exceptionFilters[$filterType] = [];
-            }
-
-            $previousFilters = $this->exceptionFilters[$filterType];
-            $currentFilters = is_array($filters) ? $filters : [$filters];
-            $this->exceptionFilters[$filterType] = [...$previousFilters, ...$currentFilters];
+        foreach ($this->normalizeExceptionFilters($filters) as $filter) {
+            $bindings[] = new ExceptionFilterBinding($filter, $types);
         }
 
-        $this->router->addGlobalFilters($this->exceptionFilters);
+        $this->router->addGlobalFilters($bindings);
         return $this;
+    }
+
+    /**
+     * @param class-string<ExceptionFilterInterface>|ExceptionFilterInterface|array<mixed> $filters
+     * @return array<int, class-string<ExceptionFilterInterface>|ExceptionFilterInterface>
+     */
+    private function normalizeExceptionFilters(string|ExceptionFilterInterface|array $filters): array
+    {
+        $normalized = [];
+
+        foreach (is_array($filters) ? $filters : [$filters] as $filter) {
+            if (is_array($filter)) {
+                $normalized = [...$normalized, ...$this->normalizeExceptionFilters($filter)];
+                continue;
+            }
+
+            if ($filter instanceof ExceptionFilterInterface) {
+                $normalized[] = $filter;
+                continue;
+            }
+
+            if (is_string($filter) && is_a($filter, ExceptionFilterInterface::class, true)) {
+                $normalized[] = $filter;
+                continue;
+            }
+
+            throw new InvalidArgumentException(
+                'Exception filters must be class names or instances of ExceptionFilterInterface.'
+            );
+        }
+
+        return $normalized;
     }
 
     /**
@@ -787,6 +805,8 @@ class App implements AppInterface
             $this->handleThrowable($exception);
         } finally {
             $this->clearRequestScopedRuntimeContext();
+            $this->router->resetRequestState();
+            $this->activatedController = null;
         }
     }
 
@@ -999,6 +1019,7 @@ class App implements AppInterface
 
         return str_starts_with($path, $directory);
     }
+
     /**
      * Handles an uncaught throwable through the framework exception pipeline.
      *
@@ -1007,14 +1028,23 @@ class App implements AppInterface
      */
     protected function handleThrowable(Throwable $exception): void
     {
+        try {
+            $handled = $this->exceptionFiltersConsumer->handle(
+                $exception,
+                $this->host,
+                $this->router->getActiveExceptionFilterBindings(),
+            );
+        } catch (Throwable $filterException) {
+            $exception = $filterException;
+            $handled = false;
+        }
+
         $this->closeSessionForCurrentRequest();
 
-        foreach ($this->exceptionFilters as $type => $exceptionFilter) {
-            if (is_a($exception, $type)) {
-                foreach ($exceptionFilter as $filter) {
-                    $filter->catch($exception, $this->host);
-                }
-            }
+        if ($handled) {
+            $this->response = Response::current();
+            $this->responder->respond($this->response);
+            return;
         }
 
         if (Environment::isProduction()) {
@@ -1088,6 +1118,18 @@ class App implements AppInterface
 
         if (session_status() === PHP_SESSION_DISABLED) {
             return;
+        }
+
+        $sessionName = $this->appConfig?->get('session.name', null);
+
+        if (is_string($sessionName) && $sessionName !== '') {
+            if (!preg_match('/^[A-Za-z][A-Za-z0-9_-]*$/D', $sessionName)) {
+                throw new InvalidArgumentException('The configured session name is invalid.');
+            }
+
+            if (session_name() !== $sessionName && session_name($sessionName) === false) {
+                throw new InvalidArgumentException('The configured session name could not be applied.');
+            }
         }
 
         $sessionLimiter = $this->appConfig->get('session.limit', null);

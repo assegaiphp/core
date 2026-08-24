@@ -14,6 +14,8 @@ Session auth is usually the simplest fit for:
 
 The strategy stores a safe copy of the user in the session and lets later requests ask for `isAuthenticated()` or `getUser()`.
 
+See [Session Authentication End to End](./session-authentication.md) for the complete login controller, guard, configurable redirect filter, and intended-URL restoration flow.
+
 ## JWT strategy
 
 JWT auth is a better fit for:
@@ -83,7 +85,7 @@ What you still provide:
 - the login route
 - the callback route
 - any persistence or lookup logic for provider users
-- redirects or API responses after login
+- the configured redirects or API responses that apply to your application
 
 ## Where to go next
 
