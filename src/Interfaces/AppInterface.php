@@ -6,6 +6,7 @@ use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\Http\Cors\CorsOptions;
 use Exception;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 interface AppInterface
 {
@@ -42,8 +43,8 @@ interface AppInterface
   public function useGlobalInterceptors(IAssegaiInterceptor|string|array $interceptors): self;
 
   /**
-   * @param ExceptionFilterInterface|class-string|array<class-string|ExceptionFilterInterface> $filters
-   * @param class-string|array<class-string> $type
+   * @param ExceptionFilterInterface|class-string<ExceptionFilterInterface>|array<class-string<ExceptionFilterInterface>|ExceptionFilterInterface> $filters
+   * @param class-string<Throwable>|array<class-string<Throwable>> $type
    * @return self
    */
   public function useGlobalFilters(ExceptionFilterInterface|string|array $filters, string|array $type = Exception::class): self;

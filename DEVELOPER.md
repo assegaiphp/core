@@ -21,6 +21,6 @@ These notes are not part of the public guide surface and should not be read as s
 
 ## Current release prep
 
-- [0.8.0 Release Prep](./docs/releases/0.8.0-prep.md)
-- [0.8.0 Release Notes Draft](./docs/releases/0.8.0-release-notes-draft.md)
-- [0.10.0 Upgrade Notes Draft](./docs/releases/0.10.0-upgrade-notes-draft.md)
+- [0.10.0 Release Notes](./docs/releases/0.10.0-release-notes.md)
+- [0.10.0 Upgrade Notes](./docs/releases/0.10.0-upgrade-notes.md)
+- [Session Authentication End to End](./docs/session-authentication.md)

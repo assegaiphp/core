@@ -44,6 +44,8 @@ If authentication succeeds, the strategy stores a sanitized copy of the user in 
 
 Framework session cookies default to `HttpOnly` and `SameSite=Lax`; `Secure` is enabled automatically for HTTPS requests. Long-lived runtimes also isolate the session identifier and `$_SESSION` data between requests.
 
+For the full controller, guard, configurable login redirect filter, intended-URL restoration, and logout workflow, continue with [Session Authentication End to End](./session-authentication.md).
+
 ## JWT authentication
 
 Use JWT authentication when the client is calling your API directly and you want to return a token.
@@ -97,6 +99,8 @@ You still decide:
 - whether you want sessions, JWTs, or both
 - how to map an OAuth profile onto a local user record
 - where to redirect the user after login
+
+Assegai core provides an opt-in `LoginRedirectFilter` for the common browser flow. Your application supplies its login URL and may configure or replace the filter.
 
 ## Where to go next
 

@@ -45,6 +45,7 @@ They focus on the tasks most people need first:
 28. [OpenSwoole Runtime](./openswoole-runtime.md)
 29. [Guards, Interceptors, Pipes, and Middleware](./guards-interceptors-pipes-and-middleware.md)
 30. [Queues and Background Jobs](./queues-and-background-jobs.md)
+31. [Session Authentication End to End](./session-authentication.md)
 
 ## Guide map
 
@@ -52,6 +53,7 @@ They focus on the tasks most people need first:
 
 - [Getting Started](./getting-started.md) introduces the CLI, the generated workspace, and the first running app.
 - [Authentication](./authentication.md) introduces session auth, JWT auth, and the current OAuth flow without assuming you already know which one your app needs.
+- [Session Authentication End to End](./session-authentication.md) implements browser login, guard failures, configurable login redirects, intended-URL restoration, and logout.
 - [Cross-Origin Resource Sharing (CORS)](./cors.md) configures browser access across origins, including credentialed requests and preflight caching.
 - [Custom CLI Schematics](./custom-cli-schematics.md) shows how to teach `assegai generate` about company-specific scaffolds.
 - [Serving with OpenSwoole](./serving-with-openswoole.md) shows how to boot the alternate long-lived runtime and what requirements it has before you switch.

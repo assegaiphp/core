@@ -11,7 +11,8 @@ use Throwable;
  *
  * This interface defines the contract for exception filters in the application.
  * Exception filters are responsible for handling exceptions thrown during the
- * execution of the application.
+ * execution of the application. The first matching handler-, controller-, or
+ * application-scoped filter is terminal and must prepare the complete response.
  */
 interface ExceptionFilterInterface
 {

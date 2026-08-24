@@ -22,6 +22,7 @@ use Assegai\Core\Attributes\Param;
 use Assegai\Core\Attributes\Req;
 use Assegai\Core\Attributes\Res;
 use Assegai\Core\Attributes\ResponseStatus;
+use Assegai\Core\Attributes\UseFilters;
 use Assegai\Core\Attributes\UseGuards;
 use Assegai\Core\Attributes\UseInterceptors;
 use Assegai\Core\Consumers\GuardsConsumer;
@@ -33,6 +34,8 @@ use Assegai\Core\Exceptions\Container\EntryNotFoundException;
 use Assegai\Core\Exceptions\Http\ForbiddenException;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\Http\NotFoundException;
+use Assegai\Core\Exceptions\Filters\ExceptionFilterBinding;
+use Assegai\Core\Exceptions\Filters\ExceptionFilterMetadata;
 use Assegai\Core\Exceptions\InterceptorException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
 use Assegai\Core\Exceptions\RenderingException;
@@ -50,6 +53,7 @@ use Assegai\Core\ModuleManager;
 use Assegai\Core\Util\TypeManager;
 use Assegai\Core\Util\Validator;
 use Exception;
+use InvalidArgumentException;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
@@ -109,10 +113,10 @@ final class Router
      * @var array The global interceptors.
      */
     private array $globalInterceptors = [];
-    /**
-     * @var array<class-string|ExceptionFilterInterface> The global filters.
-     */
+    /** @var array<int, ExceptionFilterBinding> The global exception filters. */
     private array $globalFilters = [];
+    private ?object $activeController = null;
+    private ?ReflectionMethod $activeHandler = null;
     private ?MiddlewareConsumer $middlewareConsumer = null;
     /**
      * @var array<string, array{matched_segments: int, route_length: int, specificity: int, host_specificity: int, host_params: array<int|string, string>, has_handler_match: bool}|null> Controller match metadata cached for the active request.
@@ -165,6 +169,15 @@ final class Router
     {
         self::$instance = new Router($injector, $controllerManager, $moduleManager);
         return self::$instance;
+    }
+
+    /**
+     * Clears route-scoped state before a new request is processed.
+     */
+    public function resetRequestState(): void
+    {
+        $this->activeController = null;
+        $this->activeHandler = null;
     }
 
     /**
@@ -1131,6 +1144,8 @@ final class Router
     {
         $handlers = $this->getControllerHandlers(controller: $controller);
         $activatedHandler = $this->getActivatedHandler(handlers: $handlers, controller: $controller, request: $request);
+        $this->activeController = $controller;
+        $this->activeHandler = $activatedHandler;
         $response = Response::current();
         $response->reset();
 
@@ -2034,9 +2049,91 @@ final class Router
         $this->globalInterceptors = [...$this->globalInterceptors, ...$interceptors];
     }
 
+    /**
+     * @param array<int, ExceptionFilterBinding> $filters
+     */
     public function addGlobalFilters(array $filters): void
     {
         $this->globalFilters = [...$this->globalFilters, ...$filters];
+    }
+
+    /**
+     * Returns exception filters in handler, controller, then global precedence order.
+     *
+     * @return array<int, ExceptionFilterBinding>
+     */
+    public function getActiveExceptionFilterBindings(): array
+    {
+        $bindings = [];
+
+        if ($this->activeHandler instanceof ReflectionMethod) {
+            $bindings = [...$bindings, ...$this->getExceptionFilterBindings($this->activeHandler)];
+        }
+
+        if (is_object($this->activeController)) {
+            $bindings = [
+                ...$bindings,
+                ...$this->getExceptionFilterBindings(new ReflectionClass($this->activeController)),
+            ];
+        }
+
+        return [...$bindings, ...$this->globalFilters];
+    }
+
+    /**
+     * @param ReflectionClass<object>|ReflectionMethod $reflector
+     * @return array<int, ExceptionFilterBinding>
+     */
+    private function getExceptionFilterBindings(ReflectionClass|ReflectionMethod $reflector): array
+    {
+        $attributes = $reflector->getAttributes(UseFilters::class);
+
+        if ($attributes === []) {
+            return [];
+        }
+
+        /** @var UseFilters $useFilters */
+        $useFilters = $attributes[0]->newInstance();
+        $exceptionTypes = ExceptionFilterMetadata::exceptionTypes($reflector);
+        $bindings = [];
+
+        foreach ($this->normalizeExceptionFilters($useFilters->filters) as $filter) {
+            $bindings[] = new ExceptionFilterBinding($filter, $exceptionTypes);
+        }
+
+        return $bindings;
+    }
+
+    /**
+     * @param class-string<ExceptionFilterInterface>|ExceptionFilterInterface|array<mixed> $filters
+     * @return array<int, class-string<ExceptionFilterInterface>|ExceptionFilterInterface>
+     */
+    private function normalizeExceptionFilters(string|ExceptionFilterInterface|array $filters): array
+    {
+        $normalized = [];
+
+        foreach (is_array($filters) ? $filters : [$filters] as $filter) {
+            if (is_array($filter)) {
+                $normalized = [...$normalized, ...$this->normalizeExceptionFilters($filter)];
+                continue;
+            }
+
+            if ($filter instanceof ExceptionFilterInterface) {
+                $normalized[] = $filter;
+                continue;
+            }
+
+            if (is_string($filter) && is_a($filter, ExceptionFilterInterface::class, true)) {
+                $normalized[] = $filter;
+                continue;
+            }
+
+            throw new InvalidArgumentException(
+                'Exception filters must be class names or instances of ExceptionFilterInterface.'
+            );
+        }
+
+        return $normalized;
     }
 
     /**

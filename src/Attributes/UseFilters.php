@@ -14,9 +14,10 @@ use Attribute;
 readonly class UseFilters
 {
   /**
-   * The exception filter class name or an array of exception filter class names to use.
+   * Class-string filters are resolved through dependency injection. Configured
+   * filter instances can be supplied when constructor options are route-specific.
    *
-   * @param class-string|array<class-string>|ExceptionFilterInterface[]|ExceptionFilterInterface $filters
+   * @param class-string<ExceptionFilterInterface>|array<class-string<ExceptionFilterInterface>|ExceptionFilterInterface>|ExceptionFilterInterface $filters
    */
   public function __construct(
     public string|array|ExceptionFilterInterface $filters,

@@ -8,8 +8,8 @@
     "label": "tests"
   },
   "status": {
-    "label": "0.8.0 milestone",
+    "label": "0.10.0 milestone",
     "color": "2563eb",
-    "summary": "OpenSwoole runtime foundations and release-prep work."
+    "summary": "Configurable authentication failure handling and complete exception-filter lifecycle."
   }
 }

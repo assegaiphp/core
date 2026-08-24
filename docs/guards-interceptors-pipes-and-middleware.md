@@ -113,6 +113,8 @@ Guards are the right place for:
 
 The `UseGuards` attribute also accepts a custom exception class if you want a different failure response than the default forbidden path.
 
+For session-authenticated browser pages, configure the guard to raise `UnauthorizedException` and use `LoginRedirectFilter` to translate that exception into a login redirect. The redirect remains an exception-filter concern because a denied guard prevents interceptors from running. See [Session Authentication End to End](./session-authentication.md).
+
 ## Interceptors
 
 Interceptors wrap handler execution. They are useful when the concern is not "who is allowed in?" but rather "what should happen around this call?"

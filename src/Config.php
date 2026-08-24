@@ -2,6 +2,7 @@
 
 namespace Assegai\Core;
 
+use Assegai\Core\Config\ApplicationConfigLoader;
 use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Exceptions\ConfigurationException;
 use Assegai\Core\Util\Debug\Log;
@@ -26,9 +27,7 @@ class Config
    */
   public static function hydrate(?string $configDirectory = null): void
   {
-    $config = [];
     $workingDirectory = $configDirectory ?? Paths::getWorkingDirectory();
-    $configFilename = Paths::join(trim($workingDirectory), 'config', 'default.php');
     $envPath = Paths::join(trim($workingDirectory), '.env');
 
     // Load .env file
@@ -37,65 +36,13 @@ class Config
       $dotEnv->load();
     }
 
-    // Load the default config file
-    if (is_file($configFilename)) {
-      $config = require($configFilename);
-
-      $_ENV = $_ENV + $config;
-    }
-
-    // Attempt to load the local file
-    $configFilename = str_replace('default', 'local', $configFilename);
-    if (is_file($configFilename)) {
-      $config = require($configFilename);
-
-      $_ENV = array_replace_recursive($_ENV, $config);
-    }
-
-    $configFilename = preg_replace('/(default|local|production)/', 'secure', $configFilename);
-    if (is_file($configFilename)) {
-      $config = require($configFilename);
-
-      $_ENV = array_replace_recursive($_ENV, $config);
-    }
+    $config = ApplicationConfigLoader::load(
+      $workingDirectory,
+      Config::environment() === EnvironmentType::PRODUCTION,
+    );
+    $_ENV = $_ENV + $config;
 
     if (!isset($GLOBALS['config'])) {
-      $defaultConfigFilename = Paths::join(trim($workingDirectory), 'config', 'default.php');
-      $secureConfigFilename = Paths::join(trim($workingDirectory), 'config', 'default.php');
-      $localConfigFilename = Paths::join(trim($workingDirectory), 'config', 'local.php');
-      $productionConfigFilename = Paths::join(trim($workingDirectory), 'config', 'production.php');
-
-      $config = is_file($defaultConfigFilename)
-        ? require($defaultConfigFilename)
-        : [];
-
-      // If the environment is production, merge the production config with the default config
-      if (Config::environment() === EnvironmentType::PRODUCTION && is_file($productionConfigFilename)) {
-        $productionConfig =
-          is_file($productionConfigFilename)
-            ? require($productionConfigFilename)
-            : [];
-        $config = array_replace_recursive($config, $productionConfig);
-      }
-
-      if (is_file($localConfigFilename)) {
-        $localConfig =
-          is_file($localConfigFilename)
-            ? require($localConfigFilename)
-            : [];
-
-        $config = array_replace_recursive($config, $localConfig);
-      }
-
-      if (is_file($secureConfigFilename)) {
-        $secureConfig =
-          is_file($secureConfigFilename)
-            ? require($secureConfigFilename)
-            : [];
-
-        $config = array_replace_recursive($config, $secureConfig);
-      }
-
       $GLOBALS['config'] = $config;
     }
   }

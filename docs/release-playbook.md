@@ -60,6 +60,7 @@ When the current milestone is feature-complete, create a release branch:
 
 - `release/0.8.0`
 - `release/0.9.0`
+- `release/0.10.0`
 
 That branch is only for:
 
@@ -124,6 +125,7 @@ For the current near-term roadmap:
 
 - `0.8.0`: OpenSwoole Runtime Foundations
 - `0.9.0`: ORM Stability Rewrite
+- `0.10.0`: Configurable Authentication Failure Handling and Complete Exception-Filter Lifecycle
 - additional `0.x` milestones as needed based on stability and feedback
 - `1.0.0`: confidence and stability release when the framework is actually ready
 
@@ -286,6 +288,7 @@ Planned milestone articles:
 
 - `0.8.0`: OpenSwoole runtime foundations
 - `0.9.0`: ORM stability rewrite
+- `0.10.0`: configurable authentication failure handling and the complete exception-filter lifecycle
 - likely `1.0.0+`: entity-driven database sync and the entity-first migration workflow
 - likely `1.0.0+`: application runtime contexts, non-web execution, and scheduling
 - `1.0.0`: what AssegaiPHP 1.0 means and why the framework is ready

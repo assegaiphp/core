@@ -105,6 +105,8 @@ class ConfigCest
     $I->assertNotEmpty(Config::get('databases')['mysql']);
     $I->assertNotEmpty(Config::get('databases')['mysql'][$this->databaseName]);
     $I->assertEquals($this->appName, Config::get('app_name'));
+    $I->assertSame('/auth/login', Config::get('authentication')['loginRedirect']['url']);
+    $I->assertSame('assegai_test_session', Config::get('session')['name']);
   }
 
   public function testTheDatabaseMethod(UnitTester $I): void
