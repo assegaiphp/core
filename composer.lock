@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3dc82ffd54a123fc315d543fd29752be",
+    "content-hash": "d99dac10beb317e5e6b86dda8eb37c0e",
     "packages": [
         {
             "name": "arubacao/tld-checker",
@@ -115,16 +115,16 @@
         },
         {
             "name": "assegaiphp/collections",
-            "version": "0.9.0",
+            "version": "0.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/assegaiphp/collections.git",
-                "reference": "14ed3c186cac650513eaa4d731ca3f971a15daf8"
+                "reference": "06164f0af6f2d01e5124adcfd779b6cc8e4136d1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/assegaiphp/collections/zipball/14ed3c186cac650513eaa4d731ca3f971a15daf8",
-                "reference": "14ed3c186cac650513eaa4d731ca3f971a15daf8",
+                "url": "https://api.github.com/repos/assegaiphp/collections/zipball/06164f0af6f2d01e5124adcfd779b6cc8e4136d1",
+                "reference": "06164f0af6f2d01e5124adcfd779b6cc8e4136d1",
                 "shasum": ""
             },
             "require": {
@@ -155,22 +155,22 @@
             "description": "The assegaiphp/collections package is a powerful tool for creating and managing groups of related objects in your AssegaiPHP projects. With this library, you can easily organize and manipulate data in a variety of ways, such as arrays, lists, sets, and maps. The package offers a wide range of methods for adding, removing, and manipulating items, as well as sorting, searching, and filtering your collections. It is fully compatible with PHP 7.x and above and is designed to be lightweight and easy to use. Whether you're building a web application, a CLI tool, or a standalone script, assegaiphp/collections is the perfect choice for working with data. With its simple and intuitive interface, you can easily start working with collections in your project right away.",
             "support": {
                 "issues": "https://github.com/assegaiphp/collections/issues",
-                "source": "https://github.com/assegaiphp/collections/tree/0.9.0"
+                "source": "https://github.com/assegaiphp/collections/tree/0.10.0"
             },
-            "time": "2026-04-25T19:10:30+00:00"
+            "time": "2026-08-24T12:53:28+00:00"
         },
         {
             "name": "assegaiphp/common",
-            "version": "0.9.0",
+            "version": "0.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/assegaiphp/common.git",
-                "reference": "daa8f71da83f6ea5a3b0c9d7d7cac6c01391650b"
+                "reference": "6dc41086940414db87c83ed93f147fe76d05ef55"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/assegaiphp/common/zipball/daa8f71da83f6ea5a3b0c9d7d7cac6c01391650b",
-                "reference": "daa8f71da83f6ea5a3b0c9d7d7cac6c01391650b",
+                "url": "https://api.github.com/repos/assegaiphp/common/zipball/6dc41086940414db87c83ed93f147fe76d05ef55",
+                "reference": "6dc41086940414db87c83ed93f147fe76d05ef55",
                 "shasum": ""
             },
             "require": {
@@ -202,28 +202,28 @@
             "description": "The assegai/common package is a collection of commonly used utility classes and functions for AssegaiPHP projects. This package provides a set of tools that are designed to make it easier for developers to perform common tasks such as working with arrays, strings, and paths. The package also includes classes for handling errors and logging, as well as a simple yet powerful configuration management system. The package is designed to be lightweight, with minimal dependencies, and is fully compatible with any AssegaiPHP based project. Whether you're building a small web application or a large enterprise system, assegai/common provides the essential building blocks you need to get started quickly and easily.",
             "support": {
                 "issues": "https://github.com/assegaiphp/common/issues",
-                "source": "https://github.com/assegaiphp/common/tree/0.9.0"
+                "source": "https://github.com/assegaiphp/common/tree/0.10.0"
             },
-            "time": "2026-04-25T19:37:48+00:00"
+            "time": "2026-08-24T12:55:11+00:00"
         },
         {
             "name": "assegaiphp/forms",
-            "version": "0.9.0",
+            "version": "0.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/assegaiphp/forms.git",
-                "reference": "79bf99d8413485144745b89bed3874989de8e281"
+                "reference": "15c557ae055096c8f1e3ed6dfdba2dca40e83152"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/assegaiphp/forms/zipball/79bf99d8413485144745b89bed3874989de8e281",
-                "reference": "79bf99d8413485144745b89bed3874989de8e281",
+                "url": "https://api.github.com/repos/assegaiphp/forms/zipball/15c557ae055096c8f1e3ed6dfdba2dca40e83152",
+                "reference": "15c557ae055096c8f1e3ed6dfdba2dca40e83152",
                 "shasum": ""
             },
             "require": {
-                "assegaiphp/collections": "^0.9.0",
-                "assegaiphp/util": "^0.9.0",
-                "assegaiphp/validation": "^0.9.0",
+                "assegaiphp/collections": "^0.10.0",
+                "assegaiphp/util": "^0.10.0",
+                "assegaiphp/validation": "^0.10.0",
                 "php": ">=8.4"
             },
             "require-dev": {
@@ -249,22 +249,22 @@
             "description": "A simple PHP library for dealing with HTML form submissions.",
             "support": {
                 "issues": "https://github.com/assegaiphp/forms/issues",
-                "source": "https://github.com/assegaiphp/forms/tree/0.9.0"
+                "source": "https://github.com/assegaiphp/forms/tree/0.10.0"
             },
-            "time": "2026-04-25T21:12:57+00:00"
+            "time": "2026-08-24T15:16:59+00:00"
         },
         {
             "name": "assegaiphp/util",
-            "version": "0.9.0",
+            "version": "0.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/assegaiphp/util.git",
-                "reference": "8d5d7f0f1b67833910d75f8d706ce3ad405be18c"
+                "reference": "fb236ecfb9a5088c4b76cf82932ce873ac7b64ec"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/assegaiphp/util/zipball/8d5d7f0f1b67833910d75f8d706ce3ad405be18c",
-                "reference": "8d5d7f0f1b67833910d75f8d706ce3ad405be18c",
+                "url": "https://api.github.com/repos/assegaiphp/util/zipball/fb236ecfb9a5088c4b76cf82932ce873ac7b64ec",
+                "reference": "fb236ecfb9a5088c4b76cf82932ce873ac7b64ec",
                 "shasum": ""
             },
             "require": {
@@ -297,28 +297,28 @@
             "description": "A  collection of useful PHP utility classes to simplify common tasks and enhance application development.",
             "support": {
                 "issues": "https://github.com/assegaiphp/util/issues",
-                "source": "https://github.com/assegaiphp/util/tree/0.9.0"
+                "source": "https://github.com/assegaiphp/util/tree/0.10.0"
             },
-            "time": "2026-04-25T16:21:06+00:00"
+            "time": "2026-08-24T12:57:48+00:00"
         },
         {
             "name": "assegaiphp/validation",
-            "version": "0.9.0",
+            "version": "0.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/assegaiphp/validation.git",
-                "reference": "470450b74eae99c07b0770ccc39508c4ea5a372e"
+                "reference": "53a5117afa9aefa3116f630fb15aee98fe0e6fc0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/assegaiphp/validation/zipball/470450b74eae99c07b0770ccc39508c4ea5a372e",
-                "reference": "470450b74eae99c07b0770ccc39508c4ea5a372e",
+                "url": "https://api.github.com/repos/assegaiphp/validation/zipball/53a5117afa9aefa3116f630fb15aee98fe0e6fc0",
+                "reference": "53a5117afa9aefa3116f630fb15aee98fe0e6fc0",
                 "shasum": ""
             },
             "require": {
                 "arubacao/tld-checker": "^1.2",
                 "giggsey/libphonenumber-for-php": "^8.13",
-                "php": "^8.2"
+                "php": ">=8.4"
             },
             "require-dev": {
                 "codeception/codeception": "^5.0",
@@ -344,9 +344,9 @@
             "description": "Introducing the AssegaiPHP Validation package, the ultimate tool for ensuring the integrity and accuracy of your application's data. With this package, you can easily implement validation rules for incoming data, whether it be from a form submission, API request, or any other source. The package utilizes a simple, yet powerful syntax that allows you to specify a wide range of validation rules with ease. Additionally, the package integrates seamlessly with the AssegaiPHP framework, making it an essential addition to any AssegaiPHP project. With this package, you'll have peace of mind knowing that your application is receiving clean and accurate data every time.",
             "support": {
                 "issues": "https://github.com/assegaiphp/validation/issues",
-                "source": "https://github.com/assegaiphp/validation/tree/0.9.0"
+                "source": "https://github.com/assegaiphp/validation/tree/0.10.0"
             },
-            "time": "2023-08-31T03:56:19+00:00"
+            "time": "2026-08-24T13:28:53+00:00"
         },
         {
             "name": "atatusoft-ltd/plural",
