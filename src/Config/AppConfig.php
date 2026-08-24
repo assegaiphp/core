@@ -3,6 +3,8 @@
 namespace Assegai\Core\Config;
 
 use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Config;
+use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Util\Path;
 
 /**
@@ -13,6 +15,17 @@ use Assegai\Util\Path;
 #[Injectable]
 class AppConfig extends AbstractConfig
 {
+  /**
+   * @inheritDoc
+   */
+  public function load(): void
+  {
+    $this->config = ApplicationConfigLoader::load(
+      $this->getWorkingDirectory(),
+      Config::environment() === EnvironmentType::PRODUCTION,
+    );
+  }
+
   /**
    * @inheritDoc
    */

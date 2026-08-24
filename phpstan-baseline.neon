@@ -226,18 +226,8 @@ parameters:
 			path: src/Config.php
 
 		-
-			message: "#^Parameter \\#1 \\$filename of function is_file expects string, string\\|null given\\.$#"
-			count: 1
-			path: src/Config.php
-
-		-
 			message: "#^Parameter \\#1 \\$json of function json_decode expects string, string\\|false given\\.$#"
 			count: 1
-			path: src/Config.php
-
-		-
-			message: "#^Ternary operator condition is always true\\.$#"
-			count: 3
 			path: src/Config.php
 
 		-

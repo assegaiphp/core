@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Exceptions\Filters;
 
+use Assegai\Core\Config;
 use InvalidArgumentException;
 
 /**
@@ -54,6 +55,54 @@ final readonly class LoginRedirectFilterOptions
         throw new InvalidArgumentException('Excluded login redirect paths must be non-empty, single-line strings.');
       }
     }
+  }
+
+  /**
+   * Builds the redirect policy from the application's `config/auth.php` fragment.
+   *
+   * @param array<string, mixed>|null $authenticationConfig
+   */
+  public static function fromConfig(?array $authenticationConfig = null): self
+  {
+    $authenticationConfig ??= Config::get('authentication');
+    $config = is_array($authenticationConfig['loginRedirect'] ?? null)
+      ? $authenticationConfig['loginRedirect']
+      : null;
+
+    if ($config === null || !is_string($config['url'] ?? null)) {
+      throw new InvalidArgumentException(
+        'Configure authentication.loginRedirect.url in config/auth.php before using LoginRedirectFilter by class name.'
+      );
+    }
+
+    $statusCode = $config['statusCode'] ?? 302;
+    $preserveTarget = $config['preserveTarget'] ?? true;
+    $targetSessionKey = $config['targetSessionKey'] ?? 'auth.intended_url';
+    $excludedPaths = $config['excludedPaths'] ?? [];
+
+    if (!is_int($statusCode)) {
+      throw new InvalidArgumentException('authentication.loginRedirect.statusCode must be an integer.');
+    }
+
+    if (!is_bool($preserveTarget)) {
+      throw new InvalidArgumentException('authentication.loginRedirect.preserveTarget must be a boolean.');
+    }
+
+    if (!is_string($targetSessionKey)) {
+      throw new InvalidArgumentException('authentication.loginRedirect.targetSessionKey must be a string.');
+    }
+
+    if (!is_array($excludedPaths)) {
+      throw new InvalidArgumentException('authentication.loginRedirect.excludedPaths must be an array.');
+    }
+
+    return new self(
+      loginUrl: $config['url'],
+      statusCode: $statusCode,
+      preserveTarget: $preserveTarget,
+      targetSessionKey: $targetSessionKey,
+      excludedPaths: $excludedPaths,
+    );
   }
 
   /**

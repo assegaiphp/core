@@ -57,6 +57,18 @@ final class ProtectedMembersController
   }
 }
 
+#[Controller('configured-members')]
+#[UseGuards(DenyGuard::class, UnauthorizedException::class)]
+#[UseFilters(LoginRedirectFilter::class)]
+final class ConfiguredMembersController
+{
+  #[Get]
+  public function index(): array
+  {
+    return ['name' => 'Katherine'];
+  }
+}
+
 #[Injectable]
 #[OnException(UnauthorizedException::class)]
 final class HandlerUnauthorizedFilter implements ExceptionFilterInterface
@@ -116,7 +128,12 @@ final class FailureController
 }
 
 #[Module(
-  controllers: [ProtectedMembersController::class, ApiPrivateController::class, FailureController::class],
+  controllers: [
+    ProtectedMembersController::class,
+    ConfiguredMembersController::class,
+    ApiPrivateController::class,
+    FailureController::class,
+  ],
   providers: [DenyGuard::class, HandlerUnauthorizedFilter::class, FilterAudit::class, TeapotExceptionFilter::class],
 )]
 final class ExceptionFilterAppModule implements AssegaiModuleInterface
@@ -176,9 +193,10 @@ final class ExceptionFiltersCest
       'version' => '0.1.0',
     ], JSON_PRETTY_PRINT));
     file_put_contents($this->workingDirectory . '/assegai.json', '{}');
+    file_put_contents($this->workingDirectory . '/config/default.php', "<?php\n\nreturn [];\n");
     file_put_contents(
-      $this->workingDirectory . '/config/default.php',
-      "<?php\n\nreturn ['session' => ['name' => 'assegai_filter_test']];\n",
+      $this->workingDirectory . '/config/auth.php',
+      "<?php\n\nreturn [\n  'authentication' => [\n    'loginRedirect' => [\n      'url' => '/configured-sign-in',\n      'statusCode' => 303,\n      'targetSessionKey' => 'security.intended_url',\n    ],\n  ],\n  'session' => ['name' => 'assegai_filter_test'],\n];\n",
     );
 
     chdir($this->workingDirectory);
@@ -203,7 +221,7 @@ final class ExceptionFiltersCest
     $_ENV['ENV'] = 'DEV';
     chdir($this->originalWorkingDirectory);
 
-    foreach (['config/default.php', 'composer.json', 'assegai.json', '.env'] as $filename) {
+    foreach (['config/default.php', 'config/auth.php', 'composer.json', 'assegai.json', '.env'] as $filename) {
       $path = $this->workingDirectory . '/' . $filename;
 
       if (is_file($path)) {
@@ -288,6 +306,21 @@ final class ExceptionFiltersCest
     $I->assertSame(['handled' => 'filtered failure'], json_decode($emitter->emissions[0]['body'], true));
     $I->assertSame(1, FilterAudit::$calls);
     $I->assertSame(0, $nonMatchingFilter->calls);
+  }
+
+  public function testClassNameFilterUsesApplicationAuthConfiguration(UnitTester $I): void
+  {
+    $emitter = $this->createCapturingEmitter();
+    $app = AssegaiFactory::create(ExceptionFilterAppModule::class, $this->createExecutingRuntime());
+    $app->setRuntimeRequestContext($this->requestContext('/configured-members'));
+    $app->setRuntimeResponseEmitter($emitter);
+
+    $app->run();
+
+    $I->assertCount(1, $emitter->emissions);
+    $I->assertSame(303, $emitter->emissions[0]['response']?->getStatusCode());
+    $I->assertSame('/configured-sign-in', $emitter->emissions[0]['response']?->getHeader('Location'));
+    $I->assertSame('/configured-members', $_SESSION['security']['intended_url'] ?? null);
   }
 
   public function testHandlerFilterTakesPrecedenceOverControllerAndGlobalFilters(UnitTester $I): void

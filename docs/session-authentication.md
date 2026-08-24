@@ -19,12 +19,21 @@ composer require assegaiphp/auth
 
 ## Configure the framework-owned session
 
-An Assegai application starts the session before controllers and guards run. Configure that session in `config/default.php`:
+An Assegai application starts the session before controllers and guards run. Configure non-secret authentication policy and the framework-owned session in `config/auth.php`:
 
 ```php
 <?php
 
 return [
+  'authentication' => [
+    'loginRedirect' => [
+      'url' => '/auth/login',
+      'statusCode' => 302,
+      'preserveTarget' => true,
+      'targetSessionKey' => 'auth.intended_url',
+      'excludedPaths' => [],
+    ],
+  ],
   'session' => [
     'name' => 'backoffice_session',
     'cookieLifetime' => 3600,
@@ -143,17 +152,11 @@ use Assegai\Core\Attributes\Http\Get;
 use Assegai\Core\Attributes\UseFilters;
 use Assegai\Core\Attributes\UseGuards;
 use Assegai\Core\Exceptions\Filters\LoginRedirectFilter;
-use Assegai\Core\Exceptions\Filters\LoginRedirectFilterOptions;
 use Assegai\Core\Exceptions\Http\UnauthorizedException;
 
 #[Controller('dashboard')]
 #[UseGuards(SessionAuthGuard::class, UnauthorizedException::class)]
-#[UseFilters(new LoginRedirectFilter(new LoginRedirectFilterOptions(
-  loginUrl: '/auth/login',
-  statusCode: 302,
-  preserveTarget: true,
-  targetSessionKey: 'auth.intended_url',
-)))]
+#[UseFilters(LoginRedirectFilter::class)]
 final readonly class DashboardController
 {
   public function __construct(private AuthService $auth)
@@ -171,13 +174,15 @@ final readonly class DashboardController
 }
 ```
 
-`loginUrl` is required; the filter does not assume an application route. The configured login path is automatically excluded from redirects so a mistakenly protected login route returns `401` instead of looping.
+`authentication.loginRedirect.url` is required in `config/auth.php`; the filter does not assume an application route. When the filter is registered by class name, Core resolves its complete policy from that file. The configured login path is automatically excluded from redirects so a mistakenly protected login route returns `401` instead of looping.
+
+For a one-off controller policy, pass a configured `LoginRedirectFilter` instance to `UseFilters` instead. Applications may also replace the built-in filter with any implementation of `ExceptionFilterInterface` for bespoke behavior.
 
 Only safe `GET` and `HEAD` targets are retained. Cross-origin, scheme-relative, and malformed targets are rejected.
 
-The complete option surface is:
+The complete `authentication.loginRedirect` surface is:
 
-- `loginUrl`: required relative or HTTP(S) login URL
+- `url`: required relative or HTTP(S) login URL
 - `statusCode`: `301`, `302`, `303`, `307`, or `308`; defaults to `302`
 - `preserveTarget`: whether to remember safe requested URLs; defaults to `true`
 - `targetSessionKey`: dot-delimited session key used for that URL

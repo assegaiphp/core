@@ -3,7 +3,9 @@
 namespace Assegai\Core\Exceptions\Filters;
 
 use Assegai\Core\ArgumentsHost;
+use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\OnException;
+use Assegai\Core\Config\AppConfig;
 use Assegai\Core\Enumerations\Http\RequestMethod;
 use Assegai\Core\Exceptions\Http\UnauthorizedException;
 use Assegai\Core\Exceptions\Interfaces\ExceptionFilterInterface;
@@ -16,10 +18,20 @@ use Throwable;
  * Redirects unauthenticated browser flows to an application-configured login URL.
  */
 #[OnException(UnauthorizedException::class)]
+#[Injectable]
 final readonly class LoginRedirectFilter implements ExceptionFilterInterface
 {
-  public function __construct(public LoginRedirectFilterOptions $options)
+  public LoginRedirectFilterOptions $options;
+
+  public function __construct(
+    ?LoginRedirectFilterOptions $options = null,
+    ?AppConfig $appConfig = null,
+  )
   {
+    $authenticationConfig = $appConfig?->get('authentication');
+    $this->options = $options ?? LoginRedirectFilterOptions::fromConfig(
+      is_array($authenticationConfig) ? $authenticationConfig : null,
+    );
   }
 
   /**
