@@ -400,6 +400,26 @@ final class ExceptionFiltersCest
     $I->assertFalse(Session::getInstance()->has('security.intended_url'));
   }
 
+  public function testBackslashRequestUriIsNotStoredAsAnIntendedTarget(UnitTester $I): void
+  {
+    $request = Request::createFromRuntimeContext($this->requestContext('/\\attacker.example/private'));
+    $response = Response::create();
+    RuntimeContext::set(Request::class, $request);
+    RuntimeContext::set(Response::class, $response);
+    Request::setInstance($request);
+    Response::setInstance($response);
+    $filter = new LoginRedirectFilter(new LoginRedirectFilterOptions(
+      loginUrl: '/sign-in',
+      targetSessionKey: 'security.intended_url',
+    ));
+
+    $filter->catch(new UnauthorizedException(), new ArgumentsHost());
+
+    $I->assertSame(302, $response->getStatusCode());
+    $I->assertSame('/sign-in', $response->getHeader('Location'));
+    $I->assertFalse(Session::getInstance()->has('security.intended_url'));
+  }
+
   public function testSessionPullReturnsAndRemovesNestedValues(UnitTester $I): void
   {
     $_SESSION = ['auth' => ['intended_url' => '/dashboard']];

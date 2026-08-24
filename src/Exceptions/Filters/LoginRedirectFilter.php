@@ -88,7 +88,7 @@ final readonly class LoginRedirectFilter implements ExceptionFilterInterface
   {
     $uri = trim($request->getUri());
 
-    if ($uri === '' || preg_match('/[\r\n]/', $uri)) {
+    if ($uri === '' || str_contains($uri, '\\') || preg_match('/[\r\n]/', $uri)) {
       return null;
     }
 
