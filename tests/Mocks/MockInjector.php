@@ -2,6 +2,8 @@
 
 namespace Mocks;
 
+use Assegai\Common\Interfaces\Queues\QueueInterface;
+use Assegai\Common\Interfaces\Queues\QueueProcessResultInterface;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Attributes\Modules\Module;
 use Assegai\Core\Config\ProjectConfig;
@@ -17,6 +19,8 @@ use Assegai\Core\Consumers\MiddlewareConsumer;
 use Assegai\Core\Interfaces\AssegaiModuleInterface;
 use Assegai\Core\Interfaces\ConfiguresInjectorInterface;
 use Assegai\Core\Interfaces\ParameterResolverInterface;
+use Assegai\Core\Queues\Attributes\InjectQueue;
+use Assegai\Core\Queues\QueueFactory;
 use Assegai\Core\Session;
 use Attribute;
 use ReflectionParameter;
@@ -96,6 +100,60 @@ class AttributeResolvedService
     #[ResolveAttributeValue('attribute-seam')]
     public AttributeResolvedValue $value,
   ) {
+  }
+}
+
+final class FakeQueue implements QueueInterface
+{
+  public static int $creations = 0;
+
+  /** @param array<string, mixed> $config */
+  public function __construct(private readonly array $config)
+  {
+  }
+
+  public function add(object $job, object|array|null $options = null): void
+  {
+  }
+
+  public function process(callable $callback): QueueProcessResultInterface
+  {
+    throw new \LogicException('Not used in this test.');
+  }
+
+  public function getName(): string
+  {
+    return (string) $this->config['name'];
+  }
+
+  public function getTotalJobs(): int
+  {
+    return 0;
+  }
+
+  public static function create(array $config): self
+  {
+    self::$creations++;
+
+    return new self($config);
+  }
+}
+
+#[Injectable]
+final class QueueInjectedService
+{
+  public function __construct(
+    #[InjectQueue('fake.notifications')]
+    public QueueInterface $queue,
+  ) {
+  }
+}
+
+#[Injectable]
+final class QueueFactoryAwareService
+{
+  public function __construct(public QueueFactory $queueFactory)
+  {
   }
 }
 

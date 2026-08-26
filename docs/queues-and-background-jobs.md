@@ -163,6 +163,30 @@ That is a very Assegai-style pattern:
 - the service stays injectable
 - the queue connection is resolved through attributes and configuration
 
+Queue resolution does not contact the broker. Core keeps one configured queue instance per named connection in the application graph, while the transport opens its connection only when `add()`, `process()`, or another broker operation first needs it. An unavailable queue backend therefore does not prevent the HTTP application from booting; the operation that needs the backend reports the connection failure.
+
+When an application needs to choose a connection programmatically, inject `QueueFactory`:
+
+```php
+<?php
+
+use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Queues\QueueFactory;
+
+#[Injectable]
+final readonly class TenantQueueRouter
+{
+  public function __construct(private QueueFactory $queues)
+  {
+  }
+
+  public function dispatch(object $job): void
+  {
+    $this->queues->connection('rabbitmq.notifications')->add($job);
+  }
+}
+```
+
 ## Use a controller to hand off work quickly
 
 ```php
@@ -290,21 +314,11 @@ If you do not want to use the CLI worker yet, you can still run a simple PHP scr
 
 declare(strict_types=1);
 
-use Assegai\Common\Interfaces\Queues\QueueInterface;
+use Assegai\Core\Queues\QueueFactory;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$driverClass = config('queues.drivers.beanstalk');
-$queueConfig = config('queues.connections.beanstalk.notifications');
-
-if (!is_string($driverClass) || !class_exists($driverClass) || !is_array($queueConfig)) {
-  throw new RuntimeException('Queue configuration for beanstalk.notifications is missing.');
-}
-
-$queueConfig['name'] ??= 'notifications';
-
-/** @var QueueInterface $queue */
-$queue = $driverClass::create($queueConfig);
+$queue = (new QueueFactory())->connection('beanstalk.notifications');
 
 while (true) {
   $result = $queue->process(function (object $job): void {

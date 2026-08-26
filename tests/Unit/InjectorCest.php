@@ -16,6 +16,7 @@ use Assegai\Core\Http\Responses\Response;
 use Assegai\Core\Injector;
 use Assegai\Core\Interfaces\AppInterface;
 use Assegai\Core\ModuleManager;
+use Assegai\Core\Queues\QueueFactory;
 use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Session;
@@ -24,6 +25,7 @@ use Mocks\ChildUsesParentExportedService;
 use Mocks\ChildUsesParentPrivateService;
 use Mocks\ExplicitRequestScopedService;
 use Mocks\ExportVisibilityAppModule;
+use Mocks\FakeQueue;
 use Mocks\FrameworkAwareAppModule;
 use Mocks\FrameworkAwareContractsService;
 use Mocks\FrameworkAwareService;
@@ -36,6 +38,8 @@ use Mocks\ParentExportVisibilityAppModule;
 use Mocks\ParentPrivateModule;
 use Mocks\ParentPrivateVisibilityAppModule;
 use Mocks\ProviderOwnershipOrderingAppModule;
+use Mocks\QueueFactoryAwareService;
+use Mocks\QueueInjectedService;
 use Mocks\RequestCapturingService;
 use Mocks\ResolverAwareAppModule;
 use Mocks\ResolverOnlyAwareAppModule;
@@ -56,11 +60,13 @@ class InjectorCest
   private string $logsDirectory = '';
   private string $configDirectory = '';
   private string $appConfigFilename = '';
+  private string $queueConfigFilename = '';
   private string $projectConfigFilename = '';
   private bool $createdComposerConfig = false;
   private bool $createdSourceDirectory = false;
   private bool $createdConfigDirectory = false;
   private bool $createdAppConfig = false;
+  private bool $createdQueueConfig = false;
   private bool $createdProjectConfig = false;
   private array $previousServer = [];
   private array $previousGet = [];
@@ -93,6 +99,7 @@ class InjectorCest
     $this->logsDirectory = getcwd() . '/logs';
     $this->configDirectory = getcwd() . '/config';
     $this->appConfigFilename = $this->configDirectory . '/default.php';
+    $this->queueConfigFilename = $this->configDirectory . '/queues.php';
     $this->projectConfigFilename = getcwd() . '/assegai.json';
     $this->createdComposerConfig = false;
     $this->createdSourceDirectory = false;
@@ -121,6 +128,23 @@ class InjectorCest
 
     file_put_contents($this->appConfigFilename, "<?php\n\nreturn [];\n");
     $this->createdAppConfig = true;
+
+    file_put_contents($this->queueConfigFilename, <<<'PHP'
+<?php
+
+return [
+  'drivers' => [
+    'fake' => \Mocks\FakeQueue::class,
+  ],
+  'connections' => [
+    'fake' => [
+      'notifications' => [],
+    ],
+  ],
+];
+PHP);
+    $this->createdQueueConfig = true;
+    FakeQueue::$creations = 0;
 
     file_put_contents($this->projectConfigFilename, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     $this->createdProjectConfig = true;
@@ -192,6 +216,10 @@ class InjectorCest
 
     if ($this->createdAppConfig && is_file($this->appConfigFilename)) {
       unlink($this->appConfigFilename);
+    }
+
+    if ($this->createdQueueConfig && is_file($this->queueConfigFilename)) {
+      unlink($this->queueConfigFilename);
     }
 
     if ($this->createdProjectConfig && is_file($this->projectConfigFilename)) {
@@ -266,6 +294,19 @@ class InjectorCest
     $I->assertSame('attribute-seam', $service->value->value);
   }
 
+  public function testQueueInjectionUsesTheApplicationQueueFactory(UnitTester $I): void
+  {
+    $injector = Injector::getInstance();
+    $service = $injector->resolve(QueueInjectedService::class);
+    $factoryAwareService = $injector->resolve(QueueFactoryAwareService::class);
+
+    $I->assertInstanceOf(QueueInjectedService::class, $service);
+    $I->assertInstanceOf(QueueFactoryAwareService::class, $factoryAwareService);
+    $I->assertSame('notifications', $service->queue->getName());
+    $I->assertSame($service->queue, $factoryAwareService->queueFactory->connection('fake.notifications'));
+    $I->assertSame(1, FakeQueue::$creations);
+  }
+
   public function testImportedModulesCanRegisterPackageParameterResolversBeforeProviderResolution(UnitTester $I): void
   {
     $app = AssegaiFactory::create(ResolverAwareAppModule::class);
@@ -275,7 +316,7 @@ class InjectorCest
     $I->assertInstanceOf(App::class, $app);
     $I->assertInstanceOf(ResolverResolvedService::class, $service);
     $I->assertSame('resolved-by-registry', $service->value->value);
-    $I->assertCount(1, Injector::getInstance()->getParameterResolvers());
+    $I->assertCount(2, Injector::getInstance()->getParameterResolvers());
   }
 
   public function testInjectorExtensionsCanBeConfiguredByImportedClassesWithoutTheModuleInterface(UnitTester $I): void
@@ -287,7 +328,7 @@ class InjectorCest
     $I->assertInstanceOf(App::class, $app);
     $I->assertInstanceOf(ResolverResolvedService::class, $service);
     $I->assertSame('resolved-by-registry', $service->value->value);
-    $I->assertCount(1, Injector::getInstance()->getParameterResolvers());
+    $I->assertCount(2, Injector::getInstance()->getParameterResolvers());
   }
 
   public function testRefreshingRequestScopeRebindsRequestScopedServices(UnitTester $I): void
@@ -356,6 +397,19 @@ class InjectorCest
     $I->assertSame(Request::current(), $secondExplicitScoped->request);
     $I->assertNull($injector->get(RequestCapturingService::class));
     $I->assertNull($injector->get(ExplicitRequestScopedService::class));
+  }
+
+  public function testRefreshingRequestScopeRetainsTheApplicationQueueFactory(UnitTester $I): void
+  {
+    $app = AssegaiFactory::create(FrameworkAwareAppModule::class);
+    $injector = Injector::getInstance();
+    $factory = $injector->get(QueueFactory::class);
+
+    $refreshRequestScope = new \ReflectionMethod($app, 'refreshRequestScope');
+    $refreshRequestScope->invoke($app);
+
+    $I->assertInstanceOf(QueueFactory::class, $factory);
+    $I->assertSame($factory, $injector->get(QueueFactory::class));
   }
 
   public function testChildModulesCanInjectParentModuleExports(UnitTester $I): void
