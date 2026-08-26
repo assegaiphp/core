@@ -307,6 +307,19 @@ PHP);
     $I->assertSame(1, FakeQueue::$creations);
   }
 
+  public function testModuleProvidersCanInjectTheApplicationQueueFactory(UnitTester $I): void
+  {
+    $moduleManager = ModuleManager::getInstance();
+    $moduleManager->setRootModuleClass(FrameworkAwareAppModule::class);
+    $moduleManager->buildModuleTokensList(FrameworkAwareAppModule::class);
+    $moduleManager->buildProviderTokensList();
+
+    $service = Injector::getInstance()->resolve(QueueFactoryAwareService::class);
+
+    $I->assertInstanceOf(QueueFactoryAwareService::class, $service);
+    $I->assertSame(Injector::getInstance()->get(QueueFactory::class), $service->queueFactory);
+  }
+
   public function testQueueFactoryRejectsInvalidAndMissingConnectionPaths(UnitTester $I): void
   {
     $factory = Injector::getInstance()->get(QueueFactory::class);

@@ -569,6 +569,7 @@ class LibraryFeatureAppModule
     RequestCapturingService::class,
     ExplicitRequestScopedService::class,
     AttributeResolvedService::class,
+    QueueFactoryAwareService::class,
   ],
   controllers: [],
   imports: [],
