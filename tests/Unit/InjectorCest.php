@@ -307,6 +307,21 @@ PHP);
     $I->assertSame(1, FakeQueue::$creations);
   }
 
+  public function testQueueFactoryRejectsInvalidAndMissingConnectionPaths(UnitTester $I): void
+  {
+    $factory = Injector::getInstance()->get(QueueFactory::class);
+
+    $I->assertInstanceOf(QueueFactory::class, $factory);
+    $I->expectThrowable(
+      \InvalidArgumentException::class,
+      static fn () => $factory->connection('notifications'),
+    );
+    $I->expectThrowable(
+      \InvalidArgumentException::class,
+      static fn () => $factory->connection('fake.missing'),
+    );
+  }
+
   public function testImportedModulesCanRegisterPackageParameterResolversBeforeProviderResolution(UnitTester $I): void
   {
     $app = AssegaiFactory::create(ResolverAwareAppModule::class);
