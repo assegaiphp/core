@@ -6,7 +6,7 @@ One important part of this plan has now started landing:
 
 - constructor parameter attributes can provide their own dependency value through a generic `resolveParameterValue()` seam
 - `core` no longer hardcodes `#[InjectRepository]`
-- queue injection is now using the same seam too
+- queue injection now uses the registered resolver seam and the application `QueueFactory`
 - `core` now also exposes `ParameterResolverInterface`
 - modules can now configure injector extensions before provider resolution begins
 - `OrmModule` uses that module-level seam to register repository resolution without teaching `core` about ORM classes
@@ -22,7 +22,8 @@ Today, some package behavior leaks into `core`.
 The clearest example is constructor parameter resolution:
 
 - `orm` currently depends on `core` knowing about `#[InjectRepository]`
-- queue support currently depends on `core` knowing about `#[InjectQueue]`
+
+Queue injection is a framework-owned facility and now resolves its metadata through the same generic resolver registry used by package extensions.
 
 That works in the short term, but it creates a scaling problem:
 
@@ -188,7 +189,7 @@ The context would carry things like:
 ### How packages would use it
 
 - `orm` ships a resolver for `#[InjectRepository]`
-- queue support ships a resolver for `#[InjectQueue]`
+- core queue support registers a resolver for `#[InjectQueue]`
 - future packages can ship resolvers for their own attributes
 
 `core` only loops through registered resolvers. It does not need to recognize each package decorator by name.
@@ -325,12 +326,12 @@ Add to `core`:
 
 Keep existing hardcoded branches temporarily so current apps do not break.
 
-### Phase 3: move package logic out of `core`
+### Phase 3: move specialized logic behind resolvers
 
 Move:
 
 - `InjectRepository` handling into `orm`
-- `InjectQueue` handling into queue support
+- `InjectQueue` handling into the dedicated core queue resolver and `QueueFactory` (complete)
 
 This should happen behind compatibility shims first.
 

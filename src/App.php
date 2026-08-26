@@ -49,6 +49,7 @@ use Assegai\Core\Interfaces\OnApplicationShutdownInterface;
 use Assegai\Core\Interfaces\OnModuleInitInterface;
 use Assegai\Core\Rendering\Engines\DefaultTemplateEngine;
 use Assegai\Core\Rendering\Interfaces\TemplateEngineInterface;
+use Assegai\Core\Queues\QueueFactory;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\Runtimes\PhpHttpRuntime;
 use Assegai\Core\Runtimes\RuntimeContext;
@@ -456,6 +457,7 @@ class App implements AppInterface
             ControllerManager::class,
             ModuleManager::class,
             Injector::class,
+            QueueFactory::class,
             TemplateEngineInterface::class,
             LoggerInterface::class,
             DefaultTemplateEngine::class,

@@ -29,7 +29,8 @@ use Assegai\Core\Interfaces\IContainer;
 use Assegai\Core\Interfaces\IEntryNotFoundException;
 use Assegai\Core\Interfaces\ParameterResolverInterface;
 use Assegai\Core\Interfaces\ITokenStoreOwner;
-use Assegai\Core\Queues\Attributes\InjectQueue;
+use Assegai\Core\Queues\QueueFactory;
+use Assegai\Core\Queues\QueueParameterResolver;
 use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Util\TypeManager;
 use Codeception\Attribute\Skip;
@@ -90,6 +91,9 @@ final class Injector implements ITokenStoreOwner, IContainer
   private final function __construct()
   {
     $this->logger = new ConsoleLogger(new ConsoleOutput());
+    $queueFactory = new QueueFactory();
+    $this->add(QueueFactory::class, $queueFactory);
+    $this->registerParameterResolver(new QueueParameterResolver($queueFactory));
   }
 
   /**

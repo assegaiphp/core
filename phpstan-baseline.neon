@@ -1223,16 +1223,6 @@ parameters:
 			path: src/Pipes/ValidationPipe.php
 
 		-
-			message: "#^Method Assegai\\\\Core\\\\Queues\\\\Attributes\\\\InjectQueue\\:\\:resolveParameterValue\\(\\) return type with generic interface Assegai\\\\Common\\\\Interfaces\\\\Queues\\\\QueueInterface does not specify its types\\: T$#"
-			count: 1
-			path: src/Queues/Attributes/InjectQueue.php
-
-		-
-			message: "#^Property Assegai\\\\Core\\\\Queues\\\\Attributes\\\\InjectQueue\\:\\:\\$queue with generic interface Assegai\\\\Common\\\\Interfaces\\\\Queues\\\\QueueInterface does not specify its types\\: T$#"
-			count: 1
-			path: src/Queues/Attributes/InjectQueue.php
-
-		-
 			message: "#^Method Assegai\\\\Core\\\\RPC\\\\RpcArgumentsHost\\:\\:getArgs\\(\\) return type has no value type specified in iterable type array\\.$#"
 			count: 1
 			path: src/RPC/RpcArgumentsHost.php
