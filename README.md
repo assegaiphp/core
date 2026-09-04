@@ -1,5 +1,5 @@
 <div align="center" style="padding-bottom: 48px">
-    <a href="https://assegaiphp.com/" target="blank"><img src="https://assegaiphp.com/images/logos/logo-cropped.png" width="200" alt="Assegai Logo"></a>
+  <a href="https://assegaiphp.com/" target="blank"><img src="https://assegaiphp.com/images/logos/logo-cropped.png" width="200" alt="AssegaiPHP Logo"></a>
 </div>
 
 <p align="center">
@@ -10,71 +10,124 @@
   <img alt="Status active" src="https://img.shields.io/badge/status-active-10b981?style=flat-square">
 </p>
 
-<p style="text-align: center">A progressive <a href="https://php.net">PHP</a> framework for building effecient and scalable server-side applications.</p>
+# AssegaiPHP Core
 
-## Description
+<p align="center">A structured PHP framework for building modular APIs and server-side applications.</p>
 
-Assegai is a framework for building efficient, scalable <a href="https://php.net" target="blank">PHP</a> server-side applications. It uses modern PHP (PHP 8.4+) and combines elements of OOP (Object Oriented Programming) and FP (Functional Programming).
+AssegaiPHP gives PHP teams explicit application structure from the beginning: modules define feature boundaries, dependency injection wires behavior together, attributes keep routing and request binding close to handlers, and the official CLI scaffolds the parts as one coherent feature.
 
-## Contribution workflow
+The architecture is inspired by NestJS, expressed with modern PHP 8.4 features and conventions.
 
-For commit and pull request conventions in this repo, see:
+## Why AssegaiPHP
 
-- [docs/commit-and-pr-guidelines.md](./docs/commit-and-pr-guidelines.md)
+- **Structure that survives growth:** controllers, providers, modules, DTOs, and repositories have distinct responsibilities.
+- **A complete API workflow:** the same metadata drives request binding, validation, OpenAPI documentation, Postman exports, and typed TypeScript clients.
+- **Productive scaffolding:** generate projects, resources, pages, components, and other framework artifacts without hand-wiring the module graph.
+- **One server-side application model:** build JSON APIs, server-rendered pages, HTMX interactions, and hydrated Web Components without introducing a second backend architecture.
 
-## Philosophy
+## Framework at a glance
 
-<p>In recent years, PHP has gained a lot of features out the box that make it a really compelling language for developers. Assegai aims to take advantage of these wonderful features and provide an application architecture which allows for the effortless creation of highly testable, scalable, loosely coupled and easily maintainable applications. The architecture is heavily inspired by Nestjs.</p>
+Core provides:
+
+- modular application composition and dependency injection
+- attribute-based controllers, routing, parameter binding, and host routing
+- DTO hydration and validation
+- guards, interceptors, pipes, middleware, and exception filters
+- generated OpenAPI metadata and runtime documentation endpoints
+- application-level CORS policy
+- server-rendered Twig views, components, HTMX, and Web Components integration
+- the default PHP runtime and an experimental OpenSwoole runtime
+
+## Requirements and maturity
+
+- PHP 8.4 or newer
+- Composer 2
+
+AssegaiPHP is actively developed and currently remains on a pre-1.0 release line. The normal PHP runtime is the recommended default. OpenSwoole support is experimental and should be adopted only after testing it against your application's workload and dependencies.
 
 ## Getting started
 
-### Quick Start
+The recommended application workflow starts with the Assegai Console:
 
 ```bash
-$ composer require assegaiphp/core
+composer global require assegaiphp/console:^0.10
+assegai new blog-api
+cd blog-api
+assegai generate resource posts
+assegai api:export openapi
+assegai serve
 ```
 
-For a real application, the recommended path is still the CLI:
+The resource generator creates a controller, provider, module, entity, DTOs, and CRUD-style routes, then imports the feature into the application module. Once the server is running, open:
 
-```bash
-$ assegai new my-app
-```
+- `http://localhost:5000/docs` for Swagger UI
+- `http://localhost:5000/openapi.json` for the generated OpenAPI document
 
-Then use Core directly when you want to understand or extend the framework runtime itself.
+See [Getting Started](./docs/getting-started.md) for the complete walkthrough.
 
-### Minimal bootstrap
+## The application structure
+
+Assegai keeps transport, application behavior, and composition separate:
 
 ```php
 <?php
-// <path-to-project>/index.php
 
-$_GET['path'] = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+namespace App\Posts;
 
-require_once __DIR__ . '/bootstrap.php';
-```
+use Assegai\Core\Attributes\Controller;
+use Assegai\Core\Attributes\Http\Get;
+use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Attributes\Modules\Module;
 
-Bootstrap the app:
-
-```php
-<?php
-// <path-to-project>/bootstrap.php
-
-use Assegai\Core\AssegaiFactory;
-use App\AppModule;
-
-require __DIR__ . '/vendor/autoload.php';
-
-function bootstrap(): void
+#[Injectable]
+class PostsService
 {
-  $app = AssegaiFactory::createFromProject(AppModule::class, __DIR__);
-  $app->run();
+  public function findAll(): array
+  {
+    return [];
+  }
 }
 
-bootstrap();
+#[Controller('posts')]
+readonly class PostsController
+{
+  public function __construct(private PostsService $postsService)
+  {
+  }
+
+  #[Get]
+  public function findAll(): array
+  {
+    return $this->postsService->findAll();
+  }
+}
+
+#[Module(
+  providers: [PostsService::class],
+  controllers: [PostsController::class],
+)]
+class PostsModule
+{
+}
 ```
 
-Enable cross-origin access at the application boundary when the browser client and API
-use different origins:
+Controllers own HTTP concerns, providers own application behavior, and modules make their relationships explicit. Start with [Modules and Providers](./docs/modules-and-providers.md) and [Controllers and Routing](./docs/controllers-and-routing.md) for the full model.
+
+## API contracts and clients
+
+AssegaiPHP can derive an API contract from controllers, DTOs, validation attributes, and response metadata:
+
+```bash
+assegai api:export openapi
+assegai api:export postman
+assegai api:client typescript
+```
+
+This keeps the implementation, interactive documentation, exported contracts, and frontend client generated from the same metadata graph. See [API Docs and Clients](./docs/api-docs-and-clients.md).
+
+## Cross-origin applications
+
+Configure CORS at the application boundary when a browser client and API use different origins:
 
 ```php
 $app->enableCors([
@@ -84,77 +137,51 @@ $app->enableCors([
 ]);
 ```
 
-The framework handles real preflight requests and adds CORS headers to successful and
-error responses. See [Cross-Origin Resource Sharing (CORS)](./docs/cors.md) for all
-options and the migration from entry-point header shims.
+The policy covers real preflight requests as well as successful and error responses. See [Cross-Origin Resource Sharing](./docs/cors.md) for every option and migration guidance.
 
-Start the development server:
+## Beyond JSON APIs
+
+The same application can render classic Twig views with `view(...)`, component-backed pages with `render(...)`, HTMX interactions, and hydrated Web Components. See [Pages and Components](./docs/pages-and-components.md).
+
+Data-backed applications can add the official ORM for entities, repositories, relations, query building, and migrations. See [Data and ORM](./docs/data-and-orm.md).
+
+## Core and the official ecosystem
+
+AssegaiPHP is a collection of focused Composer packages. Not every capability is bundled into `assegaiphp/core`.
+
+| Package | Responsibility |
+|---|---|
+| `assegaiphp/core` | Application runtime, modules, DI, controllers, routing, rendering, and request lifecycle |
+| `assegaiphp/console` | Project creation, scaffolding, serving, contract export, client generation, and maintenance commands |
+| `assegaiphp/validation` | Rule- and attribute-based DTO validation |
+| `assegaiphp/orm` | Entities, repositories, relations, migrations, and SQL-family data sources |
+| `assegaiphp/auth` | Session, JWT, and OAuth authentication strategies |
+| `assegaiphp/events` | Application and domain events |
+| `assegaiphp/beanstalkd` / `assegaiphp/rabbitmq` | Queue transports and background job processing |
+
+Use the CLI to create an application. Install Core directly when embedding or extending the framework runtime itself:
 
 ```bash
-$ assegai serve
+composer require assegaiphp/core:^0.10
 ```
 
-For the fuller walkthrough, start with [Getting Started](./docs/getting-started.md).
-
-### Server-rendered UI, HTMX, and Web Components
-
-Assegai is not JSON-only. The framework supports classic server-rendered views through `view(...)`, component-backed pages through `render(...)`, automatic HTMX inclusion in rendered HTML, and first-class Web Components hydration through safe `data-props` helpers plus automatic bundle injection.
-
-For the full walkthrough, see [Pages and Components](./docs/pages-and-components.md).
-
-### Data, ORM, and Relations
-
-For data-backed applications, Assegai ships with a TypeORM-inspired workflow around modules, repositories, entities, and migrations. The fuller persistence track now lives in:
-
-- [Data and ORM](./docs/data-and-orm.md)
-- [ORM Setup and Data Sources](./docs/orm-setup-and-data-sources.md)
-- [ORM Entities, Repositories, and Results](./docs/orm-entities-repositories-and-results.md)
-- [ORM Relations](./docs/orm-relations.md)
-- [ORM Migrations and Database Workflows](./docs/orm-migrations-and-database-workflows.md)
-
-### Constrained Route Params
-
-Assegai routes support constrained dynamic params using angle-bracket syntax:
-
-```php
-#[Get(':id<int>')]
-public function findById(#[Param('id')] int $id): object
-{
-  // ...
-}
-```
-
-Built-in constraints currently include `int`, `slug`, `uuid`, `alpha`, `alnum`, `hex`, and `ulid`.
-
-For the full guide set, visit [assegaiphp.com/guide](https://assegaiphp.com/guide).
-
-## Questions
-
-For questions and support, use the official guide and support pages:
+## Documentation and support
 
 - [Guide](https://assegaiphp.com/guide)
+- [Core documentation](./docs/README.md)
 - [Support](https://assegaiphp.com/support)
+- [Release notes](./docs/releases)
 
-The issue list of this repo is **exclusively** for bug reports and feature requests.
+GitHub issues are reserved for reproducible bug reports and feature requests. Read the [issue reporting checklist](./CONTRIBUTING.md#issues-and-bugs) before opening one.
 
-## Issues
-
-Please make sure to read the [Issues Reporting Checklist](./CONTRIBUTING.md#issues-and-bugs) before opening an issue. Issues not conforming to the guidelines may be closed immediately.
-
-## Consulting
-
-With official support, you can get expert help straight from the Assegai core team. We provide dedicated technical support, migration strategies, advice on best practices and design decisions, PR reviews, and team augmentation. Read more about [support here](https://assegaiphp.com/support).
-
-## Support
-
-Assegai is an MIT-licensed open source project. It can grow thanks to sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://assegaiphp.com/support).
+For repository contribution and pull request conventions, see [Commit and PR Guidelines](./docs/commit-and-pr-guidelines.md).
 
 ## Stay in touch
 
-* Author - [Andrew Masiye](https://twitter.com/feenix11)
-* Website - [https://assegaiphp.com](https://assegaiphp.com/)
-* Twitter - [@assegaiphp](https://twitter.com/assegaiphp)
+- Author: [Andrew Masiye](https://twitter.com/feenix11)
+- Website: [assegaiphp.com](https://assegaiphp.com/)
+- X: [@assegaiphp](https://twitter.com/assegaiphp)
 
 ## License
 
-Assegai is [MIT licensed](LICENSE).
+AssegaiPHP Core is [MIT licensed](LICENSE).
