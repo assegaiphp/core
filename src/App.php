@@ -55,6 +55,7 @@ use Assegai\Core\Runtimes\PhpHttpRuntime;
 use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Paths;
+use Assegai\Core\WebComponents\WebComponentConfiguration;
 use Closure;
 use Dotenv\Dotenv;
 use Exception;
@@ -93,6 +94,7 @@ class App implements AppInterface
      * @var AppConfig|null The application configuration.
      */
     protected ?AppConfig $appConfig = null;
+    private string $workingDirectory;
     /**
      * @var ComposerConfig|null The composer configuration.
      */
@@ -279,13 +281,14 @@ class App implements AppInterface
      */
     protected function initializeAppProperties(): void
     {
-        $dotEnv = Dotenv::createImmutable(Paths::getWorkingDirectory());
+        $this->workingDirectory = realpath(Paths::getWorkingDirectory()) ?: Paths::getWorkingDirectory();
+        $dotEnv = Dotenv::createImmutable($this->workingDirectory);
         $dotEnv->load();
 
         if (!self::getLocale()) {
             self::setLocale(self::DEFAULT_LOCALE);
         }
-        $this->appConfig = new AppConfig();
+        $this->appConfig = new AppConfig($this->workingDirectory);
         $this->composerConfig = new ComposerConfig();
         $this->projectConfig = new ProjectConfig();
         $this->host = new ArgumentsHost();
@@ -303,7 +306,12 @@ class App implements AppInterface
         $this->responder->setEmitter($this->responseEmitter);
         $this->moduleManager->setRootModuleClass($this->rootModuleClass);
         $this->registerApplicationDependencies();
-        $this->refreshRequestScope();
+        try {
+            $this->refreshRequestScope();
+        } catch (Throwable $exception) {
+            $this->clearRequestScopedRuntimeContext();
+            throw $exception;
+        }
 
         $this->isDebug = Config::isDebug();
         $this->withProfiling = env('PROFILING', false);
@@ -471,6 +479,8 @@ class App implements AppInterface
      */
     protected function registerRequestScopedDependencies(): void
     {
+        $appConfig = $this->appConfig === null ? null : clone $this->appConfig;
+        $configuration = $appConfig?->toArray() ?? [];
         $this->responder = Responder::create();
         $this->responder->setTemplateEngine($this->templateEngine);
         $this->responder->setEmitter($this->getActiveResponseEmitter());
@@ -482,6 +492,11 @@ class App implements AppInterface
         RuntimeContext::set(ResponseEmitterInterface::class, $this->getActiveResponseEmitter());
         RuntimeContext::set(Responder::class, $this->responder);
         RuntimeContext::set(ResponderInterface::class, $this->responder);
+        RuntimeContext::set(WebComponentConfiguration::class, new WebComponentConfiguration(
+            $this->workingDirectory,
+            array_key_exists('webComponents', $configuration) ? $configuration['webComponents'] : [],
+        ));
+        RuntimeContext::set(AppConfig::class, $appConfig);
     }
 
     /**
@@ -767,9 +782,9 @@ class App implements AppInterface
      */
     protected function runDefaultHttpLifecycle(): void
     {
-        $this->refreshRequestScope();
-        broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
         try {
+            $this->refreshRequestScope();
+            broadcast(EventChannel::APP_LISTENING_START, new Event($this->host));
             if ($this->handleCorsPreflight()) {
                 return;
             }

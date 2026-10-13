@@ -123,7 +123,7 @@ START;
       . PHP_EOL
       . $this->view->props->generateBodyScriptTags()
       . $this->view->props->generateBodyScriptImportTags()
-      . WebComponentSupport::renderRuntimeTags(getcwd() ?: '.');
+      . WebComponentSupport::renderRuntimeTags();
 
     $html .= <<<END
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>

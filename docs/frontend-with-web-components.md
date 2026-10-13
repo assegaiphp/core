@@ -261,7 +261,7 @@ So the safe mental model is:
 - Assegai-specific helpers are available through `ctx`
 - anything beyond that should be treated as opt-in
 
-## Bundle configuration lives in `assegai.json`
+## Workspace bundle defaults live in `assegai.json`
 
 The basic shape is:
 
@@ -283,6 +283,59 @@ Important keys:
 
 If a bundle exists at the configured output path, Assegai injects it automatically into rendered HTML.
 
+## Application runtime overrides
+
+Deployment policy belongs in application configuration, not in the tracked workspace build defaults. The application `webComponents` section overrides runtime fields from `assegai.json`. For example, an application that supplies verified production scripts can disable both automatic bundle emission and development polling in `config/production.php`:
+
+```php
+<?php
+
+return [
+  'webComponents' => [
+    'enabled' => false,
+    'hotReload' => ['enabled' => false],
+  ],
+];
+```
+
+These switches are independent. `enabled: false` suppresses the automatic module tag, not polling. `hotReload.enabled: false` suppresses polling even when an active watcher marker contains a bundle URL. Neither switch removes scripts explicitly configured through document properties or templates.
+
+The supported application override fields are:
+
+- `enabled`: boolean, controls automatic bundle emission.
+- `bundleUrl`: non-empty string, overrides the workspace bundle URL or output path. A missing local file emits no automatic tag; it does not fall back to the default bundle.
+- `hotReload.enabled`: boolean, controls polling.
+- `hotReload.path`: non-empty string, changes the public watcher marker path.
+- `hotReload.pollInterval`: positive integer in milliseconds. The marker's interval still takes precedence, with a minimum effective interval of 250 ms.
+
+Omitted fields inherit workspace defaults. Invalid application override fields or types raise `InvalidArgumentException`; use a boolean `false`, not the string `'false'`. Build-only settings such as `prefix` and `output` remain in `assegai.json`.
+
+Both rendering engines and the `web_component_*` helpers share one project-bound configuration snapshot per App request. Workspace configuration and watcher state resolve lazily on first use, once per request. No override is written back to disk. With no application override, development bundling and hot reload continue to use the workspace defaults.
+
+### Share selection and rendering configuration
+
+After the application factory returns, request code can read the same application configuration used for document scripts and Web Component policy:
+
+```php
+use Assegai\Core\Config\AppConfig;
+use Assegai\Core\WebComponents\WebComponentSupport;
+
+$config = AppConfig::current();
+$scripts = $config->get('app.bodyScriptUrls');
+$runtime = WebComponentSupport::getConfiguration();
+
+$automaticEmission = $runtime->isBundleEnabled();
+$polling = $runtime->isHotReloadEnabled();
+```
+
+`AppConfig::current()` does not execute configuration fragments again or consult legacy `Config` globals. It returns a detached configuration view and throws `LogicException` outside an active App scope. Treat object-valued configuration as immutable; cloning the view does not deep-clone those objects. The Web Component configuration exposes the effective flags, resolved bundle URL, watcher state, and a readonly `workingDirectory`.
+
+Configuration fragments still merge in the established order: `default.php`, `auth.php`, `production.php` in production, `local.php`, then `secure.php`. They retain recursive merge semantics. An application that owns a private release selection should read it once during configuration, preserve it as an immutable value, derive its script definitions from that value, and validate the final merged settings against it. Use `AppConfig::current()` in request readers so a second legacy configuration load cannot select different bytes.
+
+For integrity-pinned assets, supply the verified `src`, `type`, `integrity`, and `crossorigin` through `app.bodyScriptUrls`. The existing document renderer emits these attributes. Keep automatic emission and polling disabled even when production selection is missing or invalid; the application must refuse execution instead of falling back to an unsigned bundle. Core does not verify release receipts or asset hashes.
+
+Application configuration is loaded at App construction. Restart long-lived workers after changing deployment configuration or private selection. The next ordinary PHP request constructs a fresh App. Request cleanup discards the rendering snapshot, including after errors. Explicit helper root arguments inspect that project; they do not inherit a different project's application override. Outside App scope, helpers use live workspace lookup without a process-wide cache.
+
 ## Global favicon and scripts are configured once in `config/default.php`
 
 You do not need to add a favicon or site-wide scripts per page anymore.
@@ -302,6 +355,8 @@ return [
 ```
 
 That configuration applies to both classic `View` rendering and component-backed rendered pages.
+
+Inside an App request, document defaults come from its application snapshot, not ambient `Config::set('app', ...)` or `$_ENV['app']` changes. Use application fragments or explicit per-render properties. A direct `new View(...)` with omitted properties now uses the same configured defaults as the `view(...)` helper; explicitly supplied `ViewProperties` remain authoritative.
 
 ## FAQ
 
