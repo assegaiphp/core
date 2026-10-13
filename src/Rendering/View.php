@@ -51,7 +51,7 @@ class View
   public final function __construct(
     string $templateUrl,
     array $data = [],
-    ViewProperties|array $props = new ViewProperties(),
+    ViewProperties|array $props = [],
     public ?string $component = null
   )
   {

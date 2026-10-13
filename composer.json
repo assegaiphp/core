@@ -1,6 +1,6 @@
 {
     "name": "assegaiphp/core",
-    "description": "A progressive PHP framework for building efficient and scalable server-side applications.",
+    "description": "A structured PHP framework for building modular APIs and server-side applications.",
     "type": "library",
     "require-dev": {
         "codeception/codeception": "^5.3.5",

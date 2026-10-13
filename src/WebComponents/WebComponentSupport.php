@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\WebComponents;
 
+use Assegai\Core\Runtimes\RuntimeContext;
 use Assegai\Core\Util\Paths;
 
 /**
@@ -39,8 +40,11 @@ final class WebComponentSupport
      */
     public static function renderBundleTag(?string $workingDirectory = null): string
     {
-        $bundleUrl = self::getBundleUrl($workingDirectory);
+        return self::bundleTag(self::getBundleUrl($workingDirectory));
+    }
 
+    private static function bundleTag(?string $bundleUrl): string
+    {
         if ($bundleUrl === null) {
             return '';
         }
@@ -55,9 +59,10 @@ final class WebComponentSupport
      */
     public static function renderRuntimeTags(?string $workingDirectory = null): string
     {
+        $configuration = self::getConfiguration($workingDirectory);
         $tags = array_filter([
-            self::renderBundleTag($workingDirectory),
-            self::renderHotReloadTag($workingDirectory),
+            self::bundleTag($configuration->getBundleUrl()),
+            self::hotReloadTag($configuration->getHotReloadState()),
         ]);
 
         return implode(PHP_EOL, $tags);
@@ -68,28 +73,7 @@ final class WebComponentSupport
      */
     public static function getBundleUrl(?string $workingDirectory = null): ?string
     {
-        $workingDirectory ??= getcwd() ?: '.';
-        $config = self::loadConfig($workingDirectory);
-
-        if (($config['enabled'] ?? null) === false) {
-            return null;
-        }
-
-        $configuredBundleUrl = self::normalizeBundleUrl(
-            $config['bundleUrl'] ?? $config['bundlePath'] ?? $config['output'] ?? null
-        );
-
-        if ($configuredBundleUrl !== null) {
-            if (filter_var($configuredBundleUrl, FILTER_VALIDATE_URL) || self::bundleExists($configuredBundleUrl, $workingDirectory)) {
-                return $configuredBundleUrl;
-            }
-
-            return null;
-        }
-
-        return self::bundleExists(self::DEFAULT_BUNDLE_URL, $workingDirectory)
-            ? self::DEFAULT_BUNDLE_URL
-            : null;
+        return self::getConfiguration($workingDirectory)->getBundleUrl();
     }
 
     /**
@@ -97,14 +81,19 @@ final class WebComponentSupport
      */
     public static function renderHotReloadTag(?string $workingDirectory = null): string
     {
-        $state = self::getHotReloadState($workingDirectory);
+        return self::hotReloadTag(self::getConfiguration($workingDirectory)->getHotReloadState());
+    }
 
+    /** @param array{bundleUrl: string, interval: int, markerUrl: string}|null $state */
+    private static function hotReloadTag(?array $state): string
+    {
         if ($state === null) {
             return '';
         }
 
-        $markerUrl = json_encode($state['markerUrl'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '""';
-        $bundleUrl = json_encode($state['bundleUrl'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '""';
+        $jsonFlags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+        $markerUrl = json_encode($state['markerUrl'], $jsonFlags) ?: '""';
+        $bundleUrl = json_encode($state['bundleUrl'], $jsonFlags) ?: '""';
         $interval = max(250, (int)($state['interval'] ?? self::DEFAULT_HOT_RELOAD_INTERVAL));
 
         return <<<HTML
@@ -170,136 +159,19 @@ HTML;
     }
 
     /**
-     * Loads the Web Components section from the workspace config if it exists.
-     *
-     * @return array<string, mixed>
+     * Uses the active request snapshot only for its own project.
      */
-    private static function loadConfig(string $workingDirectory): array
+    public static function getConfiguration(?string $workingDirectory = null): WebComponentConfiguration
     {
-        $configFilename = Paths::join($workingDirectory, 'assegai.json');
-
-        if (!is_file($configFilename)) {
-            return [];
+        $current = RuntimeContext::get(WebComponentConfiguration::class);
+        if ($current instanceof WebComponentConfiguration && (
+            $workingDirectory === null
+            || (realpath($workingDirectory) ?: $workingDirectory) === $current->workingDirectory
+        )) {
+            return $current;
         }
 
-        $contents = file_get_contents($configFilename);
-
-        if (!$contents || !json_is_valid($contents)) {
-            return [];
-        }
-
-        $config = json_decode($contents, true);
-
-        if (!is_array($config)) {
-            return [];
-        }
-
-        return is_array($config['webComponents'] ?? null)
-            ? $config['webComponents']
-            : [];
-    }
-
-    /**
-     * Resolves the current hot-reload state when `wc:watch` is active.
-     *
-     * @return array{bundleUrl: string, interval: int, markerUrl: string}|null
-     */
-    private static function getHotReloadState(?string $workingDirectory = null): ?array
-    {
-        $workingDirectory ??= getcwd() ?: '.';
-        $config = self::loadConfig($workingDirectory);
-        $hotReloadConfig = is_array($config['hotReload'] ?? null)
-            ? $config['hotReload']
-            : [];
-
-        if (($hotReloadConfig['enabled'] ?? true) === false) {
-            return null;
-        }
-
-        $markerUrl = self::normalizePublicUrl($hotReloadConfig['path'] ?? self::DEFAULT_HOT_RELOAD_URL);
-
-        if ($markerUrl === null) {
-            return null;
-        }
-
-        $markerFilename = Paths::join($workingDirectory, 'public', ltrim($markerUrl, '/'));
-
-        if (!is_file($markerFilename)) {
-            return null;
-        }
-
-        $contents = file_get_contents($markerFilename);
-
-        if (!$contents || !json_is_valid($contents)) {
-            return null;
-        }
-
-        $state = json_decode($contents, true);
-
-        if (!is_array($state) || ($state['active'] ?? false) !== true) {
-            return null;
-        }
-
-        $expiresAt = isset($state['expiresAt']) ? strtotime((string)$state['expiresAt']) : false;
-
-        if ($expiresAt !== false && $expiresAt < time()) {
-            return null;
-        }
-
-        $bundleUrl = self::normalizePublicUrl($state['bundleUrl'] ?? self::getBundleUrl($workingDirectory));
-
-        if ($bundleUrl === null) {
-            return null;
-        }
-
-        return [
-            'bundleUrl' => $bundleUrl,
-            'interval' => (int)($state['interval'] ?? $hotReloadConfig['pollInterval'] ?? self::DEFAULT_HOT_RELOAD_INTERVAL),
-            'markerUrl' => $markerUrl,
-        ];
-    }
-
-    /**
-     * Normalizes a configured bundle path into a browser URL.
-     */
-    private static function normalizeBundleUrl(?string $bundlePath): ?string
-    {
-        return self::normalizePublicUrl($bundlePath);
-    }
-
-    /**
-     * Normalizes a configured public asset path into a browser URL.
-     */
-    private static function normalizePublicUrl(?string $path): ?string
-    {
-        if (!$path) {
-            return null;
-        }
-
-        if (filter_var($path, FILTER_VALIDATE_URL)) {
-            return $path;
-        }
-
-        $path = '/' . ltrim($path, '/');
-
-        if (str_starts_with($path, '/public/')) {
-            return substr($path, strlen('/public'));
-        }
-
-        return $path;
-    }
-
-    /**
-     * Checks whether the bundle exists locally for a given browser URL.
-     */
-    private static function bundleExists(string $bundleUrl, string $workingDirectory): bool
-    {
-        if (filter_var($bundleUrl, FILTER_VALIDATE_URL)) {
-            return true;
-        }
-
-        $bundleFilename = Paths::join($workingDirectory, 'public', ltrim($bundleUrl, '/'));
-
-        return is_file($bundleFilename);
+        // Standalone helpers retain live workspace lookup without process-wide caching.
+        return new WebComponentConfiguration($workingDirectory ?? Paths::getWorkingDirectory());
     }
 }

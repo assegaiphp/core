@@ -3,7 +3,9 @@
 namespace Assegai\Core\Rendering;
 
 use Assegai\Core\Config as FrameworkConfig;
+use Assegai\Core\Config\AppConfig;
 use Assegai\Core\Enumerations\ViewType;
+use Assegai\Core\Runtimes\RuntimeContext;
 
 /**
  * Shared document-level properties for rendered HTML responses.
@@ -161,9 +163,10 @@ class DocumentProperties
     /**
      * @return array<string, mixed>
      */
-    protected static function getDocumentConfig(): array
+    public static function getDocumentConfig(): array
     {
-        $config = FrameworkConfig::get('app');
+        $appConfig = RuntimeContext::get(AppConfig::class);
+        $config = $appConfig instanceof AppConfig ? $appConfig->get('app') : FrameworkConfig::get('app');
 
         return is_array($config) ? $config : [];
     }

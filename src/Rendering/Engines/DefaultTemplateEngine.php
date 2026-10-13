@@ -2,7 +2,6 @@
 
 namespace Assegai\Core\Rendering\Engines;
 
-use Assegai\Core\Config as FrameworkConfig;
 use Assegai\Core\ControllerManager;
 use Assegai\Core\Exceptions\Http\HttpException;
 use Assegai\Core\Exceptions\RenderingException;
@@ -311,9 +310,7 @@ START;
      */
     private function getAppDocumentConfig(): array
     {
-        $config = FrameworkConfig::get('app');
-
-        return is_array($config) ? $config : [];
+        return DocumentProperties::getDocumentConfig();
     }
 
     /**
@@ -436,7 +433,7 @@ START;
      */
     private function loadWebComponentBundle(): string
     {
-        $scriptTag = WebComponentSupport::renderRuntimeTags(getcwd() ?: '.');
+        $scriptTag = WebComponentSupport::renderRuntimeTags();
 
         return $scriptTag ? $scriptTag . PHP_EOL : '';
     }
