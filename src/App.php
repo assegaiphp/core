@@ -217,7 +217,11 @@ class App implements AppInterface
         ?ApplicationPaths                    $paths = null,
     )
     {
-        $this->paths = $paths ?? new ApplicationPaths(Paths::getDefaultWorkingDirectory(), readOnly: false);
+        if ($paths === null) {
+            $workingDirectory = Paths::getDefaultWorkingDirectory();
+            $paths = new ApplicationPaths(realpath($workingDirectory) ?: $workingDirectory, readOnly: false);
+        }
+        $this->paths = $paths;
         $previousPaths = Paths::application();
         RuntimeContext::set(ApplicationPaths::class, $this->paths);
         $this->runtime = $runtime ?? new PhpHttpRuntime();

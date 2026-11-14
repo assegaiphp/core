@@ -108,6 +108,7 @@ final class ApplicationPathsCest
     $I->assertSame("$this->fixture/state/uploads/image.png", (new TempFile(name: 'image.png'))->getTargetFilename());
     $I->assertSame('/explicit/uploads', (new FileInterceptorOptions(dest: '/explicit/uploads'))->dest);
     $I->expectThrowable(InvalidArgumentException::class, fn() => new ApplicationPaths('/does-not-exist'));
+    $I->expectThrowable(InvalidArgumentException::class, fn() => new ApplicationPaths('.'));
     $I->expectThrowable(InvalidArgumentException::class, fn() => new ApplicationPaths("invalid\0path"));
     $I->expectThrowable(InvalidArgumentException::class, fn() => new ApplicationPaths("$this->fixture/app", stateDirectory: 'relative'));
     $I->expectThrowable(InvalidArgumentException::class, fn() => new ApplicationPaths("$this->fixture/app", environmentFile: 'https://example.com/env'));
@@ -152,6 +153,56 @@ final class ApplicationPathsCest
     }
     $paths = new ApplicationPaths("$this->fixture/app", environmentFile: 'configuration/.env');
     $I->assertSame($paths->applicationRoot . DIRECTORY_SEPARATOR . 'configuration/.env', $paths->environmentFile);
+  }
+
+  public function runtimeOverridesAreObservableWithoutChangingSnapshotsOrOtherRequests(UnitTester $I): void
+  {
+    $paths = $this->paths();
+    $snapshot = new AppConfig(paths: $paths);
+    $globals = $GLOBALS['config'] ?? null;
+    RuntimeContext::set(AppConfig::class, $snapshot);
+    Config::set('marker', 'request override');
+    Config::set('requestOnly', ['enabled' => true]);
+    $I->assertSame('request override', Config::get('marker'));
+    $I->assertSame(['enabled' => true], Config::get('requestOnly'));
+    Config::set('marker', null);
+    $I->assertNull(Config::get('marker'));
+    Config::set('requestOnly', false);
+    $I->assertFalse(Config::get('requestOnly'));
+    $_ENV['marker'] = 'environment';
+    $I->assertSame('environment', Config::get('marker'));
+    unset($_ENV['marker']);
+    $I->assertSame('secret', AppConfig::current()->get('marker'));
+    $I->assertSame($globals, $GLOBALS['config'] ?? null);
+
+    RuntimeContext::flush();
+    RuntimeContext::set(AppConfig::class, new AppConfig(paths: $paths));
+    $I->assertSame('secret', Config::get('marker'));
+    $I->assertNull(Config::get('requestOnly'));
+    RuntimeContext::flush();
+    RuntimeContext::set(AppConfig::class, new AppConfig("$this->fixture/unrelated"));
+    $I->assertNull(Config::get('marker'));
+  }
+
+  public function legacyFactoryResolvesRelativeProjectDirectories(UnitTester $I): void
+  {
+    file_put_contents("$this->fixture/app/composer.json", '{"name":"tests/legacy"}');
+    chdir("$this->fixture/app");
+    $this->createdApp = true;
+    $app = AssegaiFactory::createFromProject('unused', '.');
+    $I->assertSame("$this->fixture/app", $app->getPaths()->applicationRoot);
+    $I->assertFalse($app->getPaths()->readOnly);
+  }
+
+  public function legacyFactoryResolvesRelativeWorkingDirectoryOverrides(UnitTester $I): void
+  {
+    file_put_contents("$this->fixture/app/composer.json", '{"name":"tests/legacy"}');
+    chdir($this->fixture);
+    putenv('ASSEGAI_WORKING_DIR=app');
+    $this->createdApp = true;
+    $app = AssegaiFactory::create('unused');
+    $I->assertSame("$this->fixture/app", $app->getPaths()->applicationRoot);
+    $I->assertFalse($app->getPaths()->readOnly);
   }
 
   public function windowsSeparatorClassificationAcceptsNativeAndNormalizedUncPaths(UnitTester $I): void
@@ -276,6 +327,8 @@ final class ControllerToken {
   public function index(): Response {
     Log::info('contract', 'rendered-request');
     $_SESSION['external'] = 'persisted';
+    $previousOverride = \Assegai\Core\Config::get('requestOnly');
+    \Assegai\Core\Config::set('requestOnly', 'this request');
     return Response::current()->jsonRaw([
       'root' => Paths::getWorkingDirectory(),
       'injectedRoot' => $this->paths->applicationRoot,
@@ -283,6 +336,8 @@ final class ControllerToken {
       'upload' => (new TempFile(name: 'image.png'))->getTargetFilename(),
       'sessionPath' => session_save_path(),
       'configuration' => \Assegai\Core\Config::get('marker'),
+      'previousOverride' => $previousOverride,
+      'override' => \Assegai\Core\Config::get('requestOnly'),
     ]);
   }
   #[Get('component')]
@@ -341,6 +396,8 @@ PHP);
     $I->assertSame("$this->fixture/state/uploads/image.png", $body['upload'] ?? null);
     $I->assertSame("$this->fixture/state/sessions", $body['sessionPath'] ?? null);
     $I->assertSame('secret', $body['configuration'] ?? null);
+    $I->assertNull($body['previousOverride']);
+    $I->assertSame('this request', $body['override']);
     $I->assertSame($previousSessionPath, session_save_path());
     $I->assertNotEmpty(glob("$this->fixture/state/sessions/sess_*"));
     $I->assertDirectoryDoesNotExist("$this->fixture/app/logs");
@@ -362,6 +419,14 @@ PHP);
     ));
     $app->run();
     $I->assertSame("$this->fixture/app/public/screen.css", $emitter->filename);
+    $app->setRuntimeRequestContext(new RuntimeRequestContext(
+      server: ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/probe', 'HTTP_HOST' => 'localhost'],
+      query: ['path' => '/probe'],
+    ));
+    $app->run();
+    $body = (array) $emitter->response?->getBody();
+    $I->assertNull($body['previousOverride']);
+    $I->assertSame('this request', $body['override']);
     $I->assertSame($hashes, $this->applicationHashes());
     $I->assertNull(Paths::application());
   }

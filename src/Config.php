@@ -19,6 +19,7 @@ use LogicException;
  */
 class Config
 {
+  private const string REQUEST_OVERRIDES = self::class . ':overrides';
   private const ERR_MSG_CONFIG_NOT_FOUND = 'Config Not Found: ';
 
   /**
@@ -62,7 +63,8 @@ class Config
   {
     $active = $configPath === null ? RuntimeContext::get(AppConfig::class) : null;
     if ($active instanceof AppConfig) {
-      return $_ENV[$name] ?? $active->get($name);
+      $overrides = (array) RuntimeContext::get(self::REQUEST_OVERRIDES, []);
+      return $_ENV[$name] ?? (array_key_exists($name, $overrides) ? $overrides[$name] : $active->get($name));
     }
     if (!isset($GLOBALS['config'])) {
       Config::hydrate($configPath);
@@ -96,6 +98,12 @@ class Config
    */
   public static function set(string $name, mixed $value): void
   {
+    if (RuntimeContext::get(AppConfig::class) instanceof AppConfig) {
+      $overrides = (array) RuntimeContext::get(self::REQUEST_OVERRIDES, []);
+      $overrides[$name] = $value;
+      RuntimeContext::set(self::REQUEST_OVERRIDES, $overrides);
+      return;
+    }
     $GLOBALS['config'][$name] = $value;
   }
 
