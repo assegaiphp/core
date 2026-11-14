@@ -82,6 +82,7 @@ final readonly class ApplicationPaths
       throw new InvalidArgumentException('Application paths must be local filesystem paths.');
     }
     $absolute = str_starts_with($path, DIRECTORY_SEPARATOR)
+      || str_starts_with($path, '//')
       || preg_match('/\A[A-Za-z]:[\\\\\/]/', $path) === 1;
     if (!$absolute && $base !== null) {
       $path = $base . DIRECTORY_SEPARATOR . $path;

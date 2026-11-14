@@ -142,6 +142,58 @@ final class ApplicationPathsCest
     $I->assertSame('secret', (new AppConfig("$this->fixture/app", $paths))->get('marker'));
   }
 
+  public function absoluteEnvironmentFilesAreNotPrefixedWithTheApplicationRoot(UnitTester $I): void
+  {
+    foreach (['//server/share/.env', 'C:/configuration/.env', 'C:\\configuration\\.env'] as $file) {
+      $paths = new ApplicationPaths("$this->fixture/app", environmentFile: $file);
+      $I->assertSame($file, $paths->environmentFile);
+    }
+    $paths = new ApplicationPaths("$this->fixture/app", environmentFile: 'configuration/.env');
+    $I->assertSame($paths->applicationRoot . DIRECTORY_SEPARATOR . 'configuration/.env', $paths->environmentFile);
+  }
+
+  public function windowsSeparatorClassificationAcceptsNativeAndNormalizedUncPaths(UnitTester $I): void
+  {
+    // Isolate a Windows separator constant without claiming Windows filesystem coverage.
+    $script = <<<'PHP'
+namespace Assegai\Core;
+const DIRECTORY_SEPARATOR = '\\';
+require $argv[1];
+$absolute = new \ReflectionMethod(ApplicationPaths::class, 'absolute');
+$result = [];
+foreach (['//server/share/application', '\\\\server\\share\\application', 'C:/application', 'C:\\application', '\\application'] as $path) {
+  $result['directories'][] = $absolute->invoke(null, $path);
+  $result['files'][] = $absolute->invoke(null, $path, 'C:\\base');
+}
+$result['relativeFile'] = $absolute->invoke(null, 'settings/.env', 'C:\\base');
+try {
+  $absolute->invoke(null, 'relative');
+  $result['relativeDirectoryRejected'] = false;
+} catch (\InvalidArgumentException) {
+  $result['relativeDirectoryRejected'] = true;
+}
+echo json_encode($result, JSON_THROW_ON_ERROR);
+PHP;
+    $process = proc_open(
+      [PHP_BINARY, '-r', $script, dirname(__DIR__, 2) . '/src/ApplicationPaths.php'],
+      [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+      $pipes,
+    );
+    $I->assertTrue(is_resource($process));
+    fclose($pipes[0]);
+    $output = stream_get_contents($pipes[1]);
+    $errors = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    $I->assertSame(0, proc_close($process), $errors);
+    $result = json_decode($output, true, flags: JSON_THROW_ON_ERROR);
+    $expected = ['//server/share/application', '\\\\server\\share\\application', 'C:/application', 'C:\\application', '\\application'];
+    $I->assertSame($expected, $result['directories']);
+    $I->assertSame($expected, $result['files']);
+    $I->assertSame('C:\\base\\settings/.env', $result['relativeFile']);
+    $I->assertTrue($result['relativeDirectoryRejected']);
+  }
+
   public function explicitEnvironmentDisableDoesNotReadAnAdjacentEnvFile(UnitTester $I): void
   {
     $paths = new ApplicationPaths("$this->fixture/app", environmentFile: null);
