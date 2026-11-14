@@ -100,6 +100,9 @@ trait LogsHandledExceptions
    */
   protected function resolveApplicationRootPaths(): array
   {
+    if ($paths = Paths::application()) {
+      return [$this->normalizePath($paths->applicationRoot)];
+    }
     $paths = [];
 
     foreach ([getenv('ASSEGAI_WORKING_DIR') ?: null, Paths::getWorkingDirectory(), getcwd() ?: null] as $candidate) {

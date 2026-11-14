@@ -2,6 +2,8 @@
 
 namespace Assegai\Core\Config;
 
+use Assegai\Core\ApplicationPaths;
+use Assegai\Core\Util\Paths;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Config as RootConfig;
 use Assegai\Core\Enumerations\Http\ContextType;
@@ -23,10 +25,14 @@ class ProjectConfig extends AbstractConfig
    * @param ContextType $type The context type.
    */
   public function __construct(
-    public ContextType $type = ContextType::HTTP
+    public ContextType $type = ContextType::HTTP,
+    ?ApplicationPaths $paths = null,
   )
   {
-    if (file_exists(Path::join($this->getWorkingDirectory(), '.env'))) {
+    $this->applicationPaths = $paths ?? Paths::application();
+    if ($this->applicationPaths !== null) {
+      $this->applicationPaths->loadEnvironment(required: false);
+    } elseif (file_exists(Path::join($this->getWorkingDirectory(), '.env'))) {
       $dotenv = Dotenv::createImmutable($this->getWorkingDirectory());
       $dotenv->safeLoad();
     }
@@ -39,7 +45,7 @@ class ProjectConfig extends AbstractConfig
       $_ENV['DEBUG_MODE'] = false;
     }
 
-    parent::__construct();
+    parent::__construct($this->applicationPaths);
   }
 
   /**

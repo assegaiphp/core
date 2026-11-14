@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Config;
 
+use Assegai\Core\ApplicationPaths;
 use Assegai\Core\Exceptions\ConfigurationException;
 use Assegai\Core\Util\Paths;
 
@@ -13,7 +14,7 @@ final class ApplicationConfigLoader
   /**
    * @return array<string, mixed>
    */
-  public static function load(string $workingDirectory, bool $production = false): array
+  public static function load(string $workingDirectory, bool $production = false, ?ApplicationPaths $paths = null): array
   {
     $configDirectory = Paths::join(trim($workingDirectory), 'config');
     $filenames = ['default.php', 'auth.php'];
@@ -27,7 +28,7 @@ final class ApplicationConfigLoader
     $config = [];
 
     foreach ($filenames as $filename) {
-      $path = Paths::join($configDirectory, $filename);
+      $path = $paths?->configurationFile($filename) ?? Paths::join($configDirectory, $filename);
 
       if (!is_file($path)) {
         continue;

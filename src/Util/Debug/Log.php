@@ -3,6 +3,7 @@
 namespace Assegai\Core\Util\Debug;
 
 use Assegai\Core\Util\Debug\Console\Enumerations\Color;
+use Assegai\Core\Util\Paths;
 use RuntimeException;
 
 defined('STDOUT') or define('STDOUT', fopen('php://stdout', 'wb'));
@@ -23,18 +24,34 @@ class Log
    */
   public static function init(): void
   {
-    $logDir = dirname(DEFAULT_LOG_FILE);
-    $errorDir = dirname(DEFAULT_ERROR_LOG);
+    $logFile = self::logFile();
+    $errorFile = self::errorFile();
+    $logDir = dirname($logFile);
+    $errorDir = dirname($errorFile);
     self::ensureDirectoryExists($logDir);
-    self::ensureFileExists(DEFAULT_LOG_FILE);
+    self::ensureFileExists($logFile);
 
     if ($errorDir !== $logDir) {
       self::ensureDirectoryExists($errorDir);
     }
 
-    if (DEFAULT_ERROR_LOG !== DEFAULT_LOG_FILE) {
-      self::ensureFileExists(DEFAULT_ERROR_LOG);
+    if ($errorFile !== $logFile) {
+      self::ensureFileExists($errorFile);
     }
+  }
+
+  private static function logFile(): string
+  {
+    return Paths::application()?->hasExplicitStateDirectory
+      ? Paths::getLogDirectory() . '/assegai.log'
+      : DEFAULT_LOG_FILE;
+  }
+
+  private static function errorFile(): string
+  {
+    return Paths::application()?->hasExplicitStateDirectory
+      ? Paths::getLogDirectory() . '/assegai.log'
+      : DEFAULT_ERROR_LOG;
   }
 
   /**
@@ -121,7 +138,7 @@ class Log
     error_log(
       sprintf("%sD/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message),
       3,
-      DEFAULT_LOG_FILE
+      self::logFile()
     );
   }
 
@@ -136,7 +153,7 @@ class Log
     error_log(
       sprintf("%sI/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message),
       3,
-      DEFAULT_LOG_FILE
+      self::logFile()
     );
   }
 
@@ -151,7 +168,7 @@ class Log
     error_log(
       sprintf("%sW/%s:\n%s%s\n" . PHP_EOL, Color::BLUE->value, $tag, Color::RESET->value, $message),
       3,
-      DEFAULT_LOG_FILE
+      self::logFile()
     );
   }
 
@@ -164,12 +181,12 @@ class Log
    * @param string|null $destination
    * @param string|null $headers
    */
-  public static function error(string $tag, string $message, int $type = 3, ?string $destination = DEFAULT_ERROR_LOG, ?string $headers = null): void
+  public static function error(string $tag, string $message, int $type = 3, ?string $destination = null, ?string $headers = null): void
   {
     error_log(
       sprintf("%sE/%s:\n%s%s\n" . PHP_EOL, Color::RED->value, $tag, Color::RESET->value, $message),
       $type,
-      $destination,
+      $destination ?? self::errorFile(),
       $headers
     );
   }

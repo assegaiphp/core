@@ -3,12 +3,15 @@
 namespace Assegai\Core;
 
 use Assegai\Core\Config\ApplicationConfigLoader;
+use Assegai\Core\Config\AppConfig;
 use Assegai\Core\Enumerations\EnvironmentType;
 use Assegai\Core\Exceptions\ConfigurationException;
 use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Paths;
+use Assegai\Core\Runtimes\RuntimeContext;
 use Dotenv\Dotenv;
 use Exception;
+use LogicException;
 
 /**
  * The Config class provides methods for retrieving or setting configuration
@@ -27,11 +30,14 @@ class Config
    */
   public static function hydrate(?string $configDirectory = null): void
   {
+    $paths = $configDirectory === null ? Paths::application() : null;
     $workingDirectory = $configDirectory ?? Paths::getWorkingDirectory();
     $envPath = Paths::join(trim($workingDirectory), '.env');
 
     // Load .env file
-    if (file_exists($envPath)) {
+    if ($paths !== null) {
+      $paths->loadEnvironment(required: false);
+    } elseif (file_exists($envPath)) {
       $dotEnv = Dotenv::createImmutable($workingDirectory);
       $dotEnv->load();
     }
@@ -39,6 +45,7 @@ class Config
     $config = ApplicationConfigLoader::load(
       $workingDirectory,
       Config::environment() === EnvironmentType::PRODUCTION,
+      $paths,
     );
     $_ENV = $_ENV + $config;
 
@@ -53,6 +60,10 @@ class Config
    */
   public static function get(string $name, ?string $configPath = null): mixed
   {
+    $active = $configPath === null ? RuntimeContext::get(AppConfig::class) : null;
+    if ($active instanceof AppConfig) {
+      return $_ENV[$name] ?? $active->get($name);
+    }
     if (!isset($GLOBALS['config'])) {
       Config::hydrate($configPath);
     }
@@ -173,6 +184,9 @@ class Config
    */
   public static function updateWorkspaceConfig(string $name, mixed $value, ?string $workspaceDirectory = null): void
   {
+    if ($workspaceDirectory === null && Paths::application()?->readOnly) {
+      throw new LogicException('Runtime workspace configuration is read-only; select the authored workspace explicitly.');
+    }
     if (!$workspaceDirectory)
     {
       $workspaceDirectory = Paths::getWorkingDirectory();

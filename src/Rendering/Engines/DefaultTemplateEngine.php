@@ -11,6 +11,7 @@ use Assegai\Core\ModuleManager;
 use Assegai\Core\Rendering\DocumentProperties;
 use Assegai\Core\Routing\Router;
 use Assegai\Core\WebComponents\WebComponentSupport;
+use Assegai\Core\Util\Paths;
 use Assegai\Util\Path;
 use DateInvalidTimeZoneException;
 use DateMalformedStringException;
@@ -88,7 +89,10 @@ class DefaultTemplateEngine extends TemplateEngine
     ])
     {
         parent::__construct();
-        $this->templatesDirectory = Path::join(getcwd() ?: throw new RuntimeException('No current working directory'), 'src');
+        $this->templatesDirectory = Path::join(
+            Paths::application()?->applicationRoot ?? (getcwd() ?: throw new RuntimeException('No current working directory')),
+            'src',
+        );
         $this->loader = new FilesystemLoader($this->templatesDirectory);
         $this->twig = new Environment($this->loader);
         $this->twig->addExtension(new MarkdownExtension());

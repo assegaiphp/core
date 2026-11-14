@@ -2,6 +2,8 @@
 
 namespace Assegai\Core\Util;
 
+use Assegai\Core\ApplicationPaths;
+use Assegai\Core\Runtimes\RuntimeContext;
 /**
  * The Paths class. Contains utility methods for working with paths.
  *
@@ -23,7 +25,7 @@ final class Paths
    */
   public static function getConfigDirectory(): string
   {
-    return self::getWorkingDirectory() . '/config';
+    return self::application()?->configurationDirectory ?? self::getWorkingDirectory() . '/config';
   }
 
   /**
@@ -33,6 +35,15 @@ final class Paths
    */
   public static function getWorkingDirectory(): string
   {
+    if ($paths = self::application()) {
+      return $paths->applicationRoot;
+    }
+    return self::getDefaultWorkingDirectory();
+  }
+
+  /** Resolve legacy bootstrap selection without inheriting another app's active context. */
+  public static function getDefaultWorkingDirectory(): string
+  {
     $workingDirectory = getenv('ASSEGAI_WORKING_DIR');
 
     if (is_string($workingDirectory) && trim($workingDirectory) !== '') {
@@ -40,6 +51,38 @@ final class Paths
     }
 
     return getcwd() ?: '';
+  }
+
+  public static function application(): ?ApplicationPaths
+  {
+    return RuntimeContext::get(ApplicationPaths::class);
+  }
+
+  public static function getStateDirectory(): string
+  {
+    return self::application()?->stateDirectory ?? (getcwd() ?: '.');
+  }
+
+  public static function getLogDirectory(): string
+  {
+    return self::getStateDirectory() . '/logs';
+  }
+
+  public static function getCacheDirectory(): string
+  {
+    return self::getStateDirectory() . '/cache';
+  }
+
+  public static function getSessionDirectory(): string
+  {
+    return self::getStateDirectory() . '/sessions';
+  }
+
+  public static function getUploadDirectory(): string
+  {
+    return self::application()?->hasExplicitStateDirectory
+      ? self::getStateDirectory() . '/uploads'
+      : DEFAULT_STORAGE_PATH;
   }
 
   /**
