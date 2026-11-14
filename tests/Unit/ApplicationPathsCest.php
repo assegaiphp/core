@@ -138,6 +138,8 @@ final class ApplicationPathsCest
       $I->expectThrowable(LogicException::class, fn() => $snapshot->commit());
     }
     $I->expectThrowable(LogicException::class, fn() => Config::updateWorkspaceConfig('language', 'php'));
+    $I->expectThrowable(LogicException::class, fn() => Config::updateWorkspaceConfig('language', 'php', ''));
+    $I->expectThrowable(LogicException::class, fn() => Config::updateWorkspaceConfig('language', 'php', '0'));
     $I->assertSame('{}', file_get_contents("$this->fixture/app/assegai.json"));
     $I->assertSame('secret', (new AppConfig("$this->fixture/app", $paths))->get('marker'));
   }

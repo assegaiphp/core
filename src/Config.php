@@ -184,7 +184,7 @@ class Config
    */
   public static function updateWorkspaceConfig(string $name, mixed $value, ?string $workspaceDirectory = null): void
   {
-    if ($workspaceDirectory === null && Paths::application()?->readOnly) {
+    if (!$workspaceDirectory && Paths::application()?->readOnly) {
       throw new LogicException('Runtime workspace configuration is read-only; select the authored workspace explicitly.');
     }
     if (!$workspaceDirectory)
