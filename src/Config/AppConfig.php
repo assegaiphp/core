@@ -2,6 +2,7 @@
 
 namespace Assegai\Core\Config;
 
+use Assegai\Core\ApplicationPaths;
 use Assegai\Core\Attributes\Injectable;
 use Assegai\Core\Config;
 use Assegai\Core\Enumerations\EnvironmentType;
@@ -20,11 +21,13 @@ class AppConfig extends AbstractConfig
 {
   private readonly string $workingDirectory;
 
-  public function __construct(?string $workingDirectory = null)
+  public function __construct(?string $workingDirectory = null, ?ApplicationPaths $paths = null)
   {
+    $paths ??= $workingDirectory === null ? Paths::application() : null;
+    $workingDirectory ??= $paths?->applicationRoot;
     $workingDirectory ??= Paths::getWorkingDirectory();
     $this->workingDirectory = realpath($workingDirectory) ?: $workingDirectory;
-    parent::__construct();
+    parent::__construct($paths);
   }
 
   public function getWorkingDirectory(): string
@@ -59,6 +62,7 @@ class AppConfig extends AbstractConfig
     $this->config = ApplicationConfigLoader::load(
       $this->getWorkingDirectory(),
       Config::environment() === EnvironmentType::PRODUCTION,
+      $this->applicationPaths,
     );
   }
 
@@ -67,6 +71,15 @@ class AppConfig extends AbstractConfig
    */
   public function getConfigFilename(): string
   {
+    if ($this->applicationPaths !== null) {
+      foreach (['default.php', 'local.php', 'dev.php', 'secure.php'] as $filename) {
+        $path = $this->applicationPaths->configurationFile($filename);
+        if (is_file($path)) {
+          return $path;
+        }
+      }
+      return $this->applicationPaths->configurationFile('default.php');
+    }
     $configDirectory = Path::join($this->getWorkingDirectory(), 'config');
     $possibleConfigFilenames = ['default.php', 'local.php', 'dev.php', 'secure.php'];
     $configFilename = Path::join($configDirectory, 'default.php');

@@ -8,8 +8,8 @@
     "label": "tests"
   },
   "status": {
-    "label": "0.10.0 milestone",
+    "label": "0.11.0 milestone",
     "color": "2563eb",
-    "summary": "Configurable authentication failure handling and complete exception-filter lifecycle."
+    "summary": "Bootstrap runtime paths for application resources, external configuration, secrets and persistent state."
   }
 }

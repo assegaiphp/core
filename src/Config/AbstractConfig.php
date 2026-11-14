@@ -2,9 +2,11 @@
 
 namespace Assegai\Core\Config;
 
+use Assegai\Core\ApplicationPaths;
 use Assegai\Core\Interfaces\ConfigInterface;
 use Assegai\Core\Util\Paths;
 use RuntimeException;
+use LogicException;
 
 /**
  * The abstract configuration.
@@ -21,7 +23,7 @@ abstract class AbstractConfig implements ConfigInterface
   /**
    * AbstractConfig constructor.
    */
-  public function __construct()
+  public function __construct(protected ?ApplicationPaths $applicationPaths = null)
   {
     $this->load();
   }
@@ -127,6 +129,9 @@ abstract class AbstractConfig implements ConfigInterface
    */
   public function commit(): int
   {
+    if ($this->applicationPaths?->readOnly) {
+      throw new LogicException('Runtime configuration is read-only; edit authored configuration explicitly.');
+    }
     if (! file_exists($this->getConfigFilename())) {
       throw new RuntimeException('The configuration file does not exist.');
     }
@@ -151,6 +156,6 @@ abstract class AbstractConfig implements ConfigInterface
    */
   public function getWorkingDirectory(): string
   {
-    return Paths::getWorkingDirectory() ?: '.';
+    return $this->applicationPaths?->applicationRoot ?? (Paths::getWorkingDirectory() ?: '.');
   }
 }

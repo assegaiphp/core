@@ -3,6 +3,7 @@
 namespace Assegai\Core\Files;
 
 use Assegai\Core\Attributes\Injectable;
+use Assegai\Core\Util\Paths;
 use JetBrains\PhpStorm\ArrayShape;
 
 /**
@@ -14,7 +15,7 @@ class TempFile
   /**
    * @var string
    */
-  protected string $targetDirectory = DEFAULT_STORAGE_PATH;
+  protected string $targetDirectory;
   /**
    * @var string
    */
@@ -39,6 +40,7 @@ class TempFile
     protected ?string $extension = null
   )
   {
+    $this->targetDirectory = Paths::getUploadDirectory();
     $this->targetFilename = $this->targetDirectory . "/$this->name";
     if (! $this->extension)
     {

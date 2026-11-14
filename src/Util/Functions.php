@@ -104,6 +104,9 @@ if (!function_exists('config')) {
     $pathParts = explode('.', $variablePath) ?? [''];
 
     $filepath = Paths::join($configDirname, $directory, ($pathParts[0] ?? '') . '.php');
+    if ($dirname === null && ($directory === '' || $directory === '/') && ($paths = Paths::application())) {
+      $filepath = $paths->configurationFile(($pathParts[0] ?? '') . '.php');
+    }
 
     if (!file_exists($filepath)) {
       return $default;

@@ -57,7 +57,6 @@ use Assegai\Core\Util\Debug\Log;
 use Assegai\Core\Util\Paths;
 use Assegai\Core\WebComponents\WebComponentConfiguration;
 use Closure;
-use Dotenv\Dotenv;
 use Exception;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
@@ -195,6 +194,8 @@ class App implements AppInterface
     protected ?ResponseEmitterInterface $activeResponseEmitter = null;
     protected HttpRuntimeInterface $runtime;
     protected ResponseEmitterInterface $responseEmitter;
+    protected readonly ApplicationPaths $paths;
+    private ?string $previousSessionSavePath = null;
 
     /**
      * Constructs an App instance.
@@ -213,13 +214,27 @@ class App implements AppInterface
         protected readonly ModuleManager     $moduleManager,
         protected readonly Injector          $injector,
         ?HttpRuntimeInterface                $runtime = null,
+        ?ApplicationPaths                    $paths = null,
     )
     {
+        if ($paths === null) {
+            $workingDirectory = Paths::getDefaultWorkingDirectory();
+            $paths = new ApplicationPaths(realpath($workingDirectory) ?: $workingDirectory, readOnly: false);
+        }
+        $this->paths = $paths;
+        $previousPaths = Paths::application();
+        RuntimeContext::set(ApplicationPaths::class, $this->paths);
         $this->runtime = $runtime ?? new PhpHttpRuntime();
         $this->exceptionFiltersConsumer = new ExceptionFiltersConsumer($this->injector);
         broadcast(EventChannel::APP_INIT_START, new Event());
         $this->initializeErrorAndExceptionHandlers();
-        $this->initializeAppProperties();
+        try {
+            $this->initializeAppProperties();
+        } catch (Throwable $exception) {
+            $this->clearRequestScopedRuntimeContext();
+            $this->restorePathContext($previousPaths);
+            throw $exception;
+        }
         if ($this->withProfiling) {
             $this->startupTime = microtime(true);
         }
@@ -281,16 +296,15 @@ class App implements AppInterface
      */
     protected function initializeAppProperties(): void
     {
-        $this->workingDirectory = realpath(Paths::getWorkingDirectory()) ?: Paths::getWorkingDirectory();
-        $dotEnv = Dotenv::createImmutable($this->workingDirectory);
-        $dotEnv->load();
+        $this->workingDirectory = $this->paths->applicationRoot;
+        $this->paths->loadEnvironment();
 
         if (!self::getLocale()) {
             self::setLocale(self::DEFAULT_LOCALE);
         }
-        $this->appConfig = new AppConfig($this->workingDirectory);
-        $this->composerConfig = new ComposerConfig();
-        $this->projectConfig = new ProjectConfig();
+        $this->appConfig = new AppConfig($this->workingDirectory, $this->paths);
+        $this->composerConfig = new ComposerConfig($this->paths);
+        $this->projectConfig = new ProjectConfig(paths: $this->paths);
         $this->host = new ArgumentsHost();
         $this->templateEngine = new DefaultTemplateEngine([
             'root_module_class' => $this->rootModuleClass,
@@ -353,6 +367,7 @@ class App implements AppInterface
     {
         $dependencies = [
             self::class => $this,
+            ApplicationPaths::class => $this->paths,
             AppInterface::class => $this,
             AppConfig::class => $this->appConfig,
             ComposerConfig::class => $this->composerConfig,
@@ -387,6 +402,7 @@ class App implements AppInterface
     {
         $this->closeSessionForCurrentRequest();
         $this->clearRequestScopedRuntimeContext();
+        RuntimeContext::set(ApplicationPaths::class, $this->paths);
         $this->router->resetRequestState();
         $this->activatedController = null;
         $this->request = $this->runtimeRequestContext instanceof RuntimeRequestContext
@@ -417,6 +433,7 @@ class App implements AppInterface
         $this->prepareLongLivedRuntimeSessionCookie();
 
         if (session_status() !== PHP_SESSION_ACTIVE) {
+            $this->restoreSessionSavePath();
             $this->sessionStartedForRequest = false;
             $this->applyPendingSessionCookieHeader();
             $this->clearLongLivedRuntimeSessionState();
@@ -424,6 +441,7 @@ class App implements AppInterface
         }
 
         session_write_close();
+        $this->restoreSessionSavePath();
         $this->sessionStartedForRequest = false;
         $this->applyPendingSessionCookieHeader();
         $this->clearLongLivedRuntimeSessionState();
@@ -452,6 +470,7 @@ class App implements AppInterface
     {
         $this->injector->retain([
             self::class,
+            ApplicationPaths::class,
             AppInterface::class,
             AppConfig::class,
             ComposerConfig::class,
@@ -789,7 +808,7 @@ class App implements AppInterface
                 return;
             }
 
-            $resourcePath = $this->resolvePublicResourcePath($_SERVER['REQUEST_URI'] ?? null);
+            $resourcePath = $this->resolvePublicResourcePath($this->request->getUri());
 
             if (is_string($resourcePath)) {
                 $this->respondWithPublicResource($resourcePath);
@@ -1106,8 +1125,14 @@ class App implements AppInterface
      */
     public function boot(): void
     {
-        $this->prepareApplicationGraph();
-        $this->prepareMiddlewareGraph();
+        $previousPaths = Paths::application();
+        RuntimeContext::set(ApplicationPaths::class, $this->paths);
+        try {
+            $this->prepareApplicationGraph();
+            $this->prepareMiddlewareGraph();
+        } finally {
+            $this->restorePathContext($previousPaths);
+        }
     }
 
     /**
@@ -1119,7 +1144,33 @@ class App implements AppInterface
      */
     public function shutdown(): void
     {
-        $this->invokeApplicationShutdownHooks();
+        $previousPaths = Paths::application();
+        RuntimeContext::set(ApplicationPaths::class, $this->paths);
+        try {
+            $this->invokeApplicationShutdownHooks();
+        } finally {
+            $this->restorePathContext($previousPaths);
+        }
+    }
+
+    public function getPaths(): ApplicationPaths
+    {
+        return $this->paths;
+    }
+
+    private function restorePathContext(?ApplicationPaths $paths): void
+    {
+        $paths === null
+            ? RuntimeContext::forget(ApplicationPaths::class)
+            : RuntimeContext::set(ApplicationPaths::class, $paths);
+    }
+
+    private function restoreSessionSavePath(): void
+    {
+        if ($this->previousSessionSavePath !== null && session_status() !== PHP_SESSION_ACTIVE) {
+            session_save_path($this->previousSessionSavePath);
+            $this->previousSessionSavePath = null;
+        }
     }
 
     /**
@@ -1135,6 +1186,19 @@ class App implements AppInterface
 
         if (session_status() === PHP_SESSION_DISABLED) {
             return;
+        }
+
+        // Leave custom handlers and legacy server-managed paths alone.
+        if ($this->paths->hasExplicitStateDirectory && session_module_name() === 'files') {
+            $directory = Paths::getSessionDirectory();
+            if (!is_dir($directory) && !@mkdir($directory, 0700, true) && !is_dir($directory)) {
+                throw new InvalidArgumentException('The application session directory could not be created.');
+            }
+            $previous = session_save_path($directory);
+            if ($previous === false) {
+                throw new InvalidArgumentException('The application session directory could not be selected.');
+            }
+            $this->previousSessionSavePath = $previous;
         }
 
         $sessionName = $this->appConfig?->get('session.name', null);

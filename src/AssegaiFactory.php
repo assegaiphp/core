@@ -19,7 +19,7 @@ final class AssegaiFactory
    * @param HttpRuntimeInterface|null $runtime
    * @return App
    */
-  public static function create(string $moduleName, ?HttpRuntimeInterface $runtime = null): App
+  public static function create(string $moduleName, ?HttpRuntimeInterface $runtime = null, ?ApplicationPaths $paths = null): App
   {
     $injector = Injector::createFresh();
     $moduleManager = ModuleManager::createFresh($injector);
@@ -33,6 +33,7 @@ final class AssegaiFactory
       moduleManager: $moduleManager,
       injector: $injector,
       runtime: $runtime ?? self::resolveRuntimeFromEnvironment() ?? new PhpHttpRuntime(),
+      paths: $paths,
     );
   }
 
@@ -42,10 +43,20 @@ final class AssegaiFactory
    * Environment overrides take precedence so CLI tools can steer older bootstraps
    * without having to rewrite the application code path.
    */
-  public static function createFromProject(string $moduleName, ?string $workingDirectory = null, ?string $runtime = null): App
+  public static function createFromProject(
+    string $moduleName,
+    ?string $workingDirectory = null,
+    ?string $runtime = null,
+    ?ApplicationPaths $paths = null,
+  ): App
   {
-    $workingDirectory ??= getcwd() ?: '.';
-    putenv('ASSEGAI_WORKING_DIR=' . $workingDirectory);
+    if ($paths !== null && $workingDirectory !== null && realpath($workingDirectory) !== $paths->applicationRoot) {
+      throw new InvalidArgumentException('The working directory must match the selected application root.');
+    }
+    $workingDirectory = $paths?->applicationRoot ?? $workingDirectory ?? (getcwd() ?: '.');
+    if ($paths === null) {
+      putenv('ASSEGAI_WORKING_DIR=' . $workingDirectory);
+    }
     $config = self::loadProjectConfig($workingDirectory);
     $configuredRuntime = $runtime
       ?? self::readEnvironmentValue('ASSEGAI_RUNTIME')
@@ -66,7 +77,7 @@ final class AssegaiFactory
         : [],
     ];
 
-    return self::create($moduleName, self::resolveRuntime($configuredRuntime, $runtimeOptions));
+    return self::create($moduleName, self::resolveRuntime($configuredRuntime, $runtimeOptions), $paths);
   }
 
   /**
@@ -76,9 +87,9 @@ final class AssegaiFactory
    * @param string $runtime
    * @return App
    */
-  public static function createWithRuntime(string $moduleName, string $runtime, array $options = []): App
+  public static function createWithRuntime(string $moduleName, string $runtime, array $options = [], ?ApplicationPaths $paths = null): App
   {
-    return self::create($moduleName, self::resolveRuntime($runtime, $options));
+    return self::create($moduleName, self::resolveRuntime($runtime, $options), $paths);
   }
 
   /**
