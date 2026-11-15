@@ -155,7 +155,7 @@ intact; the reviewed compatible `1.0` dependency stream is selected explicitly.
 Before tagging a milestone release:
 
 1. Check the preceding releases, agree the framework target `A.B` and its mapped
-   legacy streams with Andrew, and coordinate every module owner.
+   legacy streams with the release maintainer, and coordinate every module owner.
 2. Record every module's current published version, planned version, dependent
    constraints, checks, release notes and owner readiness. Include unchanged
    modules; an unaccounted module blocks the major/minor release.
@@ -167,7 +167,7 @@ Before tagging a milestone release:
    match the reviewed canonical matrix and remain part of the same coordinated
    readiness checks. Unpublished targets must not become live recommendations.
 5. Verify package checks and Website preparation before the first release tag.
-   Andrew owns release branches, tags and releases; repository publishing still
+   The release maintainer owns release branches, tags and releases; repository publishing still
    requires its separately scoped authorization.
 6. Publish packages in dependency order under that authorization. Update the
    Website's Composer lock only after required packages are published, verify
@@ -236,4 +236,4 @@ Publish checks still require the full module, dependency and Website evidence.
 Tracked workflow and hook files take effect only after their source pins are
 available and the corresponding checks are installed. They do not establish
 remote branch protection or grant publishing permission. Preserve the separate
-repository approvals and Andrew's authority over tags and releases.
+repository approvals and the release maintainer's authority over tags and releases.

@@ -33,19 +33,19 @@ This playbook keeps the process simple while giving us more control.
 
 ## The simple strategy
 
-Use the owner-authorized milestone workflow.
+Use the project's milestone workflow.
 
 That means:
 
-- local working branches are allowed; remote working branches require Andrew's
+- local working branches are allowed; remote working branches require the repository owner's
   explicit permission for the repository, branch and actions
 - repositories with an existing `develop` accept work there before a PR to `main`
 - each PR should belong to a milestone
-- Andrew creates release branches from remotely merged `main` and owns tags/releases
+- the release maintainer creates release branches from remotely merged `main` and owns tags/releases
 - preserve branch protection and all applicable review/CI gates
 
-Agents must also follow Andrew's canonical working rules. This playbook grants
-no publishing or branch-creation authority.
+This playbook describes the maintainer workflow. Publication and remote branch
+creation still require the repository owner's explicit authorization.
 
 ## Branch strategy
 
@@ -62,7 +62,7 @@ no publishing or branch-creation authority.
 
 ### Release stabilization
 
-When the coordinated milestone is ready, Andrew creates a release branch:
+When the coordinated milestone is ready, the release maintainer creates a release branch:
 
 - `release/0.8.0`
 - `release/0.9.0`
@@ -120,7 +120,7 @@ The important rule is simple:
 
 ### Assess requests before accepting a new baseline
 
-For a request from another project or task:
+For an integration request:
 
 - reproduce the blocker on the released versions and inspect supported contracts
 - exhaust sound compatible solutions before requesting an upstream change
@@ -131,8 +131,8 @@ For a request from another project or task:
 - involve Core, Console, Website and affected module owners at intake
 - distinguish local implementation evidence from coordinated release readiness
 
-The requesting task does not grant publishing authority. Keep internal task
-conversations out of public release material.
+Public release material explains shipped behavior, compatibility and upgrade
+steps for users.
 
 ### 1. Define the milestone before the work spreads
 
@@ -162,7 +162,7 @@ During active development:
 
 ### 3. Start release freeze when the milestone is feature-complete
 
-Andrew creates the release branch when:
+The release maintainer creates the release branch when:
 
 - the must-have work is merged
 - only polish, stabilization, docs, and release packaging remain
@@ -170,7 +170,7 @@ Andrew creates the release branch when:
 
 At that point:
 
-- Andrew branches `release/x.y.z` from remotely merged `main`
+- the release maintainer branches `release/x.y.z` from remotely merged `main`
 - move any remaining non-release work to the next milestone
 
 ### 4. Stabilize the release branch
@@ -185,12 +185,12 @@ Only allow:
 - release blog post
 - upgrade notes
 
-Coordinate release fixes with Andrew and the repository owner. Integrate them
-through the authorized workflow; agents must not write directly to `main`.
+Coordinate release fixes with the release maintainer and repository owner.
+Integrate them through the authorized workflow; do not push directly to `main`.
 
 ### 5. Tag and publish
 
-Before Andrew tags any module in a major/minor release, make sure these are done:
+Before tagging any module in a major/minor release, make sure these are done:
 
 - tests for the release theme are green
 - release notes are written
@@ -206,7 +206,7 @@ Before Andrew tags any module in a major/minor release, make sure these are done
 
 Under the separately authorized publishing plan:
 
-- Andrew tags and releases modules in dependency order
+- the release maintainer tags and releases modules in dependency order
 - publish release notes
 - publish the blog article
 - publish the upgrade notes and updates advisor entry when needed
@@ -230,9 +230,9 @@ If the work feels like a new headline, it belongs in the next milestone release.
 
 Recommended patch flow:
 
-1. agree the patch scope with Andrew and the repository owner
+1. agree the patch scope with the release maintainer and repository owner
 2. integrate only the required fixes through the existing authorized workflow
-3. Andrew creates and publishes the patch tag/release
+3. the release maintainer creates and publishes the patch tag/release
 4. coordinate any release-only fixes back through the repository's PR workflow
 
 ## Release checklist
@@ -249,7 +249,7 @@ Use this checklist for each milestone release.
 
 ### During release freeze
 
-- Andrew has created the release branch
+- the release maintainer has created the release branch
 - regression fixes only
 - docs updated
 - release notes drafted
@@ -345,7 +345,7 @@ Avoid these patterns:
 If there is any doubt, use this simple rule:
 
 > A major/minor release requires every module and Website documentation to be
-> ready together. Follow the repository's authorized branch workflow; Andrew
-> owns release branches, tags and releases.
+> ready together. Follow the repository's authorized branch workflow; the release
+> maintainer owns release branches, tags and releases.
 
 That one distinction should keep the process understandable for the whole team.
