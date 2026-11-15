@@ -151,6 +151,9 @@ final class SourceRootCest
 
   public function activeApplicationDoesNotRequireTheProcessWorkingDirectory(UnitTester $I): void
   {
+    if (PHP_OS_FAMILY === 'Windows') {
+      $I->markTestSkipped('Removing the current working directory requires POSIX filesystem semantics.');
+    }
     [$root, $component] = $this->project('active', 'Features');
     $this->app($root, new ApplicationPaths($root, environmentFile: null));
     rmdir("$this->fixture/unrelated");
@@ -159,6 +162,9 @@ final class SourceRootCest
 
   public function sourceSymlinksMustRemainInsideTheSelectedApplication(UnitTester $I): void
   {
+    if (PHP_OS_FAMILY === 'Windows') {
+      $I->markTestSkipped('This symlink fixture requires POSIX semantics; Windows link privileges are not exercised.');
+    }
     [$root] = $this->project('links', 'Source');
     symlink("$this->fixture/unrelated", "$root/escape");
     symlink("$root/Source", "$root/contained");
