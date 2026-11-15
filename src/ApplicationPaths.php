@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Assegai\Core;
 
 use Dotenv\Dotenv;
+use Assegai\Core\Config\ProjectConfig;
 use InvalidArgumentException;
 
 /**
@@ -16,6 +17,7 @@ use InvalidArgumentException;
 final readonly class ApplicationPaths
 {
   public string $applicationRoot;
+  public string $sourceDirectory;
   public string $configurationDirectory;
   public string $secretsDirectory;
   public string $stateDirectory;
@@ -43,6 +45,7 @@ final readonly class ApplicationPaths
     $this->composerDirectory = self::directory($composerDirectory, $root);
     $this->hasExplicitStateDirectory = $stateDirectory !== null;
     $this->environmentFile = $environmentFile === null ? null : self::absolute($environmentFile, $root);
+    $this->sourceDirectory = ProjectConfig::resolveSourceDirectory($root);
   }
 
   /** Load only the selected file. Null explicitly selects a process-environment-only application. */
