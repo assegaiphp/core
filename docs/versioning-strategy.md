@@ -212,6 +212,28 @@ no git, tag, release or deployment authority.
 The [0.11 inventory](../meta/releases/0.11.json) records the coordinated plan.
 Its existence is not proof that the planned packages have been published.
 
-Until those checks are implemented and wired into the authorized publishing
-path, the owner-verified inventory and Website readiness check remain mandatory.
-Neither this policy nor the membership file alone is an automatic release gate.
+## Repository enforcement
+
+The [shared package workflow](../.github/workflows/package-policy.yml) invokes
+Console's single policy reader using full commit pins for its source and Core's
+release data. Module workflows run it before their existing build jobs. It uses
+the locked semver-only tool profile, without installing the framework package
+graph. Source references must be immutable before any policy checkout occurs.
+
+The repository pre-push hooks use the same reader and pins. Set
+`ASSEGAI_RELEASE_CONSOLE` to the reviewed Console checkout and
+`ASSEGAI_RELEASE_CORE` to the reviewed Core data checkout, then install Console's
+`tools/policy` lock with scripts and plugins disabled. The supplied files must
+match their recorded commits. Keep any existing hooks when enabling the tracked
+`.githooks` directory; do not replace another configured hook directory.
+
+Hooks reject a pushed source different from the checked-out commit or an
+uncommitted Composer manifest. Package checks reject mismatched dependency
+lines, unexpected release/tag versions and release refs for unreleased modules.
+Their passing result is a package-policy observation. Complete Prepare and
+Publish checks still require the full module, dependency and Website evidence.
+
+Tracked workflow and hook files take effect only after their source pins are
+available and the corresponding checks are installed. They do not establish
+remote branch protection or grant publishing permission. Preserve the separate
+repository approvals and Andrew's authority over tags and releases.
