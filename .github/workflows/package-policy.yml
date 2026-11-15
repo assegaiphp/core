@@ -29,8 +29,11 @@ jobs:
           CONSOLE_POLICY_REF: ${{ inputs.console-ref }}
           CORE_POLICY_REF: ${{ inputs.core-ref }}
         run: |
-          [[ "$CONSOLE_POLICY_REF" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]
-          [[ "$CORE_POLICY_REF" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]
+          if ! [[ "$CONSOLE_POLICY_REF" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] ||
+             ! [[ "$CORE_POLICY_REF" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]; then
+            echo "::error::Policy sources require complete immutable Git commit references."
+            exit 1
+          fi
 
       - uses: actions/checkout@v4
         with:
