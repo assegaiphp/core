@@ -3,6 +3,7 @@
 namespace Assegai\Core\Util;
 
 use Assegai\Core\ApplicationPaths;
+use Assegai\Core\Config\ProjectConfig;
 use Assegai\Core\Runtimes\RuntimeContext;
 /**
  * The Paths class. Contains utility methods for working with paths.
@@ -102,7 +103,14 @@ final class Paths
    */
   public static function getViewDirectory(): string
   {
-    return self::join(self::getWorkingDirectory(), 'src/Views');
+    return self::join(self::getSourceDirectory(), 'Views');
+  }
+
+  /** Active applications own source selection; standalone callers can retain their existing root. */
+  public static function getSourceDirectory(?string $standaloneDirectory = null): string
+  {
+    return self::application()?->sourceDirectory
+      ?? ProjectConfig::resolveSourceDirectory($standaloneDirectory ?? self::getWorkingDirectory());
   }
 
   /**

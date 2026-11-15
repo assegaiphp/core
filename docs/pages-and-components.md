@@ -40,6 +40,12 @@ Add Web Components when:
 
 ## Classic views are the fastest path to HTML
 
+Rendering uses `sourceRoot` from the selected application's `assegai.json`, defaulting to `src` when omitted. For example, `"sourceRoot": "Features/Pages"` places classic PHP views under `Features/Pages/Views` and anchors component templates to that source tree. Colocated component Twig templates and CSS continue to resolve relative to their component files.
+
+A custom source root must be an existing relative directory inside the application. Absolute paths, empty or dot segments, and symlinks escaping the application are rejected. `ApplicationPaths::sourceDirectory` captures the resolved location at startup; changing project metadata takes effect when a new application is created. The bootstrap constructor's seven fields are unchanged.
+
+Standalone component engines retain their current-working-directory root. Standalone classic-view helpers retain `ASSEGAI_WORKING_DIR` selection. Inside an application, both use its selected source directory regardless of the process working directory.
+
 The starter app uses a `View`:
 
 ```php

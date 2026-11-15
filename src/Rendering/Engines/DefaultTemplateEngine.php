@@ -89,9 +89,8 @@ class DefaultTemplateEngine extends TemplateEngine
     ])
     {
         parent::__construct();
-        $this->templatesDirectory = Path::join(
+        $this->templatesDirectory = Paths::getSourceDirectory(
             Paths::application()?->applicationRoot ?? (getcwd() ?: throw new RuntimeException('No current working directory')),
-            'src',
         );
         $this->loader = new FilesystemLoader($this->templatesDirectory);
         $this->twig = new Environment($this->loader);
