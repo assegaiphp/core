@@ -1,0 +1,79 @@
+name: Coordinated package policy
+
+on:
+  workflow_call:
+    inputs:
+      console-ref:
+        description: Full commit containing the shared Console policy tools.
+        required: true
+        type: string
+      core-ref:
+        description: Full commit containing the reviewed Core release data.
+        required: true
+        type: string
+      inventory:
+        description: Release inventory path relative to the Core checkout.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  package-policy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require immutable source references
+        env:
+          CONSOLE_POLICY_REF: ${{ inputs.console-ref }}
+          CORE_POLICY_REF: ${{ inputs.core-ref }}
+        run: |
+          [[ "$CONSOLE_POLICY_REF" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]
+          [[ "$CORE_POLICY_REF" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check out the policy reader
+        uses: actions/checkout@v4
+        with:
+          repository: assegaiphp/console
+          ref: ${{ inputs.console-ref }}
+          path: .release-policy/console
+          persist-credentials: false
+
+      - name: Check out the release data
+        uses: actions/checkout@v4
+        with:
+          repository: assegaiphp/core
+          ref: ${{ inputs.core-ref }}
+          path: .release-policy/core
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          coverage: none
+          tools: composer:v2
+
+      - name: Install the locked policy dependency
+        env:
+          COMPOSER_MEMORY_LIMIT: 256M
+          COMPOSER_PROCESS_TIMEOUT: 60
+          COMPOSER_MAX_PARALLEL_HTTP: 2
+        run: composer --working-dir=.release-policy/console/tools/policy install --no-plugins --no-scripts --no-interaction --no-progress --prefer-dist
+
+      - name: Check the candidate package
+        uses: ./.release-policy/console/.github/actions/package-policy
+        with:
+          console-root: .release-policy/console
+          console-ref: ${{ inputs.console-ref }}
+          core-root: .release-policy/core
+          core-ref: ${{ inputs.core-ref }}
+          inventory: .release-policy/core/${{ inputs.inventory }}
+          modules: .release-policy/core/meta/framework-modules.json
+          manifest: composer.json
+          semver-autoload: .release-policy/console/tools/policy/vendor/autoload.php
+          ref: ${{ github.ref }}
