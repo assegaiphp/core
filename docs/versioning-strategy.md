@@ -5,7 +5,8 @@ This document explains how we should talk about versions across AssegaiPHP.
 The main goal is simple:
 
 - users should have one clear answer to "what version of Assegai am I on?"
-- package maintainers should still be able to release packages responsibly
+- every framework release-train module shares the same major and minor line,
+  with pre-existing version streams coordinated through the reviewed matrix
 - the CLI should report version information in a way that matches reality
 
 ## The problem
@@ -72,7 +73,17 @@ That means:
 
 ## The rule for milestone releases
 
-`assegaiphp/core` defines the framework milestone line.
+Framework modules, Console and Starter share the same `A.B` in `A.B.X`.
+Changing either `A` or `B` requires a coordinated release across the complete
+release train, including modules with no runtime changes. Patch versions may differ.
+
+Preserve the established pre-framework version streams. RabbitMQ and Beanstalkd
+were already released at `1.x`; their own minor advances with the framework
+milestone. Attributes remains the existing compatible stable dependency. Their
+numbers do not move Assegai itself to `1.x`. These relationships are explicit
+in the canonical release matrix; package size and absence from a feature list
+grant no additional exception. An individual repository cannot advance the
+framework release line on its own.
 
 Examples:
 
@@ -83,40 +94,79 @@ Examples:
 - likely `1.0.0+` = application runtime contexts and scheduling
 - `1.0.0` = confidence release
 
-Packages that are part of that milestone should align with the same minor line when they ship coordinated user-facing work.
+For example, Core `0.11.0` with ORM `0.10.2` is an incomplete transition. Core
+`0.11.1` and ORM `0.11.3` share the correct line. The established stream mapping is:
 
-Examples:
+| Framework modules | RabbitMQ and Beanstalkd | Compatible Attributes line |
+| --- | --- | --- |
+| `0.9.x` | `1.0.x` | `1.0.x` |
+| `0.10.x` | `1.1.x` | `1.0.x` |
+| `0.11.x` | `1.2.x` | `1.0.x` |
 
-- if `orm` is a headline part of `0.9.0`, it should ship on the `0.9.x` line
-- if `console` needs new upgrade or scaffolding behavior for `0.9.0`, it should also ship on the `0.9.x` line
-- if `auth` and `console` support Core's configurable browser-login failure flow for `0.10.0`, the repositories already on `0.9.x` should synchronize on `0.10.x`
-- if `database:sync` becomes a post-`1.0.0` milestone, `orm` and `console` should align to that release line together
-- if application runtime contexts and scheduling become a post-`1.0.0` milestone, `core` and `console` should align to that release line together
+The first two rows are published precedent; the last carries that coordination
+forward for the `0.11` correction. Core's
+[0.9 manifest](https://github.com/assegaiphp/core/blob/0.9.0/composer.json) and
+[0.10 manifest](https://github.com/assegaiphp/core/blob/0.10.0/composer.json)
+show synchronized helpers with Attributes `^1.0`. The adapters'
+[RabbitMQ 1.1 notes](https://github.com/assegaiphp/rabbitmq/blob/1.1.0/docs/releases/1.1.0.md)
+and [Beanstalkd 1.1 notes](https://github.com/assegaiphp/beanstalkd/blob/1.1.0/docs/releases/1.1.0.md)
+document the Common `0.9` to `0.10` transition. Preserve this history when planning
+the next release; do not infer a new framework major from another package's number.
 
-This keeps release notes, upgrade notes, and support answers easier to follow.
+## Module coverage
 
-## The rule for smaller shared packages
+The canonical membership is [framework-modules.json](../meta/framework-modules.json).
+It accounts for Attributes, Auth, Beanstalkd, CMS, Collections, Common, Console,
+Core, Events, Forms, ORM, RabbitMQ, Starter, Util and Validation. Each module has
+an explicit `framework`, `legacy-coordinated` or `stable-dependency` policy.
+`releaseLines` maps the pre-existing streams for each reviewed framework line;
+all `framework` entries use that framework line. Unknown lines and unclassified
+modules block readiness. Verify the membership against
+the active repository and published vendor catalogs for each release. New modules
+must be included before their first publication; an unknown package requires
+explicit classification rather than automatic exclusion.
 
-Not every package has to move in lockstep for every patch.
+An application such as the framework website consumes the coordinated packages
+and has its own documentation and deployment obligations. It is included in
+release readiness even though it is not a framework library.
 
-Smaller shared packages such as utility libraries may still release independently when that makes sense.
-
-But they should still follow these rules:
+Patch releases may ship independently within the agreed `A.B`:
 
 - do not silently break the active framework line
 - keep Composer constraints honest
 - keep repo health metadata honest
 - update the framework packages that depend on them when a new version becomes the expected baseline
 
+Existing version drift must be reported with exact published versions and
+constraints and checked against release history. Preserve published tags and
+releases; do not invent exceptions, relabel history, downgrade dependencies or
+claim the transition is complete. The historical Attributes `10.1` tag remains
+intact; the reviewed compatible `1.0` dependency stream is selected explicitly.
+
 ## What to do before each milestone release
 
 Before tagging a milestone release:
 
-1. confirm the target `assegaiphp/core` version
-2. confirm which first-party packages are part of that milestone
-3. align their package versions to the same release line where needed
-4. make sure `console` reports the correct CLI version and installed framework version
-5. prepare upgrade notes and the updates advisor entry for the new release path
+1. Check the preceding releases, agree the framework target `A.B` and its mapped
+   legacy streams with Andrew, and coordinate every module owner.
+2. Record every module's current published version, planned version, dependent
+   constraints, checks, release notes and owner readiness. Include unchanged
+   modules; an unaccounted module blocks the major/minor release.
+3. Coordinate with the AssegaiPHP Website owner before declaring release
+   readiness. Prepare versioned guides, upgrade notes, the updates-advisor path,
+   release article and relevant navigation/search checks for shipped behavior.
+4. Verify the complete dependency plan and Console's version/update reporting.
+   Every framework module must use the target `A.B`; pre-existing streams must
+   match the reviewed canonical matrix and remain part of the same coordinated
+   readiness checks. Unpublished targets must not become live recommendations.
+5. Verify package checks and Website preparation before the first release tag.
+   Andrew owns release branches, tags and releases; repository publishing still
+   requires its separately scoped authorization.
+6. Publish packages in dependency order under that authorization. Update the
+   Website's Composer lock only after required packages are published, verify
+   the real website, and deploy Website from `main` last through its protocol.
+7. Check the actual published versions, Composer resolution and public docs
+   before reporting the coordinated release complete.
 
 ## What the CLI should never do
 
@@ -129,13 +179,29 @@ When it reports the app's Assegai version, it should read that from the target w
 
 That keeps version reporting accurate even when the CLI and the app live in different repositories or different directories.
 
-## Future work
+## Shared release data and enforcement
 
-The next useful step after this policy is a small release manifest that can be consumed by:
+The membership inventory owns package identities and explicit retired entries.
+Each coordinated release needs one reviewed inventory of its agreed line, exact
+planned package versions, constraints and Website requirements. CLI owns the
+shared reader and validator consumed by:
 
 - the updates advisor page
 - release notes scaffolding
 - repo health badges
 - future compatibility views
 
-That would let us keep one source of truth for release lines while still publishing separate Composer packages.
+Consumers use an explicitly pinned inventory or a validated bundled snapshot;
+ordinary commands must not fetch a moving branch or require sibling checkouts.
+Generated check receipts bind the inventory digest, exact candidate source and
+dependency identities. An editable ready flag or a version label is insufficient.
+
+Preparation checks validate the planned graph and Website candidate before tags
+exist. Publication checks separately verify the actual stable package versions,
+source identities, Composer resolution and final Website state. Missing evidence
+or a changed input invalidates readiness. The validator is read-only and grants
+no git, tag, release or deployment authority.
+
+Until those checks are implemented and wired into the authorized publishing
+path, the owner-verified inventory and Website readiness check remain mandatory.
+Neither this policy nor the membership file alone is an automatic release gate.

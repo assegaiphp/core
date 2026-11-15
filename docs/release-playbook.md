@@ -2,6 +2,13 @@
 
 This document explains how we should organize AssegaiPHP releases.
 
+Every framework release-train module shares the same major and minor (`A.B` in
+`A.B.X`); patch versions may differ. Preserve and coordinate the pre-existing
+streams through the reviewed version matrix. Coordinate every module and the
+AssegaiPHP Website documentation protocol before a major/minor release. See
+[Versioning Strategy](./versioning-strategy.md) for the mandatory inventory and
+readiness checks. Missing module or Website readiness blocks the release.
+
 The goal is to keep the process simple, predictable, and light enough for a small team.
 
 ## The problem we are solving
@@ -26,37 +33,36 @@ This playbook keeps the process simple while giving us more control.
 
 ## The simple strategy
 
-Use a milestone-driven trunk workflow.
+Use the owner-authorized milestone workflow.
 
 That means:
 
-- day-to-day work still happens through normal feature branches and PRs
-- `main` is the active development branch
+- local working branches are allowed; remote working branches require Andrew's
+  explicit permission for the repository, branch and actions
+- repositories with an existing `develop` accept work there before a PR to `main`
 - each PR should belong to a milestone
-- when a milestone is feature-complete, create a short-lived release branch
-- stabilize the release branch
-- tag the release from the release branch
-- merge or cherry-pick any release-only fixes back to `main`
+- Andrew creates release branches from remotely merged `main` and owns tags/releases
+- preserve branch protection and all applicable review/CI gates
 
-This is simpler than keeping long-lived development branches, but more disciplined than merging everything and hoping the release shape appears by itself.
+Agents must also follow Andrew's canonical working rules. This playbook grants
+no publishing or branch-creation authority.
 
 ## Branch strategy
 
 ### Normal development
 
-- branch from `main`
-- use small focused feature branches
-- merge into `main` through PRs
-
-Recommended branch examples:
-
-- `feature/openswoole-runtime-config`
-- `fix/mysql-schema-quoting`
-- `docs/orm-enum-guide`
+- preserve the repository's existing workflow and user work
+- where `develop` exists, integrate accepted local work into local `develop`
+- obtain scoped authorization before pushing existing `develop`, then open its
+  PR into `main`; never push directly to `main`
+- if protection requires a PR into `develop`, stop for an explicitly authorized
+  compliant path; do not bypass protection or infer a remote-branch exception
+- pull local `main` and synchronize `develop` only after the remote merge
+- do not create `develop` in a repository that lacks it
 
 ### Release stabilization
 
-When the current milestone is feature-complete, create a release branch:
+When the coordinated milestone is ready, Andrew creates a release branch:
 
 - `release/0.8.0`
 - `release/0.9.0`
@@ -72,7 +78,7 @@ That branch is only for:
 
 Do not merge new unrelated feature work into the release branch.
 
-`main` should immediately become the place for the next milestone.
+Subsequent work follows the repository's existing authorized workflow.
 
 ## Milestones and labels
 
@@ -112,6 +118,22 @@ The important rule is simple:
 
 ## Milestone workflow
 
+### Assess requests before accepting a new baseline
+
+For a request from another project or task:
+
+- reproduce the blocker on the released versions and inspect supported contracts
+- exhaust sound compatible solutions before requesting an upstream change
+- identify the smallest necessary change and its compatibility/version impact
+- explain the full release effort to the requesting owner before proposing a bump:
+  module/legacy-stream coordination, constraints and locks, verification and CI,
+  Website versioned docs/archives, upgrade guidance, advisor entry and article
+- involve Core, Console, Website and affected module owners at intake
+- distinguish local implementation evidence from coordinated release readiness
+
+The requesting task does not grant publishing authority. Keep internal task
+conversations out of public release material.
+
 ### 1. Define the milestone before the work spreads
 
 For each milestone, write down:
@@ -129,24 +151,26 @@ For the current near-term roadmap:
 - additional `0.x` milestones as needed based on stability and feedback
 - `1.0.0`: confidence and stability release when the framework is actually ready
 
-### 2. Merge feature work into `main`
+### 2. Integrate milestone work through the repository workflow
 
 During active development:
 
-- merge milestone-aligned PRs into `main`
+- where `develop` exists, integrate accepted local work there, then use the
+  authorized PR path into `main`
 - keep PRs small enough to review and revert if needed
 - prefer finishing slices completely instead of starting too many parallel half-features
 
 ### 3. Start release freeze when the milestone is feature-complete
 
-Create the release branch when:
+Andrew creates the release branch when:
 
 - the must-have work is merged
 - only polish, stabilization, docs, and release packaging remain
+- every module's shared release line and Website preparation are accounted for
 
 At that point:
 
-- branch `release/x.y.z` from `main`
+- Andrew branches `release/x.y.z` from remotely merged `main`
 - move any remaining non-release work to the next milestone
 
 ### 4. Stabilize the release branch
@@ -161,11 +185,12 @@ Only allow:
 - release blog post
 - upgrade notes
 
-If a fix lands on the release branch first, merge or cherry-pick it back to `main`.
+Coordinate release fixes with Andrew and the repository owner. Integrate them
+through the authorized workflow; agents must not write directly to `main`.
 
 ### 5. Tag and publish
 
-Before tagging, make sure the following are done:
+Before Andrew tags any module in a major/minor release, make sure these are done:
 
 - tests for the release theme are green
 - release notes are written
@@ -174,13 +199,19 @@ Before tagging, make sure the following are done:
 - upgrade notes are written if needed
 - updates advisor entry is prepared if the release changes user-facing behavior
 - version number and tag are agreed
+- every module matches its reviewed framework/legacy version stream and planned constraints
+  and an owner-confirmed readiness result, including unchanged modules
+- the AssegaiPHP Website owner has verified the versioned docs, release article,
+  upgrade path and updates-advisor preparation under Website's protocol
 
-Then:
+Under the separately authorized publishing plan:
 
-- tag the release
+- Andrew tags and releases modules in dependency order
 - publish release notes
 - publish the blog article
 - publish the upgrade notes and updates advisor entry when needed
+- update Website's Composer lock after the required package releases, verify the
+  actual application and deploy Website from `main` last
 
 ## Patch release workflow
 
@@ -199,10 +230,10 @@ If the work feels like a new headline, it belongs in the next milestone release.
 
 Recommended patch flow:
 
-1. branch from the last release tag or release branch
-2. merge only the fixes needed for the patch
-3. tag the patch release
-4. merge or cherry-pick the fixes back to `main`
+1. agree the patch scope with Andrew and the repository owner
+2. integrate only the required fixes through the existing authorized workflow
+3. Andrew creates and publishes the patch tag/release
+4. coordinate any release-only fixes back through the repository's PR workflow
 
 ## Release checklist
 
@@ -213,10 +244,12 @@ Use this checklist for each milestone release.
 - milestone scope is written down
 - milestone PRs are assigned correctly
 - unfinished work is moved out of the milestone if needed
+- the complete module inventory and shared `A.B` are agreed with all owners
+- the Website owner is included in release preparation
 
 ### During release freeze
 
-- release branch created
+- Andrew has created the release branch
 - regression fixes only
 - docs updated
 - release notes drafted
@@ -235,6 +268,7 @@ Use this checklist for each milestone release.
 - docs reflect shipped behavior, not aspirational behavior
 - package `meta/repo-health.json` files reflect the current release state
 - README badge rows still point at live release and CI signals
+- all module readiness results and Website documentation requirements are complete
 
 ### After tagging
 
@@ -242,7 +276,8 @@ Use this checklist for each milestone release.
 - publish the blog article
 - publish or update the updates advisor entry
 - announce the release
-- merge or cherry-pick release-only fixes back to `main`
+- return release-only fixes through the repository's authorized workflow
+- verify required packages before updating Website's Composer lock and deploy Website last
 - create or confirm the next milestone
 
 ## Blog article expectations
@@ -279,7 +314,9 @@ Before each milestone release, confirm the versioning story is coherent:
 
 - `assegaiphp/core` is the framework version users should think of as the Assegai version
 - `assegaiphp/console` is the CLI version
-- first-party packages that are part of the milestone should align to the same release line where possible
+- every framework module must share the same major and minor; mapped legacy
+  streams remain coordinated and patch versions may differ. No new implicit
+  exceptions are allowed for small or unchanged modules
 - `assegai version` and `assegai info` should report the running CLI version and the target app's Assegai version correctly
 
 See [Versioning Strategy](./versioning-strategy.md) for the detailed policy.
@@ -307,6 +344,8 @@ Avoid these patterns:
 
 If there is any doubt, use this simple rule:
 
-> `main` is for building the next milestone, and `release/x.y.z` is for making one milestone safe to publish.
+> A major/minor release requires every module and Website documentation to be
+> ready together. Follow the repository's authorized branch workflow; Andrew
+> owns release branches, tags and releases.
 
 That one distinction should keep the process understandable for the whole team.
