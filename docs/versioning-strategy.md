@@ -126,6 +126,13 @@ the active repository and published vendor catalogs for each release. New module
 must be included before their first publication; an unknown package requires
 explicit classification rather than automatic exclusion.
 
+Each entry also declares `released` or `unreleased` publication state. An
+unreleased module's intended baseline remains aligned and accounted for, while
+its unfinished implementation stays outside the current public release and
+default install recommendations. A released module cannot depend on an
+unreleased one. First publication requires explicit promotion through the same
+readiness checks; a published package cannot be hidden under an unreleased label.
+
 An application such as the framework website consumes the coordinated packages
 and has its own documentation and deployment obligations. It is included in
 release readiness even though it is not a framework library.
@@ -201,6 +208,9 @@ exist. Publication checks separately verify the actual stable package versions,
 source identities, Composer resolution and final Website state. Missing evidence
 or a changed input invalidates readiness. The validator is read-only and grants
 no git, tag, release or deployment authority.
+
+The [0.11 inventory](../meta/releases/0.11.json) records the coordinated plan.
+Its existence is not proof that the planned packages have been published.
 
 Until those checks are implemented and wired into the authorized publishing
 path, the owner-verified inventory and Website readiness check remain mandatory.
