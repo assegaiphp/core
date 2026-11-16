@@ -201,6 +201,12 @@ Before tagging any module in a major/minor release, make sure these are done:
 - version number and tag are agreed
 - every module matches its reviewed framework/legacy version stream and planned constraints
   and an owner-confirmed readiness result, including unchanged modules
+- dependency requirements admit the planned graph while retaining separately
+  reviewed compatibility where supported; a module's aligned release number
+  does not establish an API reason to remove an older dependency line
+- compatibility reviews distinguish their supported intervals from executed
+  artifact samples, and current-train qualification verifies the actual target
+  graph rather than accepting an ordinary compatibility observation
 - the AssegaiPHP Website owner has verified the versioned docs, release article,
   upgrade path and updates-advisor preparation under Website's protocol
 

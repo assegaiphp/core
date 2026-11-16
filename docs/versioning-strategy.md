@@ -199,11 +199,38 @@ shared reader and validator consumed by:
 - future compatibility views
 
 Each package's `version` identifies the exact release artifact. Its
-`installConstraint` records the reviewed compatibility range, including the
-minimum supported patch. A patch release may advance the artifact version
-without raising that minimum in unrelated dependents. Raise the compatibility
-minimum explicitly when older patches are no longer supported. Both values
-remain within the package's mapped major/minor line.
+`installConstraint` records the recommendation for new installations and the
+dependency range used to qualify the coordinated release. Both values remain
+within the package's mapped major/minor line. A patch release may advance the
+artifact version without raising the recommended minimum in unrelated
+dependents.
+
+A consuming module's `composer.json` declares its supported dependencies.
+Aligning that module's release version does not require removing support for
+an older, compatible dependency. For example, a module released on 0.11 may
+retain a reviewed `^0.10.1 || ~0.11.0` requirement for Common. Compatibility is
+reviewed for that consumer and dependency together; a provider's installation
+recommendation cannot establish every consumer's support range.
+
+Additional supported intervals require an explicit support review bound to the
+consumer source, manifest and literal requirement, with the provider's release
+history and API basis. Record executed checks separately with their exact
+dependency versions, sources, lock identities and environments. A passing
+sample does not prove that every future patch was tested. Preserve the complete
+Composer interval set, including gaps, when checking evidence coverage.
+
+An ordinary published-compatibility observation cannot qualify a coordinated
+release. Current-train readiness also requires every dependency requirement to
+accept its planned artifact and the complete intended graph to resolve and pass
+its checks. A declaration accepting only Common 0.10 cannot qualify the planned
+Common 0.11 graph. Website's actual deployment lock must satisfy the reviewed
+train, its actual requirements and the recorded runtime/render checks.
+
+CLI catalogs and new-project defaults use the reviewed recommendations.
+Existing and custom requirements retain their declared support unless an
+explicit migration previews and confirms the change. Add and Update must
+compare the original requirement before modifying it; silently replacing a
+union with the current recommendation removes support and is not acceptable.
 
 Consumers use an explicitly pinned inventory or a validated bundled snapshot;
 ordinary commands must not fetch a moving branch or require sibling checkouts.
@@ -235,10 +262,15 @@ match their recorded commits. Keep any existing hooks when enabling the tracked
 `.githooks` directory; do not replace another configured hook directory.
 
 Hooks reject a pushed source different from the checked-out commit or an
-uncommitted Composer manifest. Package checks reject mismatched dependency
-lines, unexpected release/tag versions and release refs for unreleased modules.
-Their passing result is a package-policy observation. Complete Prepare and
-Publish checks still require the full module, dependency and Website evidence.
+uncommitted Composer manifest. Their shared request explicitly selects
+current-train qualification. Structural package checks reject requirements that
+exclude planned dependency artifacts, unexpected release/tag versions and
+release refs for unreleased modules. Their result explicitly records its
+structural scope and `releaseReady: false`. An ordinary compatibility
+observation cannot satisfy this gate. Optional owner evidence verifies consumer
+support separately; complete Prepare and Publish checks require that support
+evidence, the full target graph and the module and Website checks before
+declaring release readiness.
 
 Tracked workflow and hook files take effect only after their source pins are
 available and the corresponding checks are installed. They do not establish
