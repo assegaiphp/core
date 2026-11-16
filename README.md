@@ -50,7 +50,7 @@ AssegaiPHP is actively developed and currently remains on a pre-1.0 release line
 The recommended application workflow starts with the Assegai Console:
 
 ```bash
-composer global require assegaiphp/console:^0.10
+composer global require 'assegaiphp/console:~0.11.1'
 assegai new blog-api
 cd blog-api
 assegai generate resource posts
@@ -162,7 +162,7 @@ AssegaiPHP is a collection of focused Composer packages. Not every capability is
 Use the CLI to create an application. Install Core directly when embedding or extending the framework runtime itself:
 
 ```bash
-composer require assegaiphp/core:^0.10
+composer require 'assegaiphp/core:~0.11.1'
 ```
 
 ## Documentation and support
