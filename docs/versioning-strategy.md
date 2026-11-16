@@ -198,6 +198,13 @@ shared reader and validator consumed by:
 - repo health badges
 - future compatibility views
 
+Each package's `version` identifies the exact release artifact. Its
+`installConstraint` records the reviewed compatibility range, including the
+minimum supported patch. A patch release may advance the artifact version
+without raising that minimum in unrelated dependents. Raise the compatibility
+minimum explicitly when older patches are no longer supported. Both values
+remain within the package's mapped major/minor line.
+
 Consumers use an explicitly pinned inventory or a validated bundled snapshot;
 ordinary commands must not fetch a moving branch or require sibling checkouts.
 Generated check receipts bind the inventory digest, exact candidate source and
